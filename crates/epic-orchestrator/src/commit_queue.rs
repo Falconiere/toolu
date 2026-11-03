@@ -43,6 +43,8 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Result<Vec<Step
       check_now(world, key);
     }
     "stale" => check_now(world, key),
+    // Evidence the worker owes under the local gate: prompt it, as a fix does.
+    "waiting" if doc.get("local_gate") == Some(&Value::Bool(true)) => fix(world, key, &doc),
     "waiting" => set_armed(world, key, text("auto_merge") == "armed"),
     "disarmed" => crate::disarm::committed(world, key, None),
     "error" if crate::disarm::disarming(world, key) => {
@@ -51,11 +53,7 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Result<Vec<Step
     "busy" => journal(world, "action", "rebase-skipped", key, &note),
     "rebase-uncertain" => held_rebase(world, key, &note),
     "handoff" => handoff(world, key, &note),
-    "fix" => {
-      set_armed(world, key, false);
-      let reasons = doc.get("reasons").map(Value::to_string).unwrap_or_default();
-      leave(world, key, "babysit", &reasons);
-    }
+    "fix" => fix(world, key, &doc),
     "closed" => closed(world, key),
     "uncertain" | "refused" => held(world, key, &outcome, &note),
     _ => {}
@@ -64,6 +62,27 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Result<Vec<Step
     release_held(world, key);
   }
   Ok(world.outbox.drain(..).collect())
+}
+
+/// Failing checks, open threads, a draft, or a local gate waiting on the
+/// worker: back to babysit. Without babysit (#832) no tick tells the worker, so the gate's
+/// reasons prompt it; a prompt that cannot be delivered raises attention,
+/// since nothing would retry it.
+fn fix(world: &mut World, key: &str, doc: &Value) {
+  set_armed(world, key, false);
+  let reasons = doc.get("reasons").map(Value::to_string).unwrap_or_default();
+  leave(world, key, "babysit", &reasons);
+  if doc.get("local_gate") == Some(&Value::Bool(true)) {
+    let pr = world
+      .issues
+      .get(key)
+      .and_then(|issue| issue.pr)
+      .unwrap_or(0);
+    let text = format!(
+      "The merge gate needs you: {reasons}. Fix it, re-run the gate, push, then `toolu epic report babysit --pr {pr}` again."
+    );
+    crate::babysit::prompt(world, key, "gate", text, Some("gate"));
+  }
 }
 
 /// A conflict (or an unsafe worktree): the worker rebases, prompted once.

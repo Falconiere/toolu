@@ -3,7 +3,7 @@
 //! the queue only has its auto-merge disarmed, and a recovered step asks
 //! GitHub whether the merge already happened.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -30,6 +30,10 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
   };
   let record = crate::disk::read_value(&crate::snapshot::issue_path(&issue.state_dir, key))
     .unwrap_or(Value::Null);
+  let fallback = crate::gate::local::LocalGate {
+    worktree: issue.worktree.clone().map(PathBuf::from),
+    host: (!issue.kind.is_empty()).then(|| issue.kind.clone()),
+  };
   let input = StepJob {
     repo: issue.repo.clone(),
     pr,
@@ -42,6 +46,7 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
       .or_else(|| issue.worktree.clone())
       .map(PathBuf::from),
     lease: lease(&record),
+    local: crate::gate::local::policy(Path::new(&issue.state_dir), &record, &fallback),
     env: engine.env.clone(),
     reach: engine.reach.clone(),
     trace: engine.git_trace.clone(),

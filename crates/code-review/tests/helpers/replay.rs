@@ -24,20 +24,9 @@ pub(super) const REVIEW: &str = "/api/v1/chat/completions";
 pub(super) const JEV: &str = "/api/v1/systemone";
 const KEY: &str = "private-sentinel-670";
 
-/// The environment of a run without a key: Git's isolation and the process's paths.
-pub(super) fn keyless() -> Env {
-  let mut env = Env::from_pairs([
-    ("GIT_CONFIG_NOSYSTEM", "1".to_owned()),
-    ("GIT_CONFIG_GLOBAL", "/dev/null".to_owned()),
-    ("XDG_CONFIG_HOME", "/dev/null".to_owned()),
-  ]);
-  let process = Env::process();
-  for name in ["PATH", "HOME", "TMPDIR"] {
-    if let Some(value) = process.get(name) {
-      env = env.with(name, value);
-    }
-  }
-  env
+/// The environment of a run without a key, with the tools linked under `dir`.
+pub(super) fn keyless(dir: &Path) -> Result<Env, String> {
+  super::tools::tools_env(dir)
 }
 
 /// A review answer naming the slice-underflow defect on its changed line.
@@ -60,9 +49,10 @@ pub(super) fn answer() -> String {
 fn a_replay_miss_fails_the_arm_closed_naming_the_missing_request() {
   let fixtures = golden().expect("fixture");
   let empty = tempfile::tempdir().expect("fs");
+  let tools = tempfile::tempdir().expect("fs");
   let mode = Mode::Replay(Store::new(empty.path()));
   let plan = Plan {
-    env: &keyless(),
+    env: &keyless(tools.path()).expect("tools"),
     arms: ArmChoice::Baseline,
     settings: &[Setting::Small],
     mode: &mode,
@@ -134,8 +124,9 @@ pub(super) fn record(
   fixtures: &Fixtures,
   origin: &Fixture,
   store: &Path,
+  tools: &Path,
 ) -> Result<CaseReport, String> {
-  let env = keyless()
+  let env = keyless(tools)?
     .with("OPENROUTER_API_KEY", KEY)
     .with("OPENROUTER_MODEL", "")
     .with("JEV_TIMEOUT", "5")
@@ -155,10 +146,10 @@ pub(super) fn record(
 }
 
 /// A replay run of both arms: no key and the real endpoints, so only the store answers.
-fn replay(fixtures: &Fixtures, store: &Path) -> Result<CaseReport, String> {
+fn replay(fixtures: &Fixtures, store: &Path, tools: &Path) -> Result<CaseReport, String> {
   let mode = Mode::Replay(Store::new(store));
   let plan = Plan {
-    env: &keyless(),
+    env: &keyless(tools)?,
     arms: ArmChoice::Both,
     settings: &[Setting::Small],
     mode: &mode,
@@ -242,7 +233,8 @@ fn a_live_run_bills_and_records_each_distinct_request_once() {
     .route(JEV, Reply::new(200, judgment()))
     .expect("route");
   let store = tempfile::tempdir().expect("fs");
-  let live = record(&fixtures, &origin, store.path()).expect("live run");
+  let tools = tempfile::tempdir().expect("fs");
+  let live = record(&fixtures, &origin, store.path(), tools.path()).expect("live run");
   assert_eq!(live.unverified.len(), 0, "{:?}", live.unverified);
   let [base, enhanced] = live.report.arms.as_slice() else {
     panic!("two arms: {}", live.report.arms.len());
@@ -271,11 +263,12 @@ fn a_replayed_call_costs_nothing_and_matches_what_the_live_call_found() {
     .route(JEV, Reply::new(200, judgment()))
     .expect("route");
   let store = tempfile::tempdir().expect("fs");
-  let live = record(&fixtures, &origin, store.path()).expect("live run");
+  let tools = tempfile::tempdir().expect("fs");
+  let live = record(&fixtures, &origin, store.path(), tools.path()).expect("live run");
   let sent = origin.requests().expect("requests").len();
 
   // A fresh materialization of the case still hashes to the recorded requests.
-  let replayed = replay(&fixtures, store.path()).expect("replay run");
+  let replayed = replay(&fixtures, store.path(), tools.path()).expect("replay run");
   assert_eq!(replayed.unverified.len(), 0, "{:?}", replayed.unverified);
   assert_eq!(replayed.report.arms.len(), 2);
   for (arm, was) in replayed.report.arms.iter().zip(&live.report.arms) {

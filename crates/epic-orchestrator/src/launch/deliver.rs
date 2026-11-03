@@ -51,10 +51,7 @@ impl Attempt<'_> {
     let (wt, base) = self.prepare(record, ctx)?;
     let start = self.start(record, &wt, ctx)?;
     let paths = BriefPaths::of(self.state(), &self.issue.key, &wt.path);
-    let host = BriefHost {
-      kind: self.host.kind,
-      safe: self.opts.safe,
-    };
+    let host = BriefHost::at(self.host.kind, self.opts.safe, self.state());
     let brief =
       render_brief(self.graph, self.issue, &paths, &base, host).map_err(Failure::unknown)?;
     let prompted = start.started || self.opts.reprompt();

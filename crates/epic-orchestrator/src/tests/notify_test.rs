@@ -141,6 +141,31 @@ fn notify_fails_at_once_on_a_client_error_and_refuses_a_bad_url() {
 }
 
 #[test]
+fn a_delivery_row_outwaits_a_journal_lock_held_past_the_state_loop_bound() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = Paths::at(tmp.path());
+  let lock = paths.journal_lock();
+  let held = crate::lock::Held::acquire(&lock, "journal-busy").expect("lock");
+  let holder = std::thread::spawn(move || {
+    // Longer than the 2 s after which the state loop's append gives up.
+    std::thread::sleep(Duration::from_millis(2500));
+    drop(held);
+  });
+  super::record(
+    &paths,
+    &notice("which?"),
+    true,
+    "channel=url attempts=1 status=200",
+  );
+  holder.join().expect("holder");
+  let row = outcome(&paths, &["notify", "notify-failed"]);
+  assert_eq!(
+    (row.name.as_str(), row.note.as_str()),
+    ("notify", "channel=url attempts=1 status=200")
+  );
+}
+
+#[test]
 fn notify_without_a_url_posts_nothing_and_a_bad_secrets_file_is_journaled() {
   let tmp = tempfile::tempdir().expect("temp");
   let fixture = Fixture::start().expect("fixture");

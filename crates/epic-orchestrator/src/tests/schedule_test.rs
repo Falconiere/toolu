@@ -203,6 +203,35 @@ fn replace_phase(world: &mut World) {
   world.outbox.clear();
 }
 
+#[test]
+fn a_babysit_report_is_a_ready_report_when_the_epic_runs_without_babysit() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let settings = crate::epics::LaunchSettings {
+    no_babysit: true,
+    ..crate::epics::LaunchSettings::default()
+  };
+  crate::epics::write_launch_settings(tmp.path(), settings).expect("settings");
+  let report = |state_dir: &str| Report {
+    key: "a".to_owned(),
+    epic: "one".to_owned(),
+    state_dir: state_dir.to_owned(),
+    phase: "babysit".to_owned(),
+    pr: Some(7),
+    note: String::new(),
+  };
+  let mut world = World::new(0);
+  let _steps = apply_report(&mut world, &report("/epic"));
+  assert_eq!(world.issues["a"].phase, "babysit");
+  let mut world = World::new(0);
+  let steps = apply_report(&mut world, &report(&tmp.path().display().to_string()));
+  assert_eq!(world.issues["a"].phase, "ready");
+  assert!(
+    steps
+      .iter()
+      .any(|step| matches!(step, crate::model::Step::Journal(record) if record.note == "ready"))
+  );
+}
+
 fn babysit_waits(world: &mut World) {
   {
     let issue = world.issues.get_mut("a").expect("issue");

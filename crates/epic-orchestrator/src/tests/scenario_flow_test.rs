@@ -146,6 +146,7 @@ fn scenario_a_safe_epic_launches_its_workers_with_approval_prompts_on() {
     let settings = crate::epics::LaunchSettings {
       safe,
       no_jev: false,
+      no_babysit: false,
     };
     crate::epics::write_launch_settings(&scenario.state, settings).expect("safe");
     let mut engine = scenario.engine();

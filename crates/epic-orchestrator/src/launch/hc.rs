@@ -230,10 +230,7 @@ impl Attempt<'_> {
       self.issue,
       paths,
       &base,
-      BriefHost {
-        kind: self.host.kind,
-        safe: self.opts.safe,
-      },
+      BriefHost::at(self.host.kind, self.opts.safe, self.state()),
     )
     .map_err(Failure::unknown)?;
     std::fs::create_dir_all(Path::new(&paths.brief).parent().unwrap_or(self.state()))

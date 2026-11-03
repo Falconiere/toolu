@@ -58,7 +58,11 @@ fn blockers_named_by_reference_become_issue_keys() {
 fn launch_settings_default_off_follow_start_and_turn_on_when_damaged() {
   use super::{LaunchSettings, launch_settings, write_launch_settings};
   let tmp = tempfile::tempdir().expect("temp");
-  let on = |safe: bool, no_jev: bool| LaunchSettings { safe, no_jev };
+  let on = |safe: bool, no_jev: bool| LaunchSettings {
+    safe,
+    no_jev,
+    no_babysit: false,
+  };
   assert_eq!(launch_settings(tmp.path()), on(false, false));
   write_launch_settings(tmp.path(), on(true, false)).expect("safe");
   assert_eq!(launch_settings(tmp.path()), on(true, false));
@@ -72,8 +76,16 @@ fn launch_settings_default_off_follow_start_and_turn_on_when_damaged() {
     ("{}", on(false, false)),
     (r#"{"safe":"true","no_jev":false}"#, on(true, false)),
     (r#"{"safe":false,"no_jev":1}"#, on(false, true)),
+    (r#"{"no_babysit":1}"#, on(false, false)),
   ] {
     std::fs::write(tmp.path().join("launch.json"), text).expect("settings");
     assert_eq!(launch_settings(tmp.path()), expected, "{text}");
   }
+  // Only an explicit true drops babysit: a damaged file keeps CI.
+  let local = LaunchSettings {
+    no_babysit: true,
+    ..LaunchSettings::default()
+  };
+  write_launch_settings(tmp.path(), local).expect("no babysit");
+  assert_eq!(launch_settings(tmp.path()), local);
 }

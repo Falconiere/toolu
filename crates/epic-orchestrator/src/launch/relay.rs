@@ -112,10 +112,7 @@ impl Attempt<'_> {
       self.issue,
       &paths,
       text(record, "base").unwrap_or("main"),
-      BriefHost {
-        kind: self.host.kind,
-        safe: self.opts.safe,
-      },
+      BriefHost::at(self.host.kind, self.opts.safe, self.state()),
     )
     .map_err(Failure::unknown)?;
     let path = std::path::Path::new(&paths.brief);

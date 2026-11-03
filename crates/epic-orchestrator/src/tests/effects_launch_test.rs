@@ -202,6 +202,7 @@ fn a_no_jev_epic_never_asks_jev_even_with_a_key() {
   let settings = crate::epics::LaunchSettings {
     safe: false,
     no_jev: true,
+    no_babysit: false,
   };
   crate::epics::write_launch_settings(tmp.path(), settings).expect("settings");
   assert!(!super::jev_allowed(&job_input));

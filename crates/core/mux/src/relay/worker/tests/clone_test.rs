@@ -201,12 +201,14 @@ fn unreadable_mirror_with_a_registered_worktree_is_never_moved() {
   assert!(repository(&f.env, &f.task, &f.worker).is_err());
   assert!(std::path::Path::new(&config).exists());
   std::fs::write(&config, saved).unwrap();
+  // git prints the canonical path (`/private/tmp` for macOS's `/tmp`).
+  let canonical = std::fs::canonicalize(&tree).unwrap();
   assert_eq!(
     command(
       &f.env,
       &["git", "-C", &tree, "rev-parse", "--show-toplevel"],
       &[]
     ),
-    tree
+    canonical.display().to_string()
   );
 }

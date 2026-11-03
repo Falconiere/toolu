@@ -22,7 +22,8 @@ authorize a new run. Planning questions use dry-run and stop after the plan.
 
 Options: `--max N` live workers (default 3); `--hosts claude:2,codex:2`
 (hosts `claude`, `codex`, `cursor`, `muse`); `--safe` keeps each host's
-approval prompts on; `--no-jev` routes by heuristics; `--dry-run` plans and
+approval prompts on; `--no-jev` routes by heuristics; `--no-babysit` skips
+pr-babysit and merges on the worker's green local gate (no CI); `--dry-run` plans and
 launches nothing ("show me the plan", "what can run in parallel" and "don't
 launch yet" mean `--dry-run`). Subcommands: `status`, `stop`.
 
@@ -82,11 +83,11 @@ the scratch graph file is local planning output.
 ```bash
 STATE_DIR=$(toolu --json epic graph <epic> --max 3 --save | jq -r .state_dir)
 toolu epic route --graph "$STATE_DIR/graph.json" --hosts claude:2,codex:1
-toolu epic start "$STATE_DIR"    # add --safe and --no-jev when the user passed them
+toolu epic start "$STATE_DIR"    # add --safe, --no-jev and --no-babysit when the user passed them
 ```
 
 The basename of `$STATE_DIR` is the `<epic-key>`. `start` registers the
-epic, keeps `--safe` and `--no-jev` until a start without them, and starts the
+epic, keeps `--safe`, `--no-jev` and `--no-babysit` until a start without them, and starts the
 engine. Tell the user the dashboard, `http://127.0.0.1:7717/`, and which
 workers run where (`toolu epic status <epic-key>`; each has a herdr workspace
 named after its key). Resume: the same commands.

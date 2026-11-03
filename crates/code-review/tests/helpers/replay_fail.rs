@@ -17,7 +17,8 @@ fn a_failed_judge_call_makes_the_enhanced_arm_unverified_not_a_pass() {
     .route(JEV, Reply::new(500, "down".to_owned()))
     .expect("route");
   let store = tempfile::tempdir().expect("fs");
-  let live = record(&fixtures, &origin, store.path()).expect("live run");
+  let tools = tempfile::tempdir().expect("fs");
+  let live = record(&fixtures, &origin, store.path(), tools.path()).expect("live run");
   assert_eq!(live.report.arms.len(), 1, "{:?}", live.unverified);
   assert_eq!(
     live.report.arms.first().map(|arm| arm.arm),
@@ -33,9 +34,10 @@ fn a_failed_judge_call_makes_the_enhanced_arm_unverified_not_a_pass() {
 fn a_selection_that_yields_no_arm_is_unverified_never_satisfied() {
   let fixtures = golden().expect("fixture");
   let empty = tempfile::tempdir().expect("fs");
+  let tools = tempfile::tempdir().expect("fs");
   let mode = Mode::Replay(Store::new(empty.path()));
   let plan = Plan {
-    env: &keyless(),
+    env: &keyless(tools.path()).expect("tools"),
     arms: ArmChoice::Enhanced,
     settings: &[Setting::None],
     mode: &mode,

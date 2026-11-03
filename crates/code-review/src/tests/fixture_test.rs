@@ -45,19 +45,42 @@ pub(super) fn repo() -> tempfile::TempDir {
   dir
 }
 
+/// A PATH of the system tools plus links to the git and ast-grep the process
+/// PATH resolves, under `state`. Their own directories stay out: a host CLI
+/// beside them (codex sits with ast-grep in Homebrew's bin) would be selected
+/// to review instead of the fixture's `OpenRouter`.
+fn tools_path(state: &Path) -> String {
+  let bin = state.join("bin");
+  std::fs::create_dir_all(&bin).unwrap();
+  let process = Env::process();
+  let dirs: Vec<&str> = process.get("PATH").unwrap_or("").split(':').collect();
+  for tool in ["git", "ast-grep"] {
+    let link = bin.join(tool);
+    // A relative PATH entry would make a link that dangles outside the cwd.
+    let found = dirs
+      .iter()
+      .map(|dir| Path::new(dir).join(tool))
+      .find(|path| path.is_absolute() && path.is_file());
+    // A second environment under the same dir finds the links already made.
+    if let Some(found) = found
+      && std::fs::symlink_metadata(&link).is_err()
+    {
+      std::os::unix::fs::symlink(found, link).unwrap();
+    }
+  }
+  format!("{}:/usr/bin:/bin", bin.display())
+}
+
 pub(super) fn env(root: &Path, state: &Path, fixture: &Fixture) -> Env {
-  let mut env = Env::process()
+  Env::process()
     .with("TOOLU_PROJECT_DIR", &root.to_string_lossy())
     .with("STATE_DIR", &state.to_string_lossy())
     .with("OPENROUTER_API_KEY", "private-sentinel-669")
     .with("HTTPS_PROXY", &fixture.proxy_url())
     .with("NO_PROXY", "")
     .with("GIT_CONFIG_NOSYSTEM", "1")
-    .with("GIT_CONFIG_GLOBAL", "/dev/null");
-  if let Some(path) = Env::process().get("PATH") {
-    env = env.with("PATH", path);
-  }
-  env
+    .with("GIT_CONFIG_GLOBAL", "/dev/null")
+    .with("PATH", &tools_path(state))
 }
 
 pub(super) fn options(fixture: &Fixture) -> Options<'static> {

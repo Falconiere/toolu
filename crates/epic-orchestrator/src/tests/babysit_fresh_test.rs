@@ -141,3 +141,23 @@ fn only_a_waiting_babysit_or_ready_issue_gets_a_request() {
   assert!(request(&world, KEY, &paths).is_none());
   assert!(request(&world, "pr:o/r#2", &paths).is_none());
 }
+
+#[test]
+fn an_epic_started_without_babysit_never_gets_a_request() {
+  let dir = tempfile::tempdir().expect("temp");
+  let state = state_file(dir.path());
+  let mut world = watched(&state);
+  let paths = Paths::at(dir.path());
+  let epic = dir.path().join("epic");
+  std::fs::create_dir_all(&epic).expect("epic");
+  world.issues.get_mut("one").expect("issue").state_dir = epic.display().to_string();
+  assert!(request(&world, KEY, &paths).is_some(), "babysit on");
+  let settings = crate::epics::LaunchSettings {
+    no_babysit: true,
+    ..crate::epics::LaunchSettings::default()
+  };
+  crate::epics::write_launch_settings(&epic, settings).expect("settings");
+  assert!(request(&world, KEY, &paths).is_none(), "babysit off");
+  world.issues.get_mut("one").expect("issue").phase = "ready".into();
+  assert!(request(&world, KEY, &paths).is_none(), "ready too");
+}

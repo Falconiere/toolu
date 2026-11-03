@@ -43,6 +43,8 @@ pub(crate) struct StepJob {
   pub worktree: Option<PathBuf>,
   /// The agent lease that fences it, when recorded.
   pub lease: Option<Lease>,
+  /// The local gate that stands in for checks under `--no-babysit`.
+  pub local: Option<crate::gate::local::LocalGate>,
   /// The environment git and GitHub run with.
   pub env: Env,
   /// The GitHub client builder.
@@ -95,36 +97,55 @@ fn run(input: &StepJob) -> Result<Map<String, Value>, String> {
     repo: repo.to_owned(),
     number: input.pr,
   };
-  let (result, facts) = assess(&gh, &pr)?;
-  let armed = result.get("auto_merge_armed") == Some(&Value::Bool(true));
-  let verdict = text(&result, "verdict");
-  let head = text(&result, "head");
+  let (mut result, facts) = assess(&gh, &pr)?;
   let parked = match input.mode {
     Mode::Disarm => {
+      let armed = result.get("auto_merge_armed") == Some(&Value::Bool(true));
       disarm(&gh, &facts, armed)?;
       return Ok(outcome("disarmed"));
     }
     Mode::Head { parked } => parked,
   };
-  let out = match verdict.as_str() {
+  if let Some(local) = &input.local {
+    crate::gate::local::apply(&mut result, local, &input.env);
+  }
+  let out = act(input, (&gh, &pr, &facts), &result, parked)?;
+  Ok(with(out, "head", json!(text(&result, "head"))))
+}
+
+/// The step's outcome for the assessed verdict.
+fn act(
+  input: &StepJob,
+  target: (&Gh, &Pr, &Facts),
+  result: &Map<String, Value>,
+  parked: bool,
+) -> Result<Map<String, Value>, String> {
+  let (gh, pr, facts) = target;
+  let armed = result.get("auto_merge_armed") == Some(&Value::Bool(true));
+  let verdict = text(result, "verdict");
+  let head = text(result, "head");
+  let reasons = || result.get("reasons").cloned().unwrap_or(json!([]));
+  Ok(match verdict.as_str() {
     "merged" | "closed" => outcome(&verdict),
     "fix" => {
-      disarm(&gh, &facts, armed)?;
-      with(
-        outcome("fix"),
-        "reasons",
-        result.get("reasons").cloned().unwrap_or(json!([])),
-      )
+      disarm(gh, facts, armed)?;
+      let fix = with(outcome("fix"), "reasons", reasons());
+      with(fix, "local_gate", json!(input.local.is_some()))
     }
     "rebase" => {
-      disarm(&gh, &facts, armed)?;
-      rebased(input, &result, parked)
+      disarm(gh, facts, armed)?;
+      rebased(input, result, parked)
     }
-    "wait" => waiting(&gh, &pr, &facts, &head, armed)?,
-    "merge" => merged(&gh, &pr, &facts, &head, &input.env)?,
+    // Nothing arms auto-merge for a local gate: GitHub never sees it pass.
+    "wait" if input.local.is_some() => {
+      let waiting = with(outcome("waiting"), "reasons", reasons());
+      let owed = result.get("local_wait") == Some(&Value::Bool(true));
+      with(waiting, "local_gate", json!(owed))
+    }
+    "wait" => waiting(gh, pr, facts, &head, armed)?,
+    "merge" => merged(gh, pr, facts, &head, &input.env)?,
     other => return Err(format!("unknown verdict {other:?}")),
-  };
-  Ok(with(out, "head", json!(head)))
+  })
 }
 
 /// After a restart: `merged` when GitHub merged the PR, `open` to gate it

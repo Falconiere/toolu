@@ -53,14 +53,16 @@ impl Record {
   }
 }
 
-/// Take the journal lock, retrying a live holder for two seconds.
-pub(super) fn journal_held(lock: &Path) -> Result<Held, String> {
+/// How long the state loop retries a live holder of the journal lock.
+const LOCK_WAIT: Duration = Duration::from_secs(2);
+
+/// Take the journal lock, retrying a live holder for `wait`.
+pub(super) fn journal_held(lock: &Path, wait: Duration) -> Result<Held, String> {
   let start = std::time::Instant::now();
-  let limit = Duration::from_secs(2);
   loop {
     match Held::acquire(lock, "journal-busy") {
       Ok(held) => return Ok(held),
-      Err(err) if err == "journal-busy" && start.elapsed() < limit => {
+      Err(err) if err == "journal-busy" && start.elapsed() < wait => {
         std::thread::sleep(Duration::from_millis(20));
       }
       Err(err) => return Err(err),
@@ -71,14 +73,29 @@ pub(super) fn journal_held(lock: &Path) -> Result<Held, String> {
 /// Append `record` under `lock`, returning the sequence it was given.
 ///
 /// # Errors
-/// The lock is busy or the file cannot be written.
+/// The lock is busy past [`LOCK_WAIT`] or the file cannot be written.
 pub(crate) fn append(
   dir: &Path,
   lock: &Path,
   record: &Record,
   now: SystemTime,
 ) -> Result<Record, String> {
-  let _held = journal_held(lock)?;
+  append_within(dir, lock, record, now, LOCK_WAIT)
+}
+
+/// [`append`] retrying a live holder for `wait` instead: a thread nothing
+/// waits on can afford more than the state loop.
+///
+/// # Errors
+/// The lock is busy past `wait` or the file cannot be written.
+pub(crate) fn append_within(
+  dir: &Path,
+  lock: &Path,
+  record: &Record,
+  now: SystemTime,
+  wait: Duration,
+) -> Result<Record, String> {
+  let _held = journal_held(lock, wait)?;
   std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
   let mut stored = record.clone();
   stored.note = bounded_note(&stored.note);

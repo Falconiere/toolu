@@ -6,6 +6,8 @@
 
 #[path = "helpers/replay.rs"]
 mod replay;
+#[path = "helpers/tools.rs"]
+mod tools;
 
 #[path = "helpers/replay_fail.rs"]
 mod replay_fail;

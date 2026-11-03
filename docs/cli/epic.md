@@ -109,6 +109,7 @@ Options:
       --safe                Keep approval prompts on in this epic's workers, until a start without it
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
       --no-jev              Route and check coupling by heuristics only, until a start without it
+      --no-babysit          No CI: never run pr-babysit and merge on the worker's green local gate, until a start without it
   -h, --help                Print help
 ```
 
