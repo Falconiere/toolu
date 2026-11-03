@@ -1074,6 +1074,59 @@ source: crates/cli/tests/helpers/schema.rs
             "report"
           ],
           "placeholder": false
+        },
+        {
+          "about": "Trust an attempt directory in this machine's host trust store",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "agent",
+              "possibleValues": [
+                "claude",
+                "codex"
+              ],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Absolute attempt worktree",
+              "hidden": false,
+              "long": "path",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Absolute clone root the worktree belongs to",
+              "hidden": false,
+              "long": "repo",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "trust",
+          "owner": "toolu",
+          "path": [
+            "delegate",
+            "trust"
+          ],
+          "placeholder": false
         }
       ],
       "flags": [],
@@ -4714,6 +4767,17 @@ source: crates/cli/tests/helpers/schema.rs
               "help": "No CI: never run pr-babysit and merge on the worker's green local gate, until a start without it",
               "hidden": false,
               "long": "no-babysit",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Dispatch workers through the configured delegation relay, until a start without it",
+              "hidden": false,
+              "long": "relay",
               "possibleValues": [],
               "required": false,
               "short": null,

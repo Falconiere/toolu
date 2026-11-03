@@ -139,3 +139,55 @@ fn absent_terminal_releases_only_if_launch_never_started() {
   driver::tick(&world.root, &world.env).unwrap();
   assert_eq!(store.load("after-intent").unwrap().phase, "cancelling");
 }
+
+#[test]
+fn exited_terminal_without_report_fails_the_task_and_removes_its_worktree() {
+  let world = Fixture::new().unwrap();
+  let (task, repo) = world.task("silent").unwrap();
+  let attempt = task.attempt.as_deref().unwrap();
+  let worktree = world.worktree(&repo, attempt).unwrap();
+  let name = Fixture::terminal_name(attempt);
+  let owner = format!("toolu.owner={attempt}");
+  let store = Store::new(&world.root);
+  store
+    .launched("silent", attempt, None, "launch intent")
+    .unwrap();
+  let client = Client::new(&world.env);
+  let argv = vec!["/bin/sh".into(), "-c".into(), "exit 0".into()];
+  let terminal = client
+    .launch(&Launch {
+      name: &name,
+      cwd: &worktree,
+      owner: &owner,
+      machine: Some("loop"),
+      argv: &argv,
+    })
+    .unwrap();
+  let target = address(&terminal).unwrap();
+  client
+    .call(
+      &["wait", target, "--timeout", "30"],
+      Duration::from_secs(40),
+    )
+    .unwrap();
+  store
+    .launched("silent", attempt, Some(target), "started")
+    .unwrap();
+  drop(store);
+  driver::tick(&world.root, &world.env).unwrap();
+  let failed = Store::new(&world.root).load("silent").unwrap();
+  assert_eq!(failed.phase, "failed");
+  assert_eq!(
+    failed.note.as_deref(),
+    Some("worker exited without a report")
+  );
+  assert!(!std::path::Path::new(&worktree).exists());
+  assert_eq!(
+    world
+      .git(&repo, &["worktree", "list", "--porcelain"])
+      .unwrap()
+      .matches("worktree ")
+      .count(),
+    1
+  );
+}

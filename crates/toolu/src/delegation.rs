@@ -16,6 +16,7 @@ mod machines;
 mod selection;
 mod service;
 mod task;
+mod trust;
 use machines::{machine_operation, setup_machines};
 
 /// Registration commands shared by setup and tests.
@@ -108,6 +109,29 @@ pub fn delegate_command() -> Command {
         .arg(Arg::new("repo").long("repo").required(true)),
     )
     .subcommand(delegate_report())
+    .subcommand(delegate_trust())
+}
+
+fn delegate_trust() -> Command {
+  Command::new("trust")
+    .about("Trust an attempt directory in this machine's host trust store")
+    .arg(
+      Arg::new("agent")
+        .long("agent")
+        .required(true)
+        .value_parser(["claude", "codex"]),
+    )
+    .arg(
+      Arg::new("path")
+        .long("path")
+        .required(true)
+        .help("Absolute attempt worktree"),
+    )
+    .arg(
+      Arg::new("repo")
+        .long("repo")
+        .help("Absolute clone root the worktree belongs to"),
+    )
 }
 
 /// Run worker operations.

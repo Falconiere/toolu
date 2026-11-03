@@ -11,6 +11,8 @@ use toolu_runtime::env::Env;
 
 mod bootstrap;
 mod clone;
+mod lifecycle;
+pub(in crate::relay) use lifecycle::cleanup;
 
 fn error(error: &crate::hc::Error) -> String {
   format!("{}: {}", error.code, error.message)
@@ -51,6 +53,7 @@ pub(super) fn prepare(
     env,
     run: attempt,
   };
+  lifecycle::trust(&checkout, &binary, &task.request.agent, &repo)?;
   build_prerequisites(&checkout)?;
   recipes(root, attempt, &checkout, Some(&task.recipes))?;
   Ok(binary)
@@ -244,14 +247,16 @@ pub(super) fn result(
   Ok((head, bytes))
 }
 
-/// Read a report bound to this attempt and input commit.
+/// Read a report bound to this attempt and input commit: `None` while the
+/// worker has written none, so an unreachable worker is an error rather
+/// than a missing report.
 pub(super) fn reported(
   env: &Env,
   task: &Task,
   machine: &Machine,
   cwd: &str,
-) -> Option<serde_json::Value> {
-  let attempt = task.attempt.as_deref()?;
+) -> Result<Option<serde_json::Value>, String> {
+  let attempt = task.attempt.as_deref().ok_or("missing attempt")?;
   let transfer = Transfer {
     target: Target {
       machine: &machine.name,
@@ -264,9 +269,24 @@ pub(super) fn reported(
     "{}/tasks/{attempt}-report.json",
     machine.root.trim_end_matches('/')
   );
-  let bytes = transfer.exec(&["cat", "--", &path], &[]).ok()?;
-  let report: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-  matches_report(&report, attempt, &task.request.base).then_some(report)
+  let bytes = transfer
+    .exec(
+      &[
+        "sh",
+        "-c",
+        "test -f \"$1\" || exit 0; cat -- \"$1\"",
+        "sh",
+        &path,
+      ],
+      &[],
+    )
+    .map_err(|e| error(&e))?;
+  if bytes.is_empty() {
+    return Ok(None);
+  }
+  let report: serde_json::Value =
+    serde_json::from_slice(&bytes).map_err(|e| format!("unreadable worker report: {e}"))?;
+  Ok(matches_report(&report, attempt, &task.request.base).then_some(report))
 }
 
 fn matches_report(report: &serde_json::Value, attempt: &str, base: &str) -> bool {

@@ -20,6 +20,7 @@ Commands:
   retry    Inspect, retry delivery or cancel a submitted task
   results  Import a verified result under a private Git ref
   report   Write an attempt-bound worker outcome
+  trust    Trust an attempt directory in this machine's host trust store
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -147,4 +148,22 @@ Options:
       --status <status>    [possible values: done, failed]
       --note <note>        [default: ""]
   -h, --help               Print help
+```
+
+## `toolu delegate trust`
+
+```text
+Trust an attempt directory in this machine's host trust store
+
+Usage: toolu delegate trust [OPTIONS] --agent <agent> --path <path>
+
+Options:
+      --agent <agent>     [possible values: claude, codex]
+      --json              Print exactly one JSON document on stdout
+      --path <path>       Absolute attempt worktree
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --repo <repo>       Absolute clone root the worktree belongs to
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
 ```

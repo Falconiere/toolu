@@ -211,6 +211,7 @@ pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
     safe: matches.get_flag("safe"),
     no_jev: matches.get_flag("no-jev"),
     no_babysit: matches.get_flag("no-babysit"),
+    workers: crate::epics::Workers::chosen(matches.get_flag("relay")),
   };
   if let Err(err) = crate::hc_target::configure(matches, Path::new(dir), env) {
     return failed("toolu epic start", &err);

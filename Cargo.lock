@@ -1565,6 +1565,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "toml",
  "toolu-ast-grep",
  "toolu-engine",
  "toolu-git-better",

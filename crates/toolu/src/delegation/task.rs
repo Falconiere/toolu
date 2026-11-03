@@ -28,6 +28,7 @@ pub(super) fn run(matches: &ArgMatches, env: &Env) -> Result<Value, String> {
     }
     "results" => results(args, env),
     "report" => report(args, env),
+    "trust" => super::trust::run(args, env),
     _ => Err("unknown delegate operation".into()),
   }
 }
@@ -79,9 +80,7 @@ fn submit(args: &ArgMatches, env: &Env) -> Result<Value, String> {
     } else {
       agent.into()
     }];
-    if agent == "codex" {
-      command.push("--no-daemon".into());
-    }
+    command.extend(unattended(agent).iter().map(|flag| (*flag).to_owned()));
     command.extend(
       args
         .get_many::<String>("args")
@@ -102,6 +101,18 @@ fn submit(args: &ArgMatches, env: &Env) -> Result<Value, String> {
   };
   let bundle = remote::export_recover(env, repo, key, &request.base).map_err(|e| e.message)?;
   serde_json::to_value(client::submit(env, &request, &bundle)?).map_err(|e| e.to_string())
+}
+
+/// The flags that keep each agent from waiting at an approval prompt; nobody
+/// answers one on a worker.
+fn unattended(agent: &str) -> &'static [&'static str] {
+  match agent {
+    "claude" => &["--dangerously-skip-permissions"],
+    "codex" => &["--no-daemon", "--dangerously-bypass-approvals-and-sandbox"],
+    "cursor" => &["--yolo", "--trust", "--approve-mcps"],
+    "muse" => &["--yolo"],
+    _ => &[],
+  }
 }
 
 #[cfg(test)]

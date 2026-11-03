@@ -10,24 +10,33 @@ use super::failure::Failure;
 use super::record::{Record, text};
 use super::{Ctx, live_result};
 
-/// Pin relay mode before launch ownership is reserved.
+/// Pin relay mode before launch ownership is reserved: only an epic started
+/// with `--relay`, and only while a relay is configured.
 pub(super) fn configure(
   record: &mut Record,
   opts: &super::LaunchOpts,
+  state: &std::path::Path,
   env: &toolu_runtime::env::Env,
 ) -> Result<(), Failure> {
-  if !opts.dry_run
-    && !record.contains_key("backend")
-    && !record.contains_key("stage")
-    && !record.contains_key("worktree")
-    && toolu_mux::relay::config::load(&toolu_mux::relay::config::root(env))
-      .map_err(Failure::unknown)?
-      .relay
-      .is_some()
+  if opts.dry_run
+    || record.contains_key("backend")
+    || record.contains_key("stage")
+    || record.contains_key("worktree")
+    || !crate::epics::launch_settings(state).relay()
   {
-    record.insert("backend".into(), json!("herdr-app"));
-    record.insert("relay_enabled".into(), json!(true));
+    return Ok(());
   }
+  if toolu_mux::relay::config::load(&toolu_mux::relay::config::root(env))
+    .map_err(Failure::unknown)?
+    .relay
+    .is_none()
+  {
+    return Err(Failure::refusal(
+      "the epic was started with --relay but no relay is configured; run toolu setup relay or start without --relay",
+    ));
+  }
+  record.insert("backend".into(), json!("herdr-app"));
+  record.insert("relay_enabled".into(), json!(true));
   Ok(())
 }
 
@@ -36,6 +45,17 @@ fn saved_request(record: &Record) -> Result<Option<Submission>, Failure> {
     .get("relay_request")
     .map(|saved| serde_json::from_value(saved.clone()).map_err(|e| Failure::unknown(e.to_string())))
     .transpose()
+}
+
+/// Whether the relay has settled `saved` without a result, so a relaunch
+/// needs a new submission; a relay that cannot answer leaves the saved
+/// request in place for `submit` to report.
+fn retired(env: &toolu_runtime::env::Env, saved: &Submission) -> bool {
+  client::get(env, &saved.key).is_ok_and(|task| settled_without_result(&task.phase))
+}
+
+fn settled_without_result(phase: &str) -> bool {
+  matches!(phase, "cancelled" | "failed")
 }
 
 impl Attempt<'_> {
@@ -48,13 +68,27 @@ impl Attempt<'_> {
     if record.get("hc_prepared") != Some(&Value::Bool(true)) {
       self.hc_prepare(record, ctx)?;
     }
-    let request = if let Some(saved) = saved_request(record)? {
-      saved
-    } else {
-      let request = self.relay_request(record, ctx)?;
-      record.insert("relay_request".into(), json!(request));
-      self.persist(record, "starting")?;
-      request
+    let request = match saved_request(record)? {
+      Some(saved) if !retired(ctx.env, &saved) => saved,
+      saved => {
+        if saved.is_some() && !crate::epics::launch_settings(self.state()).relay() {
+          return Err(Failure::refusal(
+            "the relay settled this attempt without a result and the epic no longer uses the relay; finish the issue with toolu epic finish, then launch it again locally",
+          ));
+        }
+        let request = self.relay_request(record, ctx, saved.is_some())?;
+        record.insert("relay_request".into(), json!(request));
+        // The earlier attempt's receipt would hide the new task from the poll.
+        for stale in [
+          "remote_report_seen",
+          "remote_result_imported",
+          "remote_result_commit",
+        ] {
+          record.remove(stale);
+        }
+        self.persist(record, "starting")?;
+        request
+      }
     };
     let checkout = text(record, "checkout").unwrap_or("");
     let bundle = remote::export_recover(ctx.env, checkout, &request.key, &request.base)
@@ -67,10 +101,19 @@ impl Attempt<'_> {
     Ok(live_result(&self.issue.reference, &self.log, record))
   }
 
-  fn relay_request(&self, record: &mut Record, ctx: &Ctx<'_>) -> Result<Submission, Failure> {
+  fn relay_request(
+    &self,
+    record: &mut Record,
+    ctx: &Ctx<'_>,
+    resubmit: bool,
+  ) -> Result<Submission, Failure> {
     let checkout = text(record, "checkout").unwrap_or("").to_owned();
     let base = text(record, "expected_base").unwrap_or("").to_owned();
-    let key = format!("epic-{}", text(record, "hc_run").unwrap_or(""));
+    let key = relay_key(
+      text(record, "hc_run").unwrap_or(""),
+      resubmit,
+      self.started_at,
+    );
     let origin = super::hc::git(ctx.env, &checkout, &["remote", "get-url", "origin"])?;
     let target = crate::hc_target::load(self.state()).map_err(Failure::refusal)?;
     let machine = target
@@ -123,6 +166,16 @@ impl Attempt<'_> {
     record.insert("brief".into(), json!(paths.brief));
     record.insert("status_file".into(), json!(paths.status));
     Ok(())
+  }
+}
+
+/// The submission key: the run's, or a fresh one for a resubmission after
+/// the relay settled the earlier task without a result.
+fn relay_key(run: &str, resubmit: bool, started_at: u64) -> String {
+  if resubmit {
+    format!("epic-{run}-{started_at}")
+  } else {
+    format!("epic-{run}")
   }
 }
 

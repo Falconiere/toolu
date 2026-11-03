@@ -171,16 +171,21 @@ fn ping(stream: &mut UnixStream) -> Result<u64, String> {
   )
 }
 
-/// Send `text` to `target` when the engine has no script directory.
+/// Send `text` to `target` when the engine has no script directory: a
+/// `relay:<key>` target through hc to the relay worker's terminal, any other
+/// through herdr.
 ///
 /// # Errors
-/// The herdr socket or the CLI prompt fails.
+/// The herdr socket or the CLI prompt fails, or the relay worker is not running.
 pub(crate) fn prompt(
   paths: &crate::paths::Paths,
   env: &Env,
   target: &str,
   text: &str,
 ) -> Result<(), String> {
+  if let Some(key) = target.strip_prefix("relay:") {
+    return relay_prompt(env, key, text);
+  }
   let mut client = Client::new();
   client
     .execute(
@@ -192,6 +197,33 @@ pub(crate) fn prompt(
       },
     )
     .and_then(|reply| crate::herdr_calls::delivered("agent.prompt", &reply))
+}
+
+/// Type `text` into the terminal the relay launched for task `key`. hc
+/// submits once and never forces a blocked dialog.
+fn relay_prompt(env: &Env, key: &str, text: &str) -> Result<(), String> {
+  let task = toolu_mux::relay::client::get(env, key)?;
+  let terminal = task
+    .terminal
+    .as_deref()
+    .filter(|address| !address.is_empty() && task.phase == "running")
+    .ok_or_else(|| {
+      format!(
+        "relay task {key} has no running worker terminal ({})",
+        task.phase
+      )
+    })?;
+  toolu_mux::hc::Client::new(env)
+    .send(terminal, text)
+    .map(drop)
+    .map_err(|error| {
+      let note = format!("hc {}: {}", error.code, error.message);
+      if error.uncertain {
+        format!("prompt uncertain: {note}")
+      } else {
+        note
+      }
+    })
 }
 
 /// The binary subscribes unless `TOOLU_EPIC_HERDR=off`. Tests subscribe only when it is `1`.
