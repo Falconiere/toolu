@@ -276,7 +276,7 @@ fn launch(
   let state = Path::new(&graph.state_dir);
   let mut record =
     record::load_launch_record(&state.join("issues").join(format!("{}.json", issue.key)))?;
-  relay::configure(&mut record, opts, ctx.env)?;
+  relay::configure(&mut record, opts, state, ctx.env)?;
   hc::pin(&mut record, ctx, state)?;
   let route = load_launch_route(&state.join("routes").join(format!("{}.json", issue.key)))?;
   let host = resolve_host(opts, route.as_ref())?;

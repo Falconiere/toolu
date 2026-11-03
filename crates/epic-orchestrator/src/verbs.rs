@@ -7,21 +7,7 @@ use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
 
-/// The phases a worker reports, in pipeline order.
-const PHASES: [&str; 12] = [
-  "brainstorm",
-  "spec",
-  "spec-review",
-  "plan",
-  "plan-review",
-  "execution",
-  "pr-open",
-  "babysit",
-  "rebasing",
-  "ready",
-  "needs-human",
-  "failed",
-];
+use crate::verbs_report::{job_command, report_command};
 
 /// The complete `toolu epic` command tree.
 pub(crate) fn command() -> Command {
@@ -155,6 +141,10 @@ fn start_command() -> Command {
       "no-babysit",
       "No CI: never run pr-babysit and merge on the worker's green local gate, until a start without it",
     ))
+    .arg(flag(
+      "relay",
+      "Dispatch workers through the configured delegation relay, until a start without it",
+    ))
 }
 
 fn queue_command() -> Command {
@@ -225,69 +215,7 @@ fn wait_command() -> Command {
     )
 }
 
-fn report_command() -> Command {
-  Command::new("report")
-    .arg(
-      Arg::new("run")
-        .long("run")
-        .requires("expected-base")
-        .help("Remote worker run identity; write a transfer report only"),
-    )
-    .arg(
-      Arg::new("expected-base")
-        .long("expected-base")
-        .requires("run")
-        .help("Remote worker's committed input revision"),
-    )
-    .about("Record a worker phase")
-    .arg(
-      Arg::new("phase")
-        .value_name("PHASE")
-        .required(true)
-        .value_parser(PHASES)
-        .help("The phase to record"),
-    )
-    .arg(
-      Arg::new("status-file")
-        .long("status-file")
-        .value_name("FILE")
-        .required(true)
-        .help("The issue status snapshot"),
-    )
-    .arg(
-      Arg::new("pr")
-        .long("pr")
-        .value_name("N")
-        .value_parser(clap::value_parser!(u64))
-        .help("Pull request number"),
-    )
-    .arg(
-      Arg::new("note")
-        .long("note")
-        .value_name("TEXT")
-        .help("Note stored with the phase"),
-    )
-}
-
-fn job_command() -> Command {
-  Command::new("job")
-    .about("Run a command under the worktree's resource lease, waiting up to 30 min for admission")
-    .arg(flag(
-      "no-wait",
-      "Refuse at once when capacity or pressure holds instead of waiting",
-    ))
-    .arg(
-      Arg::new("argv")
-        .value_name("ARGV")
-        .required(true)
-        .num_args(1..)
-        .trailing_var_arg(true)
-        .allow_hyphen_values(true)
-        .help("The command and its arguments"),
-    )
-}
-
-fn flag(name: &'static str, help: &'static str) -> Arg {
+pub(crate) fn flag(name: &'static str, help: &'static str) -> Arg {
   Arg::new(name)
     .long(name)
     .action(ArgAction::SetTrue)

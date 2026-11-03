@@ -152,45 +152,92 @@ fn recover(
   let fallback = format!("{}/{name}", machine.name);
   let target = task.terminal.as_deref().unwrap_or(&fallback);
   let client = Client::new(env);
-  let Some(terminal) = find_terminal(root, store, task, &client, target)? else {
+  let Some(terminal) = find_terminal((root, env), store, task, &client, target)? else {
     return Ok(());
   };
   hc::require_owner(&terminal, owner).map_err(|e| e.message)?;
   if terminal.get("cwd").and_then(serde_json::Value::as_str) != Some(cwd) {
     return Err("terminal working directory differs".into());
   }
+  let finished = terminal.get("state").and_then(serde_json::Value::as_str) == Some("finished");
   if task.phase == "cancelling" {
-    if terminal.get("state").and_then(serde_json::Value::as_str) != Some("finished") {
+    if !finished {
       client.kill_owned(target, owner).map_err(|e| e.message)?;
     }
-    store.finish_cancel(&task.request.key, attempt)?;
+    let settled = store.finish_cancel(&task.request.key, attempt)?;
+    return settle(store, env, &settled, cwd);
+  }
+  let address = hc::address(&terminal).map_err(|e| e.message)?;
+  let address = if address.contains('/') {
+    address.to_owned()
   } else {
-    let address = hc::address(&terminal).map_err(|e| e.message)?;
-    let address = if address.contains('/') {
-      address.to_owned()
+    format!("{}/{address}", machine.name)
+  };
+  if task.terminal.is_none() {
+    store.launched(&task.request.key, attempt, Some(&address), "recovered")?;
+  }
+  if let Some(report) = worker::reported(env, task, machine, cwd)? {
+    if !finished {
+      client.kill_owned(target, owner).map_err(|e| e.message)?;
+    }
+    let settled = accept_report(store, env, task, cwd, &report)?;
+    return settle(store, env, &settled, cwd);
+  }
+  if finished {
+    let settled = store.fail(&task.request.key, attempt, "worker exited without a report")?;
+    return settle(store, env, &settled, cwd);
+  }
+  note_prompt(store, task, &terminal, &address)
+}
+
+/// Say in the task note while the worker waits at a permission or trust
+/// prompt, and restore `launched` once it moves on, which also clears a
+/// diagnostic a failed tick left behind. Nothing is typed into it.
+fn note_prompt(
+  store: &Store,
+  task: &Task,
+  terminal: &serde_json::Value,
+  address: &str,
+) -> Result<(), String> {
+  let attempt = task.attempt.as_deref().ok_or("missing attempt")?;
+  let note = task.note.as_deref().unwrap_or_default();
+  let wanted = if hc::status(terminal) == "blocked" {
+    format!("blocked: the agent waits on a prompt in {address}")
+  } else if matches!(note, "launched" | "recovered") {
+    return Ok(());
+  } else {
+    "launched".to_owned()
+  };
+  if note != wanted {
+    store.annotate(&task.request.key, attempt, &wanted)?;
+  }
+  Ok(())
+}
+
+/// Remove the settled attempt's worktree, keeping the receipt when that fails.
+fn settle(store: &Store, env: &Env, task: &Task, cwd: &str) -> Result<(), String> {
+  let attempt = task.attempt.as_deref().ok_or("missing attempt")?;
+  let machine = task.worker.as_ref().ok_or("missing worker")?;
+  if let Err(error) = worker::cleanup(env, machine, attempt, cwd) {
+    let note = task.note.as_deref().unwrap_or_default();
+    let note = if note.is_empty() {
+      format!("cleanup incomplete: {error}")
     } else {
-      format!("{}/{address}", machine.name)
+      format!("{note}; cleanup incomplete: {error}")
     };
-    if task.terminal.is_none() {
-      store.launched(&task.request.key, attempt, Some(&address), "recovered")?;
-    }
-    if let Some(report) = worker::reported(env, task, machine, cwd) {
-      if terminal.get("state").and_then(serde_json::Value::as_str) != Some("finished") {
-        client.kill_owned(target, owner).map_err(|e| e.message)?;
-      }
-      accept_report(store, env, task, cwd, &report)?;
-    }
+    store.annotate(&task.request.key, attempt, &note)?;
   }
   Ok(())
 }
 
 fn find_terminal(
-  root: &Path,
+  context: (&Path, &Env),
   store: &Store,
   task: &Task,
   client: &Client<'_>,
   target: &str,
 ) -> Result<Option<serde_json::Value>, String> {
+  let (root, env) = context;
   match client.get(target) {
     Ok(terminal) => Ok(Some(terminal)),
     Err(error)
@@ -200,7 +247,17 @@ fn find_terminal(
       if worker::has_recipe_intent(root, attempt) {
         return Err("terminal absent after recipe intent".into());
       }
-      store.finish_cancel(&task.request.key, attempt)?;
+      let settled = store.finish_cancel(&task.request.key, attempt)?;
+      let cwd = format!(
+        "{}/tasks/{attempt}",
+        task
+          .worker
+          .as_ref()
+          .ok_or("missing worker")?
+          .root
+          .trim_end_matches('/')
+      );
+      settle(store, env, &settled, &cwd)?;
       Ok(None)
     }
     Err(error) => Err(format!("terminal lookup {}: {}", error.code, error.message)),
@@ -213,26 +270,27 @@ fn accept_report(
   task: &Task,
   cwd: &str,
   report: &serde_json::Value,
-) -> Result<(), String> {
+) -> Result<Task, String> {
   let attempt = task.attempt.as_deref().ok_or("missing attempt")?;
-  if report.get("status").and_then(serde_json::Value::as_str) == Some("failed") {
-    store.fail(
+  match report.get("status").and_then(serde_json::Value::as_str) {
+    Some("failed") => store.fail(
       &task.request.key,
       attempt,
       report
         .get("note")
         .and_then(serde_json::Value::as_str)
         .unwrap_or("worker failed"),
-    )?;
-  } else if report.get("status").and_then(serde_json::Value::as_str) == Some("done") {
-    let machine = task.worker.as_ref().ok_or("missing worker")?;
-    let (head, bytes) = worker::result(env, task, machine, cwd)?;
-    if report.get("commit").and_then(serde_json::Value::as_str) != Some(head.as_str()) {
-      return Err("reported commit differs from worktree HEAD".into());
+    ),
+    Some("done") => {
+      let machine = task.worker.as_ref().ok_or("missing worker")?;
+      let (head, bytes) = worker::result(env, task, machine, cwd)?;
+      if report.get("commit").and_then(serde_json::Value::as_str) != Some(head.as_str()) {
+        return Err("reported commit differs from worktree HEAD".into());
+      }
+      store.report(&task.request.key, attempt, &head, &bytes)
     }
-    store.report(&task.request.key, attempt, &head, &bytes)?;
+    _ => Err("worker report has no known status".into()),
   }
-  Ok(())
 }
 
 fn terminal_name(attempt: &str) -> String {

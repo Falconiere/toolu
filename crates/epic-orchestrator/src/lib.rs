@@ -185,6 +185,7 @@ mod verbs_actions;
 mod verbs_hosts;
 mod verbs_metrics;
 mod verbs_notify;
+mod verbs_report;
 mod verbs_token;
 mod wait_journal;
 mod wait_ops;

@@ -107,13 +107,26 @@ toolu delegate cancel task-001
 ```
 
 `submit` also accepts `--machine <name>` to pin a worker, `--group <name>` to
-serialize tasks in a group, and agent flags after `--`. Eligible workers must
+serialize tasks in a group, and agent flags after `--`. Nobody answers prompts
+on a worker, so the agent command starts with its unattended flags (Claude
+`--dangerously-skip-permissions`, Codex `--no-daemon
+--dangerously-bypass-approvals-and-sandbox`, Cursor `--yolo --trust
+--approve-mcps`, Muse `--yolo`) before any caller flags. Before launch the
+relay trusts the attempt worktree and its clone on the worker through the
+host's documented trust store (`toolu delegate trust`, run on the worker;
+it writes `~/.claude.json` and `~/.claude/settings.json` for Claude, under
+`$CLAUDE_CONFIG_DIR` when set, and `$CODEX_HOME/config.toml` for Codex), so
+neither host stops at its folder dialog, and Claude skips its one-time bypass
+permissions dialog. That acknowledgement is persistent for the worker user, so
+later interactive bypass sessions of that user skip the warning too. Eligible workers must
 support the requested agent, have free capacity, and not be draining. The relay
 selects the lowest occupied-to-capacity ratio, with machine name as the tie
 breaker. A task stays queued when no worker is eligible.
 
 A preparation failure known to precede launch returns the task to the queue and
-puts that worker on a persisted cooldown. Unpinned retries can use another
+puts that worker on a persisted cooldown; its note carries the failed command's
+exit code and the end of its stderr, for example Git's clone error or
+`mkdir: Permission denied` for an unmounted root. Unpinned retries can use another
 eligible worker; pinned work waits for its worker's cooldown. Preparation with
 an uncertain setup side effect stays held for inspection instead of being retried.
 `machines status` shows `preparation_cooldown_until` and excludes those slots
@@ -122,11 +135,17 @@ from availability until the deadline passes.
 With a relay configured, `toolu babysit dispatch-fix start --machine <name>`
 also pins a fixer to a registered worker; its root comes from the registration.
 Without a relay, the legacy `--machine` and `--remote-repo` flags remain paired.
-New non-dry-run epic worker launches also use the configured relay. Their implementation
-brief includes the issue and epic descriptions and closed blocker references;
-after a successful report, the controller imports the committed result and
-continues the local review and delivery workflow. Existing launch records retain
-their previously selected backend.
+An epic started with `toolu epic start --relay` dispatches its new,
+non-dry-run worker launches through the configured relay; without the flag
+every worker runs on the controller, whatever the delegation configuration
+says. Their implementation brief includes the issue and epic descriptions and
+closed blocker references; after a successful report, the controller imports
+the committed result and continues the local review and delivery workflow.
+`toolu epic answer <key> "<direction>"` reaches a running relay worker through
+hc (`task.terminal`), the same way it reaches a local one. A relay task that
+ends `cancelled` or `failed` is not reused: the next launch of that issue
+submits a fresh key. Existing launch records retain their previously selected
+backend.
 
 Results imports a verified commit into a private `refs/toolu-transfer/.../snapshot`
 ref in the specified repository; it does not merge or push it. The repository
@@ -144,8 +163,14 @@ toolu delegate report --file /srv/toolu/tasks/attempt-report.json --attempt atte
 ```
 
 The relay accepts only a report bound to the attempt and input commit. A
-finished terminal without a valid report remains held for inspection; uncertain
-launches are not automatically repeated.
+terminal that finished without one moves the task to `failed` with the note
+`worker exited without a report` and frees the slot. While a worker waits at
+a permission or trust prompt the task stays `running` and its note reads
+`blocked: the agent waits on a prompt in <terminal>`; nothing is typed into
+it. Uncertain launches are not automatically repeated. Once a task settles
+(`done`, `failed` or `cancelled`), the relay removes the attempt worktree and
+prunes the clone's worktree list; a removal that fails is appended to the
+task note as `cleanup incomplete`.
 
 ## Operate and recover
 
@@ -167,7 +192,7 @@ the local configuration and reports the remote error.
 started by setup or recovery. Keep the relay machine available for new work;
 already launched workers remain independent of the controller.
 
-Receipts, transfer data, repository clones, and attempt worktrees are retained;
+Receipts, transfer data, repository clones, and report files are retained;
 plan disk space and back up the relay state and worker data as appropriate.
 They are not an automatic backup or a complete disaster-recovery mechanism.
 

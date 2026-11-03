@@ -54,3 +54,18 @@ fn worker_reports_require_a_clean_bound_commit_and_replay_identically() {
     first
   );
 }
+
+#[test]
+fn submitted_agents_run_unattended_before_caller_flags() {
+  assert_eq!(unattended("claude"), ["--dangerously-skip-permissions"]);
+  assert_eq!(
+    unattended("codex"),
+    ["--no-daemon", "--dangerously-bypass-approvals-and-sandbox"]
+  );
+  assert_eq!(
+    unattended("cursor"),
+    ["--yolo", "--trust", "--approve-mcps"]
+  );
+  assert_eq!(unattended("muse"), ["--yolo"]);
+  assert_eq!(unattended("opencode"), [] as [&str; 0]);
+}

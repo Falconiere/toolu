@@ -64,7 +64,7 @@ fn prepare_stage(
   Ok(stage)
 }
 
-fn exists(transfer: &Transfer<'_>, dir: &str, name: &str) -> Result<bool, String> {
+pub(super) fn exists(transfer: &Transfer<'_>, dir: &str, name: &str) -> Result<bool, String> {
   let listing = transfer
     .exec(&["ls", "-A", dir], &[])
     .map_err(|e| error(&e))?;

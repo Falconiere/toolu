@@ -1,6 +1,6 @@
 //! Real HC and Git checks for worker preparation and recovery.
 
-use super::{build_prerequisites, checkout, recipes, reported, result};
+use super::{build_prerequisites, checkout, recipes};
 use crate::hc::remote::{Target, Transfer};
 use crate::relay::config::{Config, Machine};
 use crate::relay::store::{Store, Submission, Task};
@@ -9,16 +9,16 @@ use std::time::Duration;
 use toolu_runtime::env::Env;
 use toolu_runtime::process::{Spec, run};
 
-struct Fixture {
+pub(super) struct Fixture {
   dir: tempfile::TempDir,
-  env: Env,
-  repo: String,
-  tree: String,
-  worker: Machine,
-  task: Task,
+  pub(super) env: Env,
+  pub(super) repo: String,
+  pub(super) tree: String,
+  pub(super) worker: Machine,
+  pub(super) task: Task,
 }
 
-fn command(env: &Env, args: &[&str]) -> Result<String, String> {
+pub(super) fn command(env: &Env, args: &[&str]) -> Result<String, String> {
   let mut spec = Spec::new(args.iter().copied());
   spec.env = Some(env.clone());
   spec.timeout = Duration::from_secs(30);
@@ -80,7 +80,7 @@ fn repository(env: &Env, base: &str) -> Result<(String, String), String> {
 }
 
 impl Fixture {
-  fn new() -> Result<Self, String> {
+  pub(super) fn new() -> Result<Self, String> {
     let dir = tempfile::Builder::new()
       .prefix("worker-hc-")
       .tempdir_in("/tmp")
@@ -139,7 +139,7 @@ impl Fixture {
     }
   }
 
-  fn setup(&self) -> Result<(), String> {
+  pub(super) fn setup(&self) -> Result<(), String> {
     checkout(&self.transfer(&self.repo), &self.task, &self.tree)
   }
 }
@@ -254,53 +254,4 @@ fn rust_checkout_checks_the_real_toolchain_before_recipes() {
   fixture.setup().unwrap();
   std::fs::write(Path::new(&fixture.tree).join("Cargo.toml"), "[workspace]\n").unwrap();
   build_prerequisites(&fixture.transfer(&fixture.tree)).unwrap();
-}
-
-#[test]
-fn committed_result_and_report_are_bound_to_the_attempt_and_base() {
-  let fixture = Fixture::new().unwrap();
-  fixture.setup().unwrap();
-  std::fs::write(Path::new(&fixture.tree).join("result"), "fixed\n").unwrap();
-  assert!(result(&fixture.env, &fixture.task, &fixture.worker, &fixture.tree).is_err());
-  command(&fixture.env, &["git", "-C", &fixture.tree, "add", "result"]).unwrap();
-  command(
-    &fixture.env,
-    &[
-      "git",
-      "-C",
-      &fixture.tree,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.invalid",
-      "commit",
-      "-qm",
-      "result",
-    ],
-  )
-  .unwrap();
-  let (commit, bundle) =
-    result(&fixture.env, &fixture.task, &fixture.worker, &fixture.tree).unwrap();
-  assert_ne!(bundle, [] as [u8; 0]);
-  let attempt = fixture.task.attempt.as_deref().unwrap();
-  let path = Path::new(&fixture.worker.root)
-    .join("tasks")
-    .join(format!("{attempt}-report.json"));
-  std::fs::write(
-    &path,
-    serde_json::json!({"attempt":"wrong", "base":fixture.task.request.base, "commit":commit})
-      .to_string(),
-  )
-  .unwrap();
-  assert!(reported(&fixture.env, &fixture.task, &fixture.worker, &fixture.tree).is_none());
-  std::fs::write(
-    &path,
-    serde_json::json!({"attempt":attempt, "base":fixture.task.request.base, "commit":commit})
-      .to_string(),
-  )
-  .unwrap();
-  assert_eq!(
-    reported(&fixture.env, &fixture.task, &fixture.worker, &fixture.tree).unwrap()["commit"],
-    commit
-  );
 }

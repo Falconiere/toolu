@@ -62,6 +62,7 @@ fn launch_settings_default_off_follow_start_and_turn_on_when_damaged() {
     safe,
     no_jev,
     no_babysit: false,
+    workers: crate::epics::Workers::Local,
   };
   assert_eq!(launch_settings(tmp.path()), on(false, false));
   write_launch_settings(tmp.path(), on(true, false)).expect("safe");
@@ -88,4 +89,14 @@ fn launch_settings_default_off_follow_start_and_turn_on_when_damaged() {
   };
   write_launch_settings(tmp.path(), local).expect("no babysit");
   assert_eq!(launch_settings(tmp.path()), local);
+  let relay = LaunchSettings {
+    workers: crate::epics::Workers::Relay,
+    ..LaunchSettings::default()
+  };
+  write_launch_settings(tmp.path(), relay).expect("relay");
+  assert_eq!(launch_settings(tmp.path()), relay);
+  for text in ["{", "", r#"{"relay":"true"}"#, r#"{"relay":1}"#] {
+    std::fs::write(tmp.path().join("launch.json"), text).expect("settings");
+    assert!(!launch_settings(tmp.path()).relay(), "{text}");
+  }
 }

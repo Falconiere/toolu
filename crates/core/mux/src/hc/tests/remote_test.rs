@@ -75,3 +75,20 @@ fn real_git_bundle_round_trip_keeps_worktree_and_rejects_wrong_identity() {
   assert_eq!(output.stdout_bytes, b"committed\0bytes");
   assert!(export(&Env::process(), src, "run1", &sha).is_err());
 }
+
+#[test]
+fn failed_commands_carry_the_tail_of_their_stderr() {
+  let failed = super::command(
+    &Env::process(),
+    &["sh", "-c", "echo 'fatal: could not read' >&2; exit 128"],
+    &[],
+  )
+  .unwrap_err();
+  assert_eq!(failed.code, "command_failed");
+  assert_eq!(failed.message, "command exited 128: fatal: could not read");
+  assert_eq!(super::failure_message(3, ""), "command exited 3");
+  let long = "é".repeat(500);
+  let message = super::failure_message(1, &long);
+  assert!(message.starts_with("command exited 1: é"));
+  assert!(message.len() <= "command exited 1: ".len() + super::STDERR_TAIL);
+}

@@ -267,13 +267,32 @@ fn command(env: &Env, args: &[&str], input: &[u8]) -> Result<Vec<u8>, Error> {
   if out.exit_code != 0 {
     return Err(uncertain(Error::new(
       "command_failed",
-      format!("command exited {}", out.exit_code),
+      failure_message(out.exit_code, &out.stderr),
     )));
   }
   if out.stdout_bytes.len() > LIMIT {
     return Err(Error::new("too_large", "transfer exceeds 8 MiB"));
   }
   Ok(out.stdout_bytes)
+}
+
+/// The bytes of a command's stderr kept in its failure message.
+const STDERR_TAIL: usize = 400;
+
+/// `command exited N` with the end of its stderr, flattened to one line.
+fn failure_message(exit_code: i32, stderr: &str) -> String {
+  let flat = stderr.split_whitespace().collect::<Vec<_>>().join(" ");
+  if flat.is_empty() {
+    return format!("command exited {exit_code}");
+  }
+  let start = flat.len().saturating_sub(STDERR_TAIL);
+  let start = (start..flat.len())
+    .find(|at| flat.is_char_boundary(*at))
+    .unwrap_or(flat.len());
+  format!(
+    "command exited {exit_code}: {}",
+    flat.get(start..).unwrap_or_default()
+  )
 }
 
 fn text(bytes: Vec<u8>) -> Result<String, Error> {

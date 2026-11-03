@@ -152,6 +152,7 @@ fn start_leaves_a_live_engine_in_place() {
     safe,
     no_jev,
     no_babysit: false,
+    workers: crate::epics::Workers::Local,
   };
   assert_eq!(crate::epics::launch_settings(&epic), settings(false, false));
   let dir = epic.display().to_string();
@@ -161,6 +162,9 @@ fn start_leaves_a_live_engine_in_place() {
   let local = start(&verb(&["epic", "start", &dir, "--no-babysit"]), &env);
   assert_eq!(local.exit, Exit::Success, "{local:?}");
   assert!(crate::epics::launch_settings(&epic).no_babysit);
+  let outcome = start(&verb(&["epic", "start", &dir, "--relay"]), &env);
+  assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
+  assert!(crate::epics::launch_settings(&epic).relay());
   let again = start(&verb(&["epic", "start", &dir]), &env);
   assert_eq!(again.exit, Exit::Success, "{again:?}");
   assert_eq!(crate::epics::launch_settings(&epic), settings(false, false));

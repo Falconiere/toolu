@@ -38,7 +38,10 @@ To show a worker explicitly in an already running app:
 toolu herdr-app show <terminal-address>
 ```
 
-Remote dispatch requires an existing configured Herdr machine and checkout:
+With a [delegation relay](../delegation.md) configured, `toolu epic start
+<state_dir> --relay` sends implementation work to registered workers and keeps
+review and delivery local; without `--relay` every worker runs here. Direct
+remote dispatch requires an existing configured Herdr machine and checkout:
 
 ```bash
 toolu epic graph <epic-ref> --save --machine <name> --remote-repo <absolute-path>

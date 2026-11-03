@@ -110,6 +110,7 @@ Options:
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
       --no-jev              Route and check coupling by heuristics only, until a start without it
       --no-babysit          No CI: never run pr-babysit and merge on the worker's green local gate, until a start without it
+      --relay               Dispatch workers through the configured delegation relay, until a start without it
   -h, --help                Print help
 ```
 
