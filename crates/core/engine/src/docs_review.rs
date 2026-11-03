@@ -1,5 +1,6 @@
 //! Committed documentation review identity, validation, and registry rule.
 
+mod inventory;
 mod push;
 mod report;
 mod rule;
@@ -7,6 +8,7 @@ mod rule;
 use crate::gates::docs_sync::docs_base;
 use crate::gates::push_target::git_at;
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use toolu_protocol::host::Host;
 use toolu_runtime::host::roots::Roots;
@@ -75,6 +77,7 @@ pub(crate) struct Identity {
   base_branch: String,
   diff_sha: String,
   reviewed_files: Vec<String>,
+  documentation_files: BTreeMap<String, String>,
 }
 
 impl Identity {
@@ -87,6 +90,7 @@ impl Identity {
       "base_branch": self.base_branch,
       "diff_sha": self.diff_sha,
       "reviewed_files": self.reviewed_files,
+      "documentation_files": self.documentation_files,
     })
   }
 
@@ -135,6 +139,7 @@ fn identify(roots: &Roots, repo: &Path, branch: Option<&str>) -> Result<Identity
     base_branch: base,
     diff_sha,
     reviewed_files,
+    documentation_files: inventory::collect(roots, root)?,
   })
 }
 

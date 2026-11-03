@@ -1,5 +1,5 @@
 //! Validation of review evidence against committed Git content.
-use super::{Identity, git, worker_host};
+use super::{Identity, git, inventory, worker_host};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::path::{Component, Path};
@@ -37,10 +37,7 @@ fn doc(path: &str) -> Result<(), String> {
     return Err(format!("invalid documentation path {path}"));
   }
   let lower = path.to_ascii_lowercase();
-  if ![".md", ".mdx", ".rst", ".adoc", ".txt"]
-    .iter()
-    .any(|ext| lower.ends_with(ext))
-  {
+  if !inventory::is_document(&lower) {
     return Err(format!("not a documentation file: {path}"));
   }
   Ok(())
@@ -124,6 +121,7 @@ pub(super) fn validate(roots: &Roots, identity: &Identity, report: &Value) -> Re
     "base_branch",
     "diff_sha",
     "reviewed_files",
+    "documentation_files",
   ] {
     if report.get(key) != expected.get(key) {
       return Err(format!("review {key} is stale or missing"));
@@ -148,7 +146,8 @@ pub(super) fn validate(roots: &Roots, identity: &Identity, report: &Value) -> Re
   {
     return Err("findings must be empty".into());
   }
-  coverage(roots, identity, report)
+  coverage(roots, identity, report)?;
+  inventory::validate(identity, report)
 }
 
 #[cfg(test)]

@@ -53,7 +53,7 @@ The built-ins run first, in table order, and each is folded as it decides. The p
 
 | Situation | Outcome |
 |---|---|
-| Plugin definitively not installed (Claude `installed_plugins.json`, Codex snapshot) | skipped, inactive. An unreadable record fails open, and Cursor, Hermes and Muse count as installed |
+| Plugin definitively not installed (Claude `installed_plugins.json`, Codex snapshot) | skipped, inactive. An unreadable record fails open; Cursor, Hermes, Muse and OpenCode have unknown presence and are not skipped by this check |
 | Manifest whose matcher or `applies` does not fit | skipped, not matching |
 | `.js` module | skipped, unsupported |
 | `deny` before a tool, `{"decision":"block"}` after it | recorded, then the walk stops |

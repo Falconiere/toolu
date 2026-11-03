@@ -1,6 +1,5 @@
 //! One review call on a host CLI: spawn it, or answer from replay. A deadline
-//! returns `Timeout` without fallback; any other failure returns an error the
-//! caller falls through to `OpenRouter` with.
+//! returns `Timeout`; any other failure returns an error.
 
 use std::time::{Duration, Instant};
 
@@ -11,16 +10,37 @@ mod tests;
 use super::extract::{Extracted, extract};
 use super::{Argv, Delivery, HostPlan, argv, delivery, prompt_text};
 use crate::review::calls::{Call, Ledger, Stage, call};
-use crate::review::replayed::{REPLAY_MISS, REPLAYED};
+use crate::review::{Input, Options, RunError};
+use toolu_runtime::env::Env;
+
+/// A live empty review still requires an available host.
+pub(crate) fn ensure_host(
+  env: &Env,
+  input: &Input<'_>,
+  options: &Options<'_>,
+  ledger: &Ledger<'_>,
+) -> Result<(), RunError> {
+  if super::available(env.get("PATH")).is_empty()
+    && input.shaped.chunks.is_empty()
+    && (options.replay.is_none() || options.live_on_miss)
+  {
+    Err(RunError::Outage {
+      message: "no host CLI available".to_owned(),
+      usage: ledger.usage(None),
+    })
+  } else {
+    Ok(())
+  }
+}
 
 /// Why a host review call did not produce findings.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum HostError {
-  /// The wall deadline elapsed; never falls back, like the `OpenRouter` path.
+  /// The wall deadline elapsed.
   Timeout,
   /// The call was refused before any spawn (no CLI, oversized prompt).
   Refused(String),
-  /// The spawn or the output parsing failed; the caller falls back.
+  /// The spawn or the output parsing failed.
   Failed(String),
 }
 
@@ -33,12 +53,6 @@ pub(crate) fn complete_via_host(
   deadline: Instant,
 ) -> Result<toolu_openrouter::Completion, toolu_openrouter::Error> {
   let prompt = prompt_text(request.messages);
-  if let Some(replay) = ledger.replay {
-    let body = replay(stage, &prompt);
-    if body.is_some() || !ledger.live_on_miss {
-      return replayed_host(ledger, body, stage, plan, &prompt);
-    }
-  }
   let started = Instant::now();
   let remaining = deadline.saturating_duration_since(Instant::now());
   let schema = request.schema.to_string();
@@ -55,8 +69,8 @@ pub(crate) fn complete_via_host(
     ledger,
     call,
     started,
-    &prompt,
-    result.as_ref().ok().map(|(_, stdout)| stdout.as_str()),
+    request,
+    result.as_ref().ok().map(|(done, _)| done),
   );
   match result {
     Ok((done, _)) => Ok(done),
@@ -65,35 +79,6 @@ pub(crate) fn complete_via_host(
       Err(toolu_openrouter::Error::InvalidResponse)
     }
   }
-}
-
-/// Answer a host review call from `replay`: no CLI is spawned.
-fn replayed_host(
-  ledger: &mut Ledger<'_>,
-  body: Option<String>,
-  stage: Stage,
-  plan: &HostPlan,
-  prompt: &str,
-) -> Result<toolu_openrouter::Completion, toolu_openrouter::Error> {
-  let started = Instant::now();
-  let result: Result<(toolu_openrouter::Completion, String), toolu_openrouter::Error> = match body {
-    Some(body) => extract(plan.host, &body)
-      .map(|found| completion(plan, found, body))
-      .map_err(|_err| toolu_openrouter::Error::InvalidResponse),
-    None => Err(toolu_openrouter::Error::InvalidConfig),
-  };
-  let call = match &result {
-    Ok((done, _)) => served(stage, done, REPLAYED),
-    Err(_) => call(stage, &plan.model, REPLAY_MISS),
-  };
-  push(
-    ledger,
-    call,
-    started,
-    prompt,
-    result.as_ref().ok().map(|(_, stdout)| stdout.as_str()),
-  );
-  result.map(|(done, _)| done)
 }
 
 /// The usage-log call for a served host completion.
@@ -108,10 +93,20 @@ fn served(stage: Stage, done: &toolu_openrouter::Completion, outcome: &str) -> C
   }
 }
 
-/// Log `call` with the prompt and the CLI's stdout as the recorded exchange.
-fn push(ledger: &mut Ledger<'_>, call: Call, started: Instant, prompt: &str, stdout: Option<&str>) {
-  let response = stdout.unwrap_or_default().to_owned();
-  ledger.push(call, started, || (prompt.to_owned(), response));
+/// Record a host result in the shared replay format.
+fn push(
+  ledger: &mut Ledger<'_>,
+  call: Call,
+  started: Instant,
+  request: &toolu_openrouter::StructuredRequest<'_>,
+  completion: Option<&toolu_openrouter::Completion>,
+) {
+  ledger.push(call, started, || {
+    (
+      crate::review::calls::sent(request, "host"),
+      completion.map_or_else(String::new, crate::review::calls::received),
+    )
+  });
 }
 
 /// Run one review call on `plan` and parse its findings JSON. The CLI runs
@@ -131,6 +126,11 @@ pub(crate) fn run_review(
   match toolu_runtime::process::run(&spec) {
     Err(err) => Err(HostError::Failed(format!("spawn: {err:?}"))),
     Ok(output) if output.timed_out => Err(HostError::Timeout),
+    Ok(output) if output.exit_code != 0 || output.truncated => Err(HostError::Failed(format!(
+      "{} exited {} or output was truncated",
+      plan.host.name(),
+      output.exit_code
+    ))),
     Ok(output) => completed(plan, output.stdout),
   }
 }
@@ -169,6 +169,7 @@ fn staged(
     host: plan.host,
     model: &plan.model,
     schema_file: &schema,
+    schema_json,
     prompt,
     prompt_file: prompt_file.as_deref(),
   })
@@ -208,7 +209,7 @@ fn completion(
   (
     toolu_openrouter::Completion {
       content: found.text,
-      finish_reason: None,
+      finish_reason: Some("stop".to_owned()),
       model: plan.model.clone(),
       provider: Some(plan.host.name().to_owned()),
       quantization: None,

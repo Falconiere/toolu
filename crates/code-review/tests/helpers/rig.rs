@@ -3,6 +3,7 @@
 //! for openrouter.ai: `/api/v1/chat/completions` for the review model and
 //! `/api/v1/systemone` for Jev.
 
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
@@ -26,6 +27,7 @@ pub(crate) const KEY: &str = "private-sentinel-666";
 /// One fixture repository, its pipeline inputs and the loopback origin.
 pub(crate) struct Rig {
   pub(crate) fixture: Fixture,
+  pub(crate) bin: TempDir,
   pub(crate) repo: TempDir,
   /// Holds the linked tools `env` points at for the rig's lifetime.
   _tools: TempDir,
@@ -78,12 +80,29 @@ impl Rig {
     let fixture = Fixture::start().map_err(|err| err.to_string())?;
     let tools = tempfile::tempdir().map_err(|err| err.to_string())?;
     let env = super::tools::tools_env(tools.path())?;
+    let bin = tempfile::tempdir().map_err(|err| err.to_string())?;
+    let codex = bin.path().join("codex");
+    let output = bin.path().join("response.json");
+    std::fs::write(&output, "{\"findings\":[]}").map_err(|err| err.to_string())?;
+    let quote = |path: &Path| format!("'{}'", path.to_string_lossy().replace('\'', "'\\''"));
+    std::fs::write(
+      &codex,
+      format!(
+        "#!/bin/sh\n/bin/cat > {}\n/bin/cat {}\n",
+        quote(&bin.path().join("prompt.txt")),
+        quote(&output)
+      ),
+    )
+    .map_err(|err| err.to_string())?;
+    std::fs::set_permissions(codex, std::fs::Permissions::from_mode(0o755))
+      .map_err(|err| err.to_string())?;
     let shaped = shape(&env, root, Some("main")).map_err(|err| format!("{err:?}"))?;
     let rules = rules::gather(&env, root, &shaped.merge_base, &shaped.gate_files)
       .map_err(|err| format!("{err:?}"))?;
     let prepass = prepass::run(&env, root, &shaped);
     Ok(Rig {
       fixture,
+      bin,
       repo,
       _tools: tools,
       env,
@@ -98,6 +117,14 @@ impl Rig {
     self
       .env
       .clone()
+      .with(
+        "PATH",
+        &format!(
+          "{}:{}",
+          self.bin.path().display(),
+          self.env.get("PATH").unwrap_or("/usr/bin:/bin")
+        ),
+      )
       .with("OPENROUTER_API_KEY", KEY)
       .with("OPENROUTER_MODEL", "")
       .with("JEV_TIMEOUT", "5")
@@ -154,7 +181,7 @@ impl Rig {
       settings,
       flag,
     };
-    review::run(&self.env(), &input, options)
+    review::run(&self.env().with("TYPESAFE_API_KEY", KEY), &input, options)
   }
 
   /// The bodies `path` received, in order.

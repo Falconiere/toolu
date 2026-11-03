@@ -18,7 +18,7 @@ real findings, and commit. Do not merge or push.
 ## 2. Review the diff
 
 Use the host mapping in `workflows/host-mapping.md`. Run one correctness review
-over the requested committed scope; passes are sequential so every reviewer
+over the requested scope; passes are sequential so every reviewer
 sees the latest diff and writes state for that scope.
 
 Discover `ponytail-review` in the host skill catalog. If installed and Ponytail
@@ -27,12 +27,11 @@ uncommitted changes. It is a full read-only quality review; verify its findings.
 Skip a repeat only when it already reviewed the same unchanged scope. If absent
 or disabled, continue without installing it.
 
-Prefer `code-review:review` for the committed diff. Follow its automatic
+Prefer `code-review:review` for the committed and uncommitted changes. Follow its automatic
 `toolu-review:review` fallback when native review cannot complete, preserving
 scope and real findings. If the native skill is unavailable, invoke the fallback
 directly. Failed or unavailable fallback blocks completion without approval.
-Review uncommitted changes directly against the checklist below; native review
-covers committed changes only. Optional clarity/simplification passes run before
+Review all changes against the checklist below. Optional clarity/simplification passes run before
 correctness review, never concurrently with it.
 
 Review correctness, security, boundary error handling, regressions, missing

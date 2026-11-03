@@ -41,8 +41,8 @@ pub(crate) fn run(
     report.notes.clone_from(&settings.notes);
     return Ok(report);
   }
-  if env.get("OPENROUTER_API_KEY").is_none() {
-    return Ok(RunError::Unconfigured("OPENROUTER_API_KEY is missing".to_owned()).report(effort));
+  if env.get("TYPESAFE_API_KEY").is_none() {
+    return Ok(RunError::Unconfigured("TYPESAFE_API_KEY is missing".to_owned()).report(effort));
   }
   let root = root?;
   let (shaped, scoped) = shaped(env, &roots, &root, verb)?;

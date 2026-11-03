@@ -16,8 +16,21 @@ Keep documentation in sync with changed behavior through a Jev-routed editing wo
 
 ## What it provides
 
-- **`documentation-gate:sync`** audits changed behavior, updates or adds documentation with a separate routed worker, and records a committed review.
+- **`documentation-gate:sync`** reads git-better's branch commit summaries and `Intent:` trailers, verifies the task against the diff, updates or adds documentation with a separate routed worker, and records a committed review.
 - **SessionStart hook** registers a native pre-push rule in the toolu dispatcher. The rule and ledger use the same review assessment and configured `docsSync` mode; no model is called by the hook.
+
+Inspection also inventories committed regular `.md`, `.mdx`, `.rst`, `.adoc` and
+`.txt` documentation, including unchanged guides, as `documentation_files`
+(path → Git blob ID). It excludes `docs/toolu/{plans,brainstorms,specs,decisions}/`
+and the target repository's `docsSync.surfaceExcludes` globs. A report must repeat
+that inventory and supply `documentation_coverage` for every document, explaining
+its relevance to changed behavior. A cited inventoried guide cannot also be marked
+unrelated. Excluded committed documents may supplement a citation, but cannot
+replace maintained documentation evidence for affected source files.
+Missing coverage or changed document content invalidates a receipt;
+older receipts without this evidence require a new review. See the
+[worker report contract](skills/sync/references/worker.md). These checks establish
+coverage and freshness; the worker still verifies prose against implementation.
 
 `inspect` reports the committed branch diff of the current directory's repository (or `--repo`), not uncommitted edits. The base is `DOCS_SYNC_BASE`, else the branch `origin/HEAD` names (`main` when unset), then `master` and `main`, each locally or on `origin`. If none exists, run `git remote set-head origin <default-branch>`, or export `DOCS_SYNC_BASE` before starting the host. A lone plain push whose commits are all already in the base passes in any form. Otherwise the gate supports one static, plain `git push` with an explicit remote and one source resolving to `HEAD`: a local branch resolving to `HEAD` or `HEAD:<branch>`, with ordinary no-value flags. For example, use `git push <remote> HEAD:<branch>`. Implicit pushes, multiple refs or commands, `--all`, `--mirror`, `--tags`, dynamic `-C`, and `--git-dir`, `--work-tree`, or `-c` overrides are rejected under the effective gate mode. So are dynamic git subcommands, `send-pack`, `http-push`, `subtree push`, Git aliases set in the line or configured to push, and dynamic commands, `sh -c`/`eval` scripts or unparseable lines that mention `push`. Static `git -C PATH` is supported. When `push.followTags=true`, add `--no-follow-tags`. `toolu docs write-state` records the review for the detected host (or `--host`); every host's gate and the ledger read it. A missing Jev credential or suitable ready route is an error and starts no worker. See [sync](skills/sync/SKILL.md).
 

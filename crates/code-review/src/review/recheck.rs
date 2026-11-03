@@ -90,10 +90,9 @@ fn file(
     reasoning_effort: ctx.budget.reasoning,
     max_tokens: ctx.budget.max_tokens,
   };
-  let (client, deadline) = (ctx.client, ctx.deadline);
+  let deadline = ctx.deadline;
   let send = super::calls::Outbound {
     stage: Stage::Recheck,
-    client,
     request: &request,
     deadline,
     host: ctx.host.as_ref(),
@@ -101,8 +100,14 @@ fn file(
   let completion = match ctx.ledger.complete(&send) {
     Ok(completion) => completion,
     Err(err) => {
+      let reason = ctx
+        .ledger
+        .calls
+        .last()
+        .filter(|call| call.stage == Stage::Recheck)
+        .map_or_else(|| err.to_string(), |call| call.outcome.clone());
       ctx.notes.push(format!(
-        "recheck of {} failed ({err}); findings kept",
+        "recheck of {} failed ({reason}); findings kept",
         package.path
       ));
       return Vec::new();

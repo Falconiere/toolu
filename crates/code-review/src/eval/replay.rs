@@ -63,6 +63,26 @@ impl Store {
     }
   }
 
+  /// Look up old provider-keyed or host-prompt-keyed recordings during replay.
+  pub(super) fn read_legacy(
+    &self,
+    stage: Stage,
+    request: &str,
+    legacy: &str,
+  ) -> Result<Option<String>, String> {
+    if let Some(body) = self.read(stage, legacy)? {
+      return Ok(Some(body));
+    }
+    let Some(prompt) = crate::review::legacy_prompt(stage, request) else {
+      return Ok(None);
+    };
+    Ok(
+      self
+        .read(stage, &prompt)?
+        .map(|body| crate::review::legacy_completion(stage, &body).unwrap_or_default()),
+    )
+  }
+
   /// Record `response` as the answer to `request`, replacing an earlier one,
   /// without the provider's top-level `id`.
   ///

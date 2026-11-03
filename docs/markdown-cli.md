@@ -5,7 +5,7 @@ Skills, commands and agents tell the agent which command to run, so they are the
 ## What is scanned
 
 - `plugins/*/skills/**/*.md`, `plugins/*/commands/*.md`, `plugins/*/agents/*.md`, `AGENTS.md` and `docs/**/*.md`.
-- Not `docs/toolu/**` (dated brainstorms, specs and plans) or `docs/releases/**`: they are records, and they quote future verbs and typos on purpose.
+- Not `docs/toolu/**` or `docs/releases/**`: those trees primarily hold dated records that quote future verbs and typos on purpose. The exclusion also covers the maintained `docs/toolu/README.md`; the root README and plugin READMEs are outside the scan too, so their examples need separate review.
 - Fenced blocks tagged `bash`, `sh`, `shell`, `zsh`, `fish` or `console` (only its `$ ` lines). Untagged and `text` fences hold output and trees, so they are skipped; write an example of wrong usage there.
 - Inline code spans that start with `toolu` and a lowercase word, a flag or a placeholder. `toolu PostToolUse dispatcher failed` is a message, not a command.
 

@@ -27,7 +27,7 @@ environment executing Jev. Hooks can receive a different environment from agent
 commands.
 
 - The command is `toolu jev`. No wrapper script is published; SessionStart removes the `<config-dir>/jev/jev.sh` link an older version left and keeps a file of your own.
-- The skill is `jev-jev`.
+- Invoke the skill as `/jev:jev` on Claude Code or `$jev:jev` on Codex.
 - `toolu jev` never loads a project `.env`, so a `.env` never supplies or reveals the key.
 
 Set `TYPESAFE_API_KEY` in the environment for `toolu jev` to authenticate

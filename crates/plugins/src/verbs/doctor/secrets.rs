@@ -21,9 +21,15 @@ struct Need {
 const NEEDS: &[Need] = &[
   Need {
     plugin: "code-review",
-    variable: "OPENROUTER_API_KEY",
-    summary: "unset; code-review needs it for native review",
-    fix: "export OPENROUTER_API_KEY=… (https://openrouter.ai/keys)",
+    variable: "TYPESAFE_API_KEY",
+    summary: "unset; code-review needs it for Jev judgments",
+    fix: "export TYPESAFE_API_KEY=… (https://console.typesafe.ai/settings/keys)",
+  },
+  Need {
+    plugin: "documentation-gate",
+    variable: "TYPESAFE_API_KEY",
+    summary: "unset; documentation-gate needs it for worker routing",
+    fix: "export TYPESAFE_API_KEY=… (https://console.typesafe.ai/settings/keys)",
   },
   Need {
     plugin: "jev",

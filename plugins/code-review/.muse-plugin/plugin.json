@@ -3,7 +3,7 @@
   "name": "code-review",
   "displayName": "code-review",
   "version": "8.11.0",
-  "description": "Native code review of branch and uncommitted changes with OpenRouter and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
+  "description": "Native code review of branch and uncommitted changes with host CLIs and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
   "compat": {
     "source": "native",
     "manifestDir": ".muse-plugin"

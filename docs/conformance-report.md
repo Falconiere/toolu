@@ -1,13 +1,13 @@
 # Cross-host conformance report
 
 **Issue:** [#212](https://github.com/Falconiere/toolu/issues/212)  
-**Status:** historical for the TypeScript harness. The Bun conformance runner (`bun run test:conformance`, `tools/toolu-conformance`) was removed in #440. Every test is a Rust test now: see [testing.md](testing.md). The live check of both hosts is `cargo xtask host-smoke --host claude|codex|both`.
+**Status:** historical for the TypeScript harness. The Bun conformance runner (`bun run test:conformance`, `tools/toolu-conformance`) was removed in #440. Native conformance tests now run in Rust: see [testing.md](testing.md). The live host check is `cargo xtask host-smoke --host claude|codex|muse|cursor|opencode|both`; `both` runs Claude Code, Codex and Muse.
 
 ## Platforms
 
 | OS | Status |
 |----|--------|
-| macOS | The plugin runs in CI on `macos-14` (`rust-macos`) and `macos-latest` (`hook-bench`). |
+| macOS | The plugin runs in CI on `macos-14` (the `rust` matrix job) and `macos-latest` (`hook-bench`). |
 | Linux | The plugin runs in CI on `ubuntu-24.04`. |
 | Windows | **N/A**: not probed for this port |
 

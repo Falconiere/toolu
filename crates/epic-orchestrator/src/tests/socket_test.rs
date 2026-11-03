@@ -47,6 +47,14 @@ fn serve_until_stopped(paths: Paths, protocol: u64) {
   handle.join().expect("serve thread").expect("serve");
 }
 
+fn start(paths: &Paths, protocol: u64) -> thread::JoinHandle<()> {
+  let background = paths.clone();
+  let handle = thread::spawn(move || serve_until_stopped(background, protocol));
+  let mut peer = wait_socket(paths, &paths.root.join("unused"));
+  assert_eq!(read_json(&mut peer).expect("hello")["protocol"], protocol);
+  handle
+}
+
 fn stop(paths: &Paths, protocol: u64) {
   let stopped = exchange_retry(paths, protocol, &json!({"op": "stop"})).expect("stop");
   assert_eq!(stopped["ok"], true);
@@ -73,8 +81,7 @@ fn phase_count(paths: &Paths) -> usize {
 fn wait_limit() {
   let tmp = tempfile::tempdir().expect("temp");
   let paths = Paths::at(tmp.path());
-  let background = paths.clone();
-  let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
+  let handle = start(&paths, PROTOCOL);
   let body =
     exchange_retry(&paths, PROTOCOL, &json!({"op": "wait", "max_seconds": 0})).expect("wait");
   assert_eq!(body, json!({"state": "waiting"}));
@@ -86,8 +93,7 @@ fn wait_limit() {
 fn a_wait_reply_can_arrive_after_the_request_deadline() {
   let tmp = tempfile::tempdir().expect("temp");
   let paths = Paths::at(tmp.path());
-  let background = paths.clone();
-  let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
+  let handle = start(&paths, PROTOCOL);
   let started = std::time::Instant::now();
   let reply =
     exchange_retry(&paths, PROTOCOL, &json!({"op": "wait", "max_seconds": 6})).expect("wait");
@@ -157,8 +163,7 @@ fn a_wrong_protocol_request_is_rejected_without_stopping_the_engine() {
 fn a_served_engine_journals_its_usage_and_a_timed_out_wait() {
   let tmp = tempfile::tempdir().expect("temp");
   let paths = Paths::at(tmp.path());
-  let background = paths.clone();
-  let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
+  let handle = start(&paths, PROTOCOL);
   let body =
     exchange_retry(&paths, PROTOCOL, &json!({"op": "wait", "max_seconds": 1})).expect("wait");
   assert_eq!(body, json!({"state": "waiting"}));
@@ -188,8 +193,7 @@ fn protocol_replace() {
   let tmp = tempfile::tempdir().expect("temp");
   let epic = epic_dir(tmp.path());
   let paths = Paths::at(tmp.path());
-  let first = paths.clone();
-  let old = thread::spawn(move || serve_until_stopped(first, PROTOCOL - 1));
+  let old = start(&paths, PROTOCOL - 1);
   let reply = exchange_retry(&paths, PROTOCOL, &report(&epic, "t9", "running")).expect("replace");
   assert_eq!(reply["ok"], true);
   old.join().expect("old engine");

@@ -25,6 +25,7 @@ impl Fixture {
     fixture.git(&["config", "user.name", "Test"])?;
     fixture.git(&["config", "user.email", "test@example.com"])?;
     fs::write(fixture.repo.join("README.md"), "Initial guide\n")?;
+    fs::write(fixture.repo.join("GUIDE.md"), "Unchanged guide\n")?;
     fixture.commit("base")?;
     fixture.git(&["checkout", "-q", "-b", "feature"])?;
     fs::write(fixture.repo.join("code.rs"), "new behavior\n")?;
@@ -95,6 +96,13 @@ impl Fixture {
       {"path":"README.md","disposition":"not-needed","note":"Unrelated edit reviewed","docs":[]},
       {"path":"code.rs","disposition":"accurate","note":"Guide describes the behavior","docs":["README.md"]}
     ]));
+    fields.insert(
+      "documentation_coverage".into(),
+      json!([
+        {"path":"README.md","disposition":"accurate","note":"Reviewed guide","sources":["code.rs"]},
+        {"path":"GUIDE.md","disposition":"not-needed","note":"Unrelated guide","sources":[]}
+      ]),
+    );
     fields.insert(
       "checks".into(),
       json!(["Checked guide against implementation"]),
@@ -204,6 +212,56 @@ fn native_gate_requires_current_complete_review() {
   fs::write(fixture.repo.join("code.rs"), "newer behavior\n").unwrap();
   fixture.commit("new change").unwrap();
   assert!(!fixture.write(&report).unwrap().status.success());
+  assert!(reason(&fixture.push().unwrap()).contains("documentation-gate"));
+}
+
+#[test]
+fn unchanged_documentation_requires_coverage_and_binds_receipt() {
+  let fixture = Fixture::new().unwrap();
+  assert!(fixture.register().unwrap().status.success());
+  let report = fixture.report().unwrap();
+  let inventory = report["documentation_files"]
+    .as_object()
+    .expect("documentation inventory");
+  let blob = Command::new("git")
+    .current_dir(&fixture.repo)
+    .args(["rev-parse", "HEAD:GUIDE.md"])
+    .output()
+    .unwrap();
+  assert_eq!(
+    inventory["GUIDE.md"],
+    String::from_utf8_lossy(&blob.stdout).trim()
+  );
+  assert!(inventory.contains_key("README.md"));
+  let mut incomplete = report.clone();
+  incomplete["documentation_coverage"]
+    .as_array_mut()
+    .unwrap()
+    .retain(|row| row["path"] != "GUIDE.md");
+  assert!(!fixture.write(&incomplete).unwrap().status.success());
+  let written = fixture.write(&report).unwrap();
+  assert!(
+    written.status.success(),
+    "{}",
+    String::from_utf8_lossy(&written.stderr)
+  );
+  assert!(!reason(&fixture.push().unwrap()).contains("documentation-gate"));
+  fs::write(fixture.repo.join("GUIDE.md"), "Changed guide\n").unwrap();
+  fixture.git(&["add", "GUIDE.md"]).unwrap();
+  fixture
+    .git(&["commit", "-q", "-m", "change guide"])
+    .unwrap();
+  fixture.git(&["checkout", "-q", "main"]).unwrap();
+  fs::write(fixture.repo.join("GUIDE.md"), "Changed guide\n").unwrap();
+  fixture.git(&["add", "GUIDE.md"]).unwrap();
+  fixture
+    .git(&["commit", "-q", "-m", "change base guide"])
+    .unwrap();
+  fixture.git(&["checkout", "-q", "feature"]).unwrap();
+  fixture.git(&["rebase", "-q", "main"]).unwrap();
+  let current = fixture.inspect().unwrap();
+  assert_eq!(report["diff_sha"], current["diff_sha"]);
+  assert_eq!(report["reviewed_files"], current["reviewed_files"]);
   assert!(reason(&fixture.push().unwrap()).contains("documentation-gate"));
 }
 

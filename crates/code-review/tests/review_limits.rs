@@ -2,6 +2,8 @@
 //! sent, independent questions split under the request cap, an expired deadline
 //! keeps findings, and `small` judges blocking findings only.
 
+#[path = "helpers/host.rs"]
+mod host;
 #[path = "helpers/judge.rs"]
 mod judge;
 #[path = "helpers/rig.rs"]
@@ -12,7 +14,7 @@ mod tools;
 use std::time::{Duration, Instant};
 
 use judge::{choices, rig};
-use rig::{JEV, REVIEW, Rig, finding, findings};
+use rig::{JEV, Rig, finding, findings};
 use serde_json::json;
 use toolu_code_review::budget::Effort;
 use toolu_code_review::memory::Memory;
@@ -30,16 +32,12 @@ fn oversized_evidence_is_unavailable_and_never_sent() {
     &[("src/big.rs", big)],
   )
   .unwrap();
-  rig
-    .fixture
-    .route(
-      REVIEW,
-      Reply::new(
-        200,
-        findings(&[finding("src/big.rs", "high", "claim", None)]),
-      ),
-    )
-    .unwrap();
+  host::host(
+    rig.bin.path(),
+    "codex",
+    &content(&findings(&[finding("src/big.rs", "high", "claim", None)])).unwrap(),
+  )
+  .unwrap();
   let reviewed = rig
     .run(&Memory::default(), Some(Effort::Medium), &rig.options())
     .unwrap();
@@ -74,10 +72,7 @@ fn independent_questions_over_one_request_are_split() {
       item
     })
     .collect();
-  rig
-    .fixture
-    .route(REVIEW, Reply::new(200, findings(&many)))
-    .unwrap();
+  host::host(rig.bin.path(), "codex", &content(&findings(&many)).unwrap()).unwrap();
   rig.fixture.route(JEV, Reply::new(500, "down")).unwrap();
   let options = Options {
     judge_deadline: Some(Duration::from_secs(30)),
@@ -99,16 +94,12 @@ fn independent_questions_over_one_request_are_split() {
 #[test]
 fn an_expired_judge_deadline_keeps_the_findings() {
   let rig = rig().unwrap();
-  rig
-    .fixture
-    .route(
-      REVIEW,
-      Reply::new(
-        200,
-        findings(&[finding("src/lib.rs", "high", "claim", None)]),
-      ),
-    )
-    .unwrap();
+  host::host(
+    rig.bin.path(),
+    "codex",
+    &content(&findings(&[finding("src/lib.rs", "high", "claim", None)])).unwrap(),
+  )
+  .unwrap();
   let slow = choices(&[("f0", "contradicted", 0.9)]);
   rig
     .fixture
@@ -144,10 +135,12 @@ fn small_judges_blocking_findings_only_and_never_rechecks() {
     finding("src/lib.rs", "nit", "style", None),
     finding("src/lib.rs", "high", "bug", None),
   ];
-  rig
-    .fixture
-    .route(REVIEW, Reply::new(200, findings(&model)))
-    .unwrap();
+  host::host(
+    rig.bin.path(),
+    "codex",
+    &content(&findings(&model)).unwrap(),
+  )
+  .unwrap();
   rig
     .fixture
     .route(
@@ -161,7 +154,20 @@ fn small_judges_blocking_findings_only_and_never_rechecks() {
   let jev = rig.bodies(JEV);
   assert_eq!(jev.len(), 1);
   assert!(jev[0].contains("\"f1\"") && !jev[0].contains("\"f0\""));
-  assert_eq!(rig.bodies(REVIEW).len(), 1, "no recheck at small");
+  assert_eq!(
+    reviewed
+      .calls
+      .iter()
+      .filter(|call| call.stage == toolu_code_review::review::Stage::Review)
+      .count(),
+    1
+  );
+  assert!(
+    !reviewed
+      .calls
+      .iter()
+      .any(|call| call.stage == toolu_code_review::review::Stage::Recheck)
+  );
   let kept: Vec<Assessment> = reviewed
     .findings
     .iter()
@@ -180,4 +186,17 @@ fn lines(count: usize, prefix: &str) -> String {
       + "
 "
   })
+}
+
+fn content(body: &str) -> Option<String> {
+  let doc: serde_json::Value = serde_json::from_str(body).ok()?;
+  Some(
+    doc
+      .get("choices")?
+      .get(0)?
+      .get("message")?
+      .get("content")?
+      .as_str()?
+      .to_owned(),
+  )
 }

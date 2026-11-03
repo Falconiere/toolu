@@ -101,10 +101,11 @@ it. Declining is not recorded as an answer — the gate will ask again.
 
 ## What the quality gate stops
 
-`qualityGate` in `block` mode denies `git commit` and `git push`, and nothing
-else. Reading, searching, editing, and running commands stay open while the
-gate is red: a failing gate is a reason not to ship, not a reason to be unable
-to work. `MY_CLAUDE_QUALITY=off` still disables it outright.
+`qualityGate` in `block` mode denies `git commit` and `git push` in the main
+checkout while the gate is red. It allows linked worktrees; the pre-push hook
+and CI provide separate checks. Reading, searching, editing, and running checks
+remain open.
+`MY_CLAUDE_QUALITY=off` still disables it outright.
 
 ## What turns the quality gate red or green
 

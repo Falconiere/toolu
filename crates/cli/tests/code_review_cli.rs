@@ -15,6 +15,7 @@ fn toolu(args: &[&str], project: Option<&Path>) -> std::io::Result<Output> {
       .env("TOOLU_PROJECT_DIR", project)
       .env("TOOLU_CONFIG_DIR", project)
       .env_remove("OPENROUTER_API_KEY")
+      .env_remove("TYPESAFE_API_KEY")
       .env_remove("TOOLU_USER_CONFIG_DIR");
   }
   command.args(args).output()
@@ -66,10 +67,7 @@ fn a_default_enabled_run_without_a_key_fails_closed_and_uses_the_configured_effo
   assert_eq!(doc["error"]["kind"], "unconfigured");
   assert_eq!(doc["effort"], "small");
   let message = doc["error"]["message"].as_str().unwrap();
-  assert!(
-    message.contains("OPENROUTER_API_KEY is missing"),
-    "{message}"
-  );
+  assert!(message.contains("TYPESAFE_API_KEY is missing"), "{message}");
 }
 
 #[test]
@@ -193,7 +191,7 @@ fn eval_live_without_a_key_exits_69_before_anything_is_sent_or_recorded() {
   assert_eq!(output.status.code(), Some(69), "{output:?}");
   assert!(output.stdout.is_empty(), "{:?}", output.stdout);
   let stderr = String::from_utf8(output.stderr).unwrap();
-  assert!(stderr.contains("OPENROUTER_API_KEY is missing"), "{stderr}");
+  assert!(stderr.contains("TYPESAFE_API_KEY is missing"), "{stderr}");
   assert!(stderr.contains("unverified"), "{stderr}");
   assert!(!record.exists());
 }

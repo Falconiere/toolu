@@ -84,6 +84,7 @@ fn the_binary_s_report_validates_and_exits_unavailable() {
     .env("TOOLU_CONFIG_DIR", project.path())
     .env_remove("TOOLU_USER_CONFIG_DIR")
     .env_remove("OPENROUTER_API_KEY")
+    .env_remove("TYPESAFE_API_KEY")
     .output()
     .unwrap();
   assert_eq!(output.status.code(), Some(69));

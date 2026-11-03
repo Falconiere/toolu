@@ -3,7 +3,7 @@ use std::path::Path;
 use serde_json::json;
 use toolu_engine::verdict::gates::GateContext;
 use toolu_engine::verdict::review::review_gate;
-use toolu_http_test_support::{Fixture, Reply};
+use toolu_http_test_support::Fixture;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
@@ -30,8 +30,8 @@ fn default_enabled_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usa
   let report = invoke(&env, &options(&fixture));
   assert_eq!(report.verdict(), Verdict::Approved, "{report:?}");
   let call: &Call = &report.usage.calls[0];
-  assert_eq!(call.provider.as_deref(), Some("Parasail"));
-  assert_eq!(call.quantization.as_deref(), Some("fp8"));
+  assert_eq!(call.provider.as_deref(), Some("codex"));
+  assert_eq!(call.quantization.as_deref(), None);
   let file = state.path().join("feature.json");
   let saved = std::fs::read_to_string(&file).unwrap();
   let doc: serde_json::Value = serde_json::from_str(&saved).unwrap();
@@ -60,9 +60,7 @@ fn default_enabled_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usa
   );
   let usage =
     std::fs::read_to_string(repo.path().join(".codex/tmp/code-review-usage.jsonl")).unwrap();
-  assert!(
-    usage.contains("Parasail") && usage.contains("fp8") && usage.contains(r#""outcome":"ok""#)
-  );
+  assert!(usage.contains("codex") && usage.contains(r#""outcome":"ok""#));
   assert!(!usage.contains("private-sentinel-669") && !usage.contains("pub fn value"));
   assert_eq!(
     invoke(&env, &options(&fixture)).verdict(),
@@ -75,9 +73,7 @@ fn model_outage_keeps_mechanical_checks_and_blocks_gate() {
   let repo = repo();
   let state = tempfile::tempdir().unwrap();
   let fixture = Fixture::start().unwrap();
-  fixture
-    .route("/api/v1/chat/completions", Reply::new(503, "down"))
-    .unwrap();
+  fixture_test::host(state.path(), "not-json");
   let env = env(repo.path(), state.path(), &fixture);
   let report = invoke(&env, &options(&fixture));
   assert_eq!(report.verdict(), Verdict::Error);

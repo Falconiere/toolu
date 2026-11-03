@@ -32,9 +32,9 @@ pub struct Input<'a> {
 /// How one run calls out; production uses the defaults of each client.
 #[derive(Clone, Default)]
 pub struct Options<'a> {
-  /// The review model's endpoint.
+  /// Retained for compatibility with existing callers; review uses host CLIs.
   pub openrouter: toolu_openrouter::Config,
-  /// Jev's endpoint; its default is replaced by `OpenRouter`'s System One.
+  /// Jev's endpoint; defaults to `TypeSafe`.
   pub jev: Option<toolu_jev_client::Config>,
   /// `true` skips the Jev stage: the baseline arm of #670.
   pub skip_judge: bool,

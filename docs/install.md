@@ -176,7 +176,7 @@ muse plugins inspect toolu                    # trust state: approved, not "awai
 
 - Without `--approve`, `install` and `update` end with `awaiting approval: muse plugins approve <name>`; run that command, or re-run with `--approve`. Muse asks again when a hook definition changes.
 - `toolu plugins install` shallow-clones the tag matching the binary and registers it as the Muse marketplace `toolu` ([installer guide](cli/installer.md#muse)). `get.toolu.sh` and Homebrew install only the binary and are unaffected.
-- Today only the `toolu` plugin carries a `.muse-plugin/plugin.json`, and its `hooks` list is still empty; the other plugins and the hooks follow in #547. Until then a release without a plugin's manifest gives that plugin a failed step (`not available in marketplace`).
+- Every catalog plugin carries a `.muse-plugin/plugin.json`. Hook-bearing plugins declare their hooks under `capabilities.hooks` and use generated native resolvers; the core includes session, pre-tool and post-tool hooks. Older releases without a requested plugin's Muse manifest still fail that step with `not available in marketplace`.
 
 After installing a toolu plugin, run `toolu --host muse doctor`. The doctor reads Muse's installed-plugin list and inspects each toolu plugin's runtime capabilities. An installed plugin can be active in the list while its hooks still need approval; the doctor warns and gives the corresponding `muse plugins approve` command. It also warns when a plugin is disabled and gives `muse plugins enable`, or when Muse's plugin inventory cannot be read. Run doctor again after approval to verify that the hooks are effective.
 

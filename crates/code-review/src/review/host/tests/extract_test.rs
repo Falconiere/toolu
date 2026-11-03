@@ -43,3 +43,26 @@ fn codex_and_muse_pass_raw_json_through() {
   assert!(extract(Host::Codex, "").is_err());
   assert!(extract(Host::Codex, "not json at all {{{").is_err());
 }
+
+#[test]
+fn claude_prefers_structured_output_to_result_text() {
+  let output = r#"{"type":"result","is_error":false,"result":"unstructured text","structured_output":{"findings":[]},"usage":{"input_tokens":10,"output_tokens":7},"total_cost_usd":0.5}"#;
+  let found = extract(Host::Claude, output).unwrap();
+  assert_eq!(found.text, r#"{"findings":[]}"#);
+  assert_eq!((found.tokens_in, found.tokens_out), (10, 7));
+  assert_eq!(found.cost_usd, Some(0.5));
+}
+
+#[test]
+fn claude_accepts_structured_output_without_result_text() {
+  let output = r#"{"type":"result","is_error":false,"structured_output":{"findings":[]}}"#;
+  let found = extract(Host::Claude, output).unwrap();
+  assert_eq!(found.text, r#"{"findings":[]}"#);
+}
+
+#[test]
+fn claude_input_usage_includes_cached_tokens() {
+  let body = r#"{"is_error":false,"result":"{}","usage":{"input_tokens":2,"cache_creation_input_tokens":45634,"cache_read_input_tokens":9,"output_tokens":77}}"#;
+  let found = extract(Host::Claude, body).unwrap();
+  assert_eq!((found.tokens_in, found.tokens_out), (45645, 77));
+}

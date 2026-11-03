@@ -45,6 +45,64 @@ pub(super) fn restored(body: &str) -> Result<Completion, toolu_openrouter::Error
   })
 }
 
+/// Rebuild the prompt key used by historical host recordings.
+pub(crate) fn legacy_prompt(stage: Stage, request: &str) -> Option<String> {
+  if !matches!(stage, Stage::Review | Stage::Recheck) {
+    return None;
+  }
+  let doc: Value = serde_json::from_str(request).ok()?;
+  let messages: Vec<_> = doc
+    .get("messages")?
+    .as_array()?
+    .iter()
+    .map(|item| {
+      Some(toolu_openrouter::Message {
+        role: item.get("role")?.as_str()?,
+        content: item.get("content")?.as_str()?,
+      })
+    })
+    .collect::<Option<_>>()?;
+  Some(super::host::prompt_text(&messages))
+}
+
+/// Normalize a historical host response without guessing its host or model.
+pub(crate) fn legacy_completion(stage: Stage, body: &str) -> Option<String> {
+  use toolu_protocol::host::Host;
+  let doc: Value = serde_json::from_str(body).ok()?;
+  if doc.get("is_error").and_then(Value::as_bool) == Some(true)
+    || doc.get("type").and_then(Value::as_str) == Some("error")
+    || doc.get("error").is_some_and(|error| !error.is_null())
+  {
+    return None;
+  }
+  let host = if doc
+    .get("usage")
+    .and_then(|usage| usage.get("inputTokens"))
+    .is_some()
+  {
+    Host::Cursor
+  } else if doc.get("is_error").is_some() || doc.get("structured_output").is_some() {
+    Host::Claude
+  } else if doc.get("result").is_some() {
+    Host::Opencode
+  } else {
+    Host::Codex
+  };
+  let found = super::host::extract::extract(host, body).ok()?;
+  let answer: Value = serde_json::from_str(&found.text).ok()?;
+  let field = match stage {
+    Stage::Review => "findings",
+    Stage::Recheck => "rechecks",
+    Stage::Selector | Stage::Judge => return None,
+  };
+  answer.get(field)?.as_array()?;
+  Some(
+    serde_json::json!({"content": found.text, "finish_reason": "stop", "model": "unknown",
+    "usage": {"prompt_tokens": found.tokens_in, "completion_tokens": found.tokens_out}})
+    .to_string(),
+  )
+}
+
 /// Why a replayed structured call failed, in a few words.
 pub(super) fn replay_failure(err: &toolu_openrouter::Error) -> String {
   if matches!(err, toolu_openrouter::Error::InvalidConfig) {

@@ -154,3 +154,29 @@ fn an_unreexamined_prior_in_the_diff_stays_open_and_blocks_coverage() {
   );
   assert!(!report.is_complete());
 }
+
+#[test]
+fn replay_uses_custom_legacy_model_without_changing_live_lookup() {
+  let dir = tempfile::tempdir().unwrap();
+  let store = Store::new(dir.path());
+  let request = r#"{"model":"host","messages":[]}"#;
+  let legacy = r#"{"model":"vendor/custom-model","messages":[]}"#;
+  store
+    .write(crate::review::Stage::Review, legacy, "legacy-answer")
+    .unwrap();
+  let env = Env::from_pairs([("OPENROUTER_MODEL", "vendor/custom-model")]);
+  let replay = Mode::Replay(store.clone());
+  let plan = replay_plan(&env, &replay, ArmChoice::Baseline, &[Setting::Small]);
+  let problems = std::cell::RefCell::new(Vec::new());
+  assert_eq!(
+    super::lookup(&plan, &problems)(crate::review::Stage::Review, request).as_deref(),
+    Some("legacy-answer")
+  );
+  assert_eq!(*problems.borrow(), Vec::<String>::new());
+  let live = Mode::Live(Some(store));
+  let live_plan = replay_plan(&env, &live, ArmChoice::Baseline, &[Setting::Small]);
+  assert_eq!(
+    super::lookup(&live_plan, &problems)(crate::review::Stage::Review, request),
+    None
+  );
+}

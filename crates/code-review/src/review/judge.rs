@@ -1,12 +1,12 @@
 //! Jev judges fresh model findings against their file's evidence package, over
-//! `OpenRouter`'s System One endpoint. Per file the package is the shared `state`,
+//! the `TypeSafe` endpoint. Per file the package is the shared `state`,
 //! and each finding is one `choice` question; questions are batched up to the
 //! request cap. A question whose state plus question exceeds its cap is reported
 //! unavailable and never retried with less evidence. Any failure, uncertain answer
 //! or expired deadline keeps the finding: Jev alone never removes one.
 
 use serde_json::{Map, Value, json};
-use toolu_jev_client::{Answer, OPENROUTER_MODEL, Questions, State, request_body};
+use toolu_jev_client::{Answer, DEFAULT_MODEL, Questions, State, request_body};
 
 use super::calls::{Stage, jev_failure};
 use super::source::Package;
@@ -172,7 +172,7 @@ fn single(key: &str, question: &Value) -> Map<String, Value> {
 /// The request body length for `state` and `questions`; unparsable counts as over.
 fn bytes(state: &State, questions: &Map<String, Value>) -> usize {
   Questions::parse(&Value::Object(questions.clone()).to_string()).map_or(usize::MAX, |questions| {
-    request_body(state, OPENROUTER_MODEL, &questions).len()
+    request_body(state, DEFAULT_MODEL, &questions).len()
   })
 }
 

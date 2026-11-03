@@ -1,6 +1,6 @@
 //! Pipeline stage, owned by #666: wires the shaped diff (#662), the base-ref rules
 //! (#663) and the pre-pass (#664) into the structured review call (#665), then
-//! judges fresh findings with Jev over `OpenRouter`'s System One endpoint. Nothing is
+//! judges fresh findings with Jev through the TypeSafe endpoint. Nothing is
 //! sent when review is disabled or a key is absent; every outbound text is
 //! masked. The output is judged model findings for #668 to ground and anchor.
 
@@ -22,14 +22,13 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 use toolu_jev_client::{Answer, Jev, Question, Questions, State};
-use toolu_openrouter::Client;
 use toolu_runtime::env::Env;
 
 pub use calls::{Call, Record, Stage};
 pub use effort::{EffortChoice, EffortSource};
 pub use options::{Input, Options};
-pub(crate) use replayed::REPLAYED;
 pub use replayed::Replay;
+pub(crate) use replayed::{REPLAYED, legacy_completion, legacy_prompt};
 
 use crate::budget::{Budget, Effort, Judge};
 use crate::contract::{ErrorKind, Omitted, Report, Usage};
@@ -40,8 +39,8 @@ use calls::Ledger;
 use mask::Mask;
 use source::Package;
 
-/// The key both the review model and Jev use.
-const KEY_VAR: &str = "OPENROUTER_API_KEY";
+/// The key used by Jev.
+const KEY_VAR: &str = "TYPESAFE_API_KEY";
 /// How Jev assessed a model finding; the report carries it on each one.
 pub use crate::contract::Assessment;
 
@@ -130,7 +129,6 @@ impl RunError {
 
 /// What the judge and the recheck share: one wall deadline for every call.
 pub(crate) struct Ctx<'a, 'r> {
-  pub(crate) client: &'a Client,
   pub(crate) jev: &'a Jev,
   pub(crate) ledger: Ledger<'r>,
   pub(crate) deadline: Instant,
@@ -150,7 +148,7 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
   if !input.settings.enabled {
     return Err(RunError::NotEnabled);
   }
-  let (client, jev) = clients(env, options)?;
+  let jev = clients(env, options)?;
   let (mask, schema) = local(input)?;
   let mut ledger = Ledger::new(options.recorder)
     .replaying(options.replay)
@@ -163,8 +161,8 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
     .review_deadline
     .unwrap_or(Duration::from_secs(budget.deadline_secs));
   let plan = host::select_host(env, input, options, &jev, &mut ledger);
+  host::run::ensure_host(env, input, options, &ledger)?;
   let call = chunks::Call {
-    client: &client,
     schema: &schema,
     level: effort.level,
     deadline,
@@ -176,7 +174,6 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
     .judge_deadline
     .unwrap_or(Duration::from_secs(budget.judge_deadline_secs));
   let ctx = Ctx {
-    client: &client,
     jev: &jev,
     ledger,
     deadline: Instant::now() + judge_deadline,
@@ -206,7 +203,14 @@ fn review_chunks(
   ledger: &mut Ledger<'_>,
 ) -> Result<chunks::Reviews, RunError> {
   let reviews = chunks::review(input, packages, mask, call, ledger);
-  if let Some(err) = reviews.error(input.shaped.chunks.len(), ledger, call.client.model()) {
+  if let Some(err) = reviews.error(
+    input.shaped.chunks.len(),
+    ledger,
+    call
+      .host
+      .as_ref()
+      .map_or("host", |plan| plan.model.as_str()),
+  ) {
     return Err(err);
   }
   Ok(reviews)
@@ -252,26 +256,22 @@ fn finish(
     let memory = ctx.memory;
     reviewed.dismissed = judge_and_recheck(&mut reviewed.findings, packages, memory, &mut ctx);
   }
-  reviewed.usage = ctx.ledger.usage(Some(ctx.client.model().to_owned()));
+  let review_model = ctx
+    .ledger
+    .calls
+    .iter()
+    .find(|call| call.stage == Stage::Review && (call.outcome == "ok" || call.outcome == REPLAYED))
+    .map(|call| call.model.clone());
+  reviewed.usage = ctx.ledger.usage(review_model);
   reviewed.notes = ctx.notes;
   reviewed.calls = ctx.ledger.calls;
   reviewed
 }
 
-/// Both clients, from the one `OpenRouter` key; refused before any request.
-fn clients(env: &Env, options: &Options<'_>) -> Result<(Client, Jev), RunError> {
-  let unconfigured = |err: &dyn std::fmt::Display| RunError::Unconfigured(err.to_string());
-  let client =
-    Client::from_env(env, options.openrouter.clone()).map_err(|err| unconfigured(&err))?;
-  let config = options
-    .jev
-    .clone()
-    .unwrap_or_else(|| toolu_jev_client::Config {
-      endpoint: toolu_jev_client::OPENROUTER_ENDPOINT.to_owned(),
-      ..toolu_jev_client::Config::default()
-    });
-  let jev = Jev::from_env_key(env, KEY_VAR, config).map_err(|err| unconfigured(&err))?;
-  Ok((client, jev))
+/// The direct Jev client; refused before any request.
+fn clients(env: &Env, options: &Options<'_>) -> Result<Jev, RunError> {
+  let config = options.jev.clone().unwrap_or_default();
+  Jev::from_env_key(env, KEY_VAR, config).map_err(|err| RunError::Unconfigured(err.to_string()))
 }
 
 /// Judge the fresh findings Jev may see at this level, then recheck the

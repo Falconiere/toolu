@@ -1,6 +1,6 @@
 # toolu
 
-Engineering discipline for Claude Code and Codex (Muse in progress): workflow skills,
+Engineering discipline for Claude Code, Codex, Muse Code, Cursor and OpenCode: workflow skills,
 agents, commands, and registry-driven quality hooks. This is the core plugin;
 domain plugins (`rust-quality`, `ts-quality`, …) register into it.
 
@@ -25,7 +25,7 @@ codex plugin add toolu@toolu
   replies and explicit receipts across registered machines. Opt-in lifecycle
   notices reuse the existing hooks; see [peer setup and limits](../../docs/peers.md).
 
-- **Supporting skills** — `orchestrator`, `debug`, `deep-research`, `herdr-app`, and `test-writer` (few spec-derived tests, cheap runs; `/toolu:test-writer`). The end-to-end workflow lives in the separate `delivery-flow` plugin, which depends on `toolu`, `toolu-review`, and `pr-babysit`.
+- **Supporting skills** — `orchestrator`, `debug`, `deep-research`, `herdr-app`, and `test-writer` (few spec-derived tests, cheap runs; `/toolu:test-writer`). The end-to-end workflow lives in the separate `delivery-flow` plugin, which depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`.
 - **Quality gate engine** — the `PreToolUse` / `PostToolUse` / `SessionStart` hook dispatcher and runtime **registry** that domain plugins contribute checks to (fail-closed; a module runs only while its owning plugin is installed).
 - **\`push-review\` gate** — gates \`git push\` on a feature branch until the diff has been run through an accepted reviewer (the built-in \`/code-review\` skill or \`toolu-review:review\`), with a round cap that escalates instead of looping (5 rewrites against an unchanged diff; a changed diff restarts the count). Gated per target repo — `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file. **Delivery is configurable** (`gates.pushReview.mode`): the shipped default advises rather than blocking; `ask` is opt-in and a yes is remembered for that diff. See [hooks/docs/gates.md](hooks/docs/gates.md).
 - **Runtime diagnostic** — on session start and resume, a one-line message names the native binary and version. If it is missing, enforcing hooks fail closed and the launcher says how to install the binary; see [docs/runtime.md](../../docs/runtime.md#hook-launcher).
