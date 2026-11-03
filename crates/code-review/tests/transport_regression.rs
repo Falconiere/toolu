@@ -2,6 +2,8 @@
 
 #[path = "helpers/rig.rs"]
 mod rig;
+#[path = "helpers/tools.rs"]
+mod tools;
 
 use std::os::unix::fs::PermissionsExt;
 
@@ -152,5 +154,58 @@ fn failing_host_does_not_fall_back_to_openrouter() {
   std::fs::set_permissions(&codex, std::fs::Permissions::from_mode(0o755)).unwrap();
   let result = run_with_path(&rig, &bin.path().to_string_lossy(), rig::KEY);
   assert!(matches!(result, Err(RunError::Outage { .. })), "{result:?}");
+  assert_eq!(rig.fixture.requests().unwrap().len(), 0);
+}
+
+#[test]
+fn no_host_records_the_masked_request_and_empty_response() {
+  use std::cell::RefCell;
+  use toolu_code_review::review::{Record, Stage};
+  let secret = format!("{}{}", "ghp_", "Ab1".repeat(12));
+  let rig = Rig::new(
+    &[("src/lib.rs", "old\n".into())],
+    &[("src/lib.rs", format!("const TOKEN: &str = \"{secret}\";\n"))],
+  )
+  .unwrap();
+  let empty_path = tempfile::tempdir().unwrap();
+  let env = rig
+    .env()
+    .with("PATH", &empty_path.path().to_string_lossy())
+    .with("TYPESAFE_API_KEY", "test-typesafe-key");
+  let settings = Settings {
+    enabled: true,
+    ..Settings::default()
+  };
+  let input = Input {
+    root: rig.repo.path(),
+    shaped: &rig.shaped,
+    rules: &rig.rules,
+    prepass: &rig.prepass,
+    memory: &Memory::default(),
+    settings: &settings,
+    flag: Some(Effort::Medium),
+  };
+  let records = RefCell::new(Vec::new());
+  let recorder = |record: &Record<'_>| {
+    records.borrow_mut().push((
+      record.stage,
+      record.request.to_owned(),
+      record.response.to_owned(),
+    ));
+  };
+  let options = Options {
+    skip_judge: true,
+    recorder: Some(&recorder),
+    ..rig.options()
+  };
+  let result = review::run(&env, &input, &options);
+  assert!(matches!(result, Err(RunError::Outage { .. })), "{result:?}");
+  let records = records.into_inner();
+  assert_eq!(records.len(), 1);
+  assert_eq!(records[0].0, Stage::Review);
+  let request: serde_json::Value = serde_json::from_str(&records[0].1).unwrap();
+  assert!(request["messages"].is_array());
+  assert!(!records[0].1.contains(secret.as_str()));
+  assert_eq!(records[0].2, "");
   assert_eq!(rig.fixture.requests().unwrap().len(), 0);
 }

@@ -16,7 +16,7 @@ Keep documentation in sync with changed behavior through a Jev-routed editing wo
 
 ## What it provides
 
-- **`documentation-gate:sync`** audits changed behavior, updates or adds documentation with a separate routed worker, and records a committed review.
+- **`documentation-gate:sync`** reads git-better's branch commit summaries and `Intent:` trailers, verifies the task against the diff, updates or adds documentation with a separate routed worker, and records a committed review.
 - **SessionStart hook** registers a native pre-push rule in the toolu dispatcher. The rule and ledger use the same review assessment and configured `docsSync` mode; no model is called by the hook.
 
 Inspection also inventories committed regular `.md`, `.mdx`, `.rst`, `.adoc` and
@@ -24,8 +24,10 @@ Inspection also inventories committed regular `.md`, `.mdx`, `.rst`, `.adoc` and
 (path → Git blob ID). It excludes `docs/toolu/{plans,brainstorms,specs,decisions}/`
 and the target repository's `docsSync.surfaceExcludes` globs. A report must repeat
 that inventory and supply `documentation_coverage` for every document, explaining
-its relevance to changed behavior. A cited guide cannot simultaneously be marked
-unrelated. Missing coverage or changed document content invalidates a receipt;
+its relevance to changed behavior. A cited inventoried guide cannot also be marked
+unrelated. Excluded committed documents may supplement a citation, but cannot
+replace maintained documentation evidence for affected source files.
+Missing coverage or changed document content invalidates a receipt;
 older receipts without this evidence require a new review. See the
 [worker report contract](skills/sync/references/worker.md). These checks establish
 coverage and freshness; the worker still verifies prose against implementation.

@@ -27,8 +27,8 @@ use toolu_runtime::env::Env;
 pub use calls::{Call, Record, Stage};
 pub use effort::{EffortChoice, EffortSource};
 pub use options::{Input, Options};
-pub(crate) use replayed::REPLAYED;
 pub use replayed::Replay;
+pub(crate) use replayed::{REPLAYED, legacy_completion, legacy_prompt};
 
 use crate::budget::{Budget, Effort, Judge};
 use crate::contract::{ErrorKind, Omitted, Report, Usage};

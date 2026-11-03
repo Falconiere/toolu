@@ -100,3 +100,84 @@ fn malformed_documentation_evidence_is_rejected_when_written_and_assessed() {
     );
   }
 }
+
+fn excluded_citation_fixture() -> (tempfile::TempDir, toolu_runtime::host::roots::Roots) {
+  let (dir, roots) = fixture();
+  let repo = dir.path();
+  super::super::tests::git(repo, &["checkout", "main"]);
+  std::fs::create_dir_all(repo.join("docs/toolu/plans")).unwrap();
+  std::fs::write(
+    repo.join("docs/toolu/plans/history.md"),
+    "historical context\n",
+  )
+  .unwrap();
+  std::fs::create_dir_all(repo.join("private")).unwrap();
+  std::fs::write(repo.join("private/notes.md"), "private context\n").unwrap();
+  std::fs::create_dir_all(repo.join(".claude")).unwrap();
+  std::fs::write(
+    repo.join(".claude/toolu.config.json"),
+    r#"{"docsSync":{"surfaceExcludes":["private/*"]}}"#,
+  )
+  .unwrap();
+  super::super::tests::git(repo, &["add", "."]);
+  super::super::tests::git(repo, &["commit", "-m", "add supplemental documentation"]);
+  super::super::tests::git(repo, &["checkout", "feature"]);
+  super::super::tests::git(repo, &["merge", "--no-edit", "main"]);
+  (dir, roots)
+}
+
+#[test]
+fn excluded_documents_can_supplement_affected_citations() {
+  let (dir, roots) = excluded_citation_fixture();
+  let repo = dir.path();
+  let mut review = report(&roots, repo);
+  for excluded in ["docs/toolu/plans/history.md", "private/notes.md"] {
+    assert!(review["documentation_files"].get(excluded).is_none());
+  }
+  review["coverage"][0]["docs"] = json!(["README.md", "docs/toolu/plans/history.md"]);
+  review["coverage"][1]["docs"] = json!(["README.md", "private/notes.md"]);
+  write(&roots, repo, None, &review).expect("supplemental citations accepted");
+  crate::docs_review::assess(&roots, repo, "feature").expect("supplemental citations assessed");
+}
+
+#[test]
+fn excluded_citations_alone_and_cited_not_needed_docs_remain_invalid() {
+  let (dir, roots) = excluded_citation_fixture();
+  let repo = dir.path();
+  let valid = report(&roots, repo);
+  for excluded in ["docs/toolu/plans/history.md", "private/notes.md"] {
+    let mut review = valid.clone();
+    review["coverage"][1]["docs"] = json!([excluded]);
+    let error = write(&roots, repo, None, &review).expect_err("excluded citation alone");
+    assert!(error.contains("affected"), "{error}");
+  }
+  let mut review = valid;
+  review["coverage"][1]["docs"] = json!(["README.md", "GUIDE.md", "private/notes.md"]);
+  let error = write(&roots, repo, None, &review).expect_err("cited guide marked not needed");
+  assert!(error.contains("GUIDE.md"), "{error}");
+}
+
+#[test]
+fn updated_coverage_requires_a_changed_affected_document() {
+  let (dir, roots) = excluded_citation_fixture();
+  let repo = dir.path();
+  let excluded = "docs/toolu/plans/history.md";
+  std::fs::write(repo.join(excluded), "changed historical context\n").unwrap();
+  super::super::tests::git(repo, &["add", excluded]);
+  super::super::tests::git(repo, &["commit", "-m", "change historical context"]);
+  let mut review = report(&roots, repo);
+  review["coverage"].as_array_mut().unwrap().push(json!({
+    "path": excluded, "disposition": "not-needed", "note": "Historical context", "docs": []
+  }));
+  review["coverage"][1]["disposition"] = json!("updated");
+  review["coverage"][1]["docs"] = json!(["GUIDE.md", excluded]);
+  review["documentation_coverage"][1] = json!({
+    "path": "GUIDE.md", "disposition": "accurate", "note": "Checked guide", "sources": ["code.rs"]
+  });
+  let error = write(&roots, repo, None, &review)
+    .expect_err("updated row needs changed affected documentation");
+  assert!(
+    error.contains("updated") && error.contains("documentation"),
+    "{error}"
+  );
+}

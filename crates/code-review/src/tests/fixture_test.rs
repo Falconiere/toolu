@@ -81,7 +81,10 @@ pub(super) fn env(root: &Path, state: &Path, fixture: &Fixture) -> Env {
     .with("NO_PROXY", "")
     .with("GIT_CONFIG_NOSYSTEM", "1")
     .with("GIT_CONFIG_GLOBAL", "/dev/null")
-    .with("PATH", &format!("{}:{}", state.display(), tools_path(state)))
+    .with(
+      "PATH",
+      &format!("{}:{}", state.display(), tools_path(state)),
+    )
 }
 
 pub(super) fn options(fixture: &Fixture) -> Options<'static> {

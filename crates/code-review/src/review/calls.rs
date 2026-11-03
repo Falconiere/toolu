@@ -164,9 +164,11 @@ impl<'a> Ledger<'a> {
     if let Some(plan) = send.host {
       run::complete_via_host(self, send.stage, plan, send.request, send.deadline)
     } else {
-      self
-        .calls
-        .push(call(send.stage, "host", "no host CLI available"));
+      self.push(
+        call(send.stage, "host", "no host CLI available"),
+        Instant::now(),
+        || (sent(send.request, "host"), String::new()),
+      );
       Err(toolu_openrouter::Error::InvalidResponse)
     }
   }

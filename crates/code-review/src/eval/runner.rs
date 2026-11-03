@@ -96,7 +96,7 @@ fn lookup<'a>(
             "\"model\":\"host\"",
             &format!("\"model\":{}", serde_json::json!(model)),
           );
-        return store.read(stage, &legacy);
+        return store.read_legacy(stage, request, &legacy);
       }
       Ok(body)
     });

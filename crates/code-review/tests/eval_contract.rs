@@ -4,6 +4,9 @@
 //! diffs, the gate contract holds against the production predicates, and seeded
 //! review memory behaves as specified. No network, no model.
 
+#[path = "helpers/historical_replay.rs"]
+mod historical_replay;
+
 #[path = "helpers/replay.rs"]
 mod replay;
 #[path = "helpers/tools.rs"]
@@ -23,7 +26,6 @@ use toolu_code_review::memory::{self, Memory};
 use toolu_code_review::model::ModelFinding;
 use toolu_code_review::shape::{Shaped, shape};
 use toolu_code_review::validate::{Input, Validated, validate};
-use toolu_runtime::env::Env;
 
 fn root() -> PathBuf {
   Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/code-review-eval")
@@ -41,8 +43,8 @@ fn case<'a>(fixtures: &'a Fixtures, id: &str) -> Result<&'a Case, String> {
   need(fixtures.set().case(id), id)
 }
 
-fn git_env() -> Env {
-  Env::process()
+fn git_env() -> toolu_runtime::env::Env {
+  toolu_runtime::env::Env::process()
     .with("GIT_CONFIG_NOSYSTEM", "1")
     .with("GIT_CONFIG_GLOBAL", "/dev/null")
     .with("XDG_CONFIG_HOME", "/dev/null")
@@ -107,10 +109,6 @@ fn statuses(case: &Case, findings: &[Finding]) -> Vec<Status> {
     .iter()
     .map(|entry| entry.status)
     .collect()
-}
-
-fn none() -> Vec<String> {
-  Vec::new()
 }
 
 #[test]
@@ -238,7 +236,7 @@ fn every_gate_flag_in_the_golden_set_holds_against_the_production_predicates() {
     .collect();
   assert!(gates.len() >= 3);
   for (id, gate) in &gates {
-    assert_eq!(violations(gate), none(), "{id}");
+    assert_eq!(violations(gate), Vec::<String>::new(), "{id}");
   }
   assert!(
     gates
@@ -268,8 +266,8 @@ fn a_drifted_line_stays_open_under_its_prior_id() {
   assert_eq!(found.line, 6);
   let out = grounded(&shaped, &memory, &[found]);
   assert_eq!(out.recap.still_open, ["mem-drift-1"]);
-  assert_eq!(out.recap.resolved, none());
-  assert_eq!(out.recap.new, none());
+  assert_eq!(out.recap.resolved, Vec::<String>::new());
+  assert_eq!(out.recap.new, Vec::<String>::new());
   assert_eq!(
     out.findings.first().map(|finding| finding.id.as_str()),
     Some("mem-drift-1")
@@ -280,7 +278,7 @@ fn a_drifted_line_stays_open_under_its_prior_id() {
   // Re-examined and not re-raised, the same prior would be resolved instead.
   let silent = grounded(&shaped, &memory, &[]);
   assert_eq!(silent.recap.resolved, ["mem-drift-1"]);
-  assert_eq!(silent.recap.still_open, none());
+  assert_eq!(silent.recap.still_open, Vec::<String>::new());
 }
 
 #[test]
@@ -297,12 +295,12 @@ fn an_unreexamined_prior_stays_open_and_is_never_resolved() {
   }];
   let out = grounded_without(&shaped, &memory, &[], &lost);
   assert_eq!(out.recap.still_open, ["mem-legacy-1"]);
-  assert_eq!(out.recap.resolved, none());
+  assert_eq!(out.recap.resolved, Vec::<String>::new());
 
   // Re-examined and not re-raised, the same prior would be resolved instead.
   let silent = grounded(&shaped, &memory, &[]);
   assert_eq!(silent.recap.resolved, ["mem-legacy-1"]);
-  assert_eq!(silent.recap.still_open, none());
+  assert_eq!(silent.recap.still_open, Vec::<String>::new());
 }
 
 #[test]
@@ -325,8 +323,8 @@ fn missing_history_means_a_full_review_with_nothing_carried_over() {
   .expect("fixture");
   let out = grounded(&shaped, &state.memory, &[found]);
   assert_eq!(out.recap.new.len(), 1);
-  assert_eq!(out.recap.still_open, none());
-  assert_eq!(out.recap.resolved, none());
+  assert_eq!(out.recap.still_open, Vec::<String>::new());
+  assert_eq!(out.recap.resolved, Vec::<String>::new());
   let missing = case(&fixtures, "memory-missing").expect("fixture");
   assert_eq!(statuses(missing, &out.findings), [Status::Caught]);
 }

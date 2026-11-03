@@ -122,24 +122,43 @@ pub(super) fn validate(identity: &Identity, report: &Value) -> Result<(), String
   if seen.len() != identity.documentation_files.len() {
     return Err("documentation coverage does not match the committed inventory".into());
   }
-  cited_documents(report, &affected)
+  cited_documents(identity, report, &affected)
 }
 
-fn cited_documents(report: &Value, affected: &BTreeSet<&str>) -> Result<(), String> {
+fn cited_documents(
+  identity: &Identity,
+  report: &Value,
+  affected: &BTreeSet<&str>,
+) -> Result<(), String> {
   let rows = report
     .get("coverage")
     .and_then(Value::as_array)
     .ok_or("missing coverage")?;
-  for doc in rows
-    .iter()
-    .filter_map(|row| row.get("docs").and_then(Value::as_array))
-    .flatten()
-  {
-    let path = doc.as_str().ok_or("invalid documentation reference")?;
-    if !affected.contains(path) {
-      return Err(format!(
-        "cited documentation lacks affected coverage: {path}"
-      ));
+  for row in rows {
+    let docs = row
+      .get("docs")
+      .and_then(Value::as_array)
+      .ok_or("missing docs array")?;
+    let mut maintained = false;
+    let mut changed_maintained = false;
+    for doc in docs {
+      let path = doc.as_str().ok_or("invalid documentation reference")?;
+      if !identity.documentation_files.contains_key(path) {
+        continue;
+      }
+      if !affected.contains(path) {
+        return Err(format!(
+          "cited documentation lacks affected coverage: {path}"
+        ));
+      }
+      maintained = true;
+      changed_maintained |= identity.reviewed_files.iter().any(|file| file == path);
+    }
+    if text(row, "disposition")? != "not-needed" && !maintained {
+      return Err("affected source requires maintained documentation".into());
+    }
+    if text(row, "disposition")? == "updated" && !changed_maintained {
+      return Err("updated source requires changed maintained documentation".into());
     }
   }
   Ok(())
