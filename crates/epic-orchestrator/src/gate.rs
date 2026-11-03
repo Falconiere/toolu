@@ -97,10 +97,9 @@ pub(crate) fn run_gate(opts: &GateOpts, at: &Settle<'_>) -> Result<Value, String
     };
     result.extend(merge::do_merge(at.gh, &target));
   }
-  // Auto-merge waits on checks that never come under the local gate.
-  if local.is_none() {
-    apply_auto(opts, at, (&pr, &facts, &head), &mut result)?;
-  }
+  // Auto-merge waits on checks that never come under the local gate, so it
+  // never arms there; one armed before still disarms on fix or rebase.
+  apply_auto(opts, at, (&pr, &facts, &head), &mut result, local.is_none())?;
   settle_merged(opts, at, &verdict, &mut result)?;
   // The merge and settlement already happened: a record that cannot be
   // written is reported with the result, not instead of it.
@@ -116,13 +115,9 @@ pub(crate) fn run_gate(opts: &GateOpts, at: &Settle<'_>) -> Result<Value, String
 /// start said `--no-babysit`.
 fn local_policy(opts: &GateOpts) -> Option<local::LocalGate> {
   let (dir, key) = (opts.state_dir.as_deref()?, opts.key.as_deref()?);
-  let record =
-    crate::disk::read_value(&dir.join("issues").join(format!("{key}.json"))).unwrap_or(Value::Null);
-  let none = local::LocalGate {
-    worktree: None,
-    host: None,
-  };
-  local::policy(dir, &record, &none)
+  let record = crate::disk::read_value(&crate::snapshot::issue_path(&dir.to_string_lossy(), key))
+    .unwrap_or(Value::Null);
+  local::policy(dir, &record, &local::LocalGate::default())
 }
 
 /// Close and tick the delivered issue once its PR merged.
@@ -161,12 +156,13 @@ fn settle_merged(
   Ok(())
 }
 
-/// Arm or disarm auto-merge as the verdict asks.
+/// Arm (when `arm` allows it) or disarm auto-merge as the verdict asks.
 fn apply_auto(
   opts: &GateOpts,
   at: &Settle<'_>,
   target: (&Pr, &assess::Facts, &str),
   result: &mut Map<String, Value>,
+  arm: bool,
 ) -> Result<(), String> {
   let (pr, facts, head) = target;
   let verdict = result
@@ -175,7 +171,7 @@ fn apply_auto(
     .unwrap_or("")
     .to_owned();
   let armed = result.get("auto_merge_armed") == Some(&Value::Bool(true));
-  match auto::action(&verdict, armed, opts.auto) {
+  match auto::action(&verdict, armed, opts.auto && arm) {
     Some(auto::Action::Arm) => {
       let method = merge::merge_method(at.gh, pr, opts.method.as_deref())?;
       result.extend(auto::arm(at.gh, facts, head, &method));

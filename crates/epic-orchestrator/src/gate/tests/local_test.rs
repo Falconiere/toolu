@@ -70,7 +70,7 @@ fn verdict(result: &Map<String, Value>) -> (String, String) {
 }
 
 #[test]
-fn a_fresh_green_ledger_at_the_pull_request_head_merges_and_anything_less_waits() {
+fn a_fresh_green_ledger_at_the_pull_request_head_merges_and_anything_less_waits_on_the_worker() {
   let tmp = tempfile::tempdir().expect("temp");
   let head = repo(tmp.path());
   let local = LocalGate {
@@ -82,13 +82,19 @@ fn a_fresh_green_ledger_at_the_pull_request_head_merges_and_anything_less_waits(
   let (state, reason) = verdict(&result);
   assert_eq!(state, "wait");
   assert!(reason.starts_with("local gate: no plan ledger"), "{reason}");
+  assert_eq!(result["local_gate"], json!(false));
+  assert_eq!(result["local_wait"], json!(true), "the worker owes it");
+  // A green ledger goes stale after the engine's own rebase: the worker owes
+  // it, so the queue step prompts instead of blocking the queue.
   ledger(tmp.path(), "0000000");
+  let mut result = assessed("wait", &head);
   apply(&mut result, &local, &env());
   let (state, reason) = verdict(&result);
   assert_eq!(state, "wait");
   assert_eq!(reason, "local gate: steps not fresh-green: gate: stale");
   let cur = diff_sha(&env(), tmp.path(), "main").expect("diff sha");
   ledger(tmp.path(), &cur);
+  let mut result = assessed("wait", &head);
   apply(&mut result, &local, &env());
   let (state, reason) = verdict(&result);
   assert_eq!(state, "merge");
@@ -104,6 +110,7 @@ fn a_fresh_green_ledger_at_the_pull_request_head_merges_and_anything_less_waits(
   apply(&mut moved, &local, &env());
   let (state, reason) = verdict(&moved);
   assert_eq!(state, "wait");
+  assert_eq!(moved["local_wait"], json!(true));
   assert_eq!(
     reason,
     format!(
@@ -142,6 +149,7 @@ fn the_local_gate_leaves_fix_rebase_and_unknown_mergeability_alone() {
       "local gate: no worktree recorded".to_owned()
     )
   );
+  assert_eq!(bare["local_wait"], json!(false), "the engine owes it");
   let mut no_host = assessed("wait", "abc");
   let worktree = LocalGate {
     worktree: Some("/wt".into()),

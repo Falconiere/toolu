@@ -381,13 +381,17 @@ until a start without it (a damaged file keeps babysit on). Under it:
   engine's queue step) swaps required checks for the worker's local gate: the
   worktree in the issue's launch record sits at the PR head and its plan
   ledger passes the plan gate the push hook runs (every step fresh-green
-  against the current diff). A `wait` names what is missing (`local gate: no
-  plan ledger for this change`, `local gate: steps not fresh-green: s3:
-  stale`, `local gate: worktree at 1a2b3c4, pull request head 5d6e7f8`).
-  Conflicts, a PR behind its base, unresolved threads and a draft still return
-  `rebase` or `fix`; a `fix` prompts the idle worker with its reasons, since
-  no babysit tick will. GitHub still computing mergeability still waits.
-  Nothing arms auto-merge.
+  against the current diff). Without it the verdict is `wait` naming the
+  missing evidence (`local gate: no plan ledger for this change`, `local
+  gate: steps not fresh-green: s3: stale`, `local gate: worktree at 1a2b3c4,
+  pull request head 5d6e7f8`); the engine's own rebase of a PR behind its
+  base stales the ledger, so this is the normal path, not an error. When the
+  worker owes that evidence, the engine's queue step prompts it with the
+  reasons, since no babysit tick will, and takes the PR out of the queue
+  until the worker reports `babysit` again; a `fix` (unresolved threads, a
+  draft) prompts the same way. A launch record without a worktree or host,
+  and GitHub still computing mergeability, wait silently. Conflicts and a PR
+  behind its base still return `rebase`. Nothing arms auto-merge.
 - On `merge` the engine merges pinned to that head, ticks the epic checklist,
   closes the sub-issue and tears the worktree down, as it does when CI is green.
 

@@ -111,7 +111,6 @@ const LOCAL_WATCH: &str = "This epic runs without CI: the engine
 /// The babysit lines of the brief: the authorization, what follows the
 /// babysit report, step 5 and its message line.
 fn babysit_lines(host: BriefHost) -> [(&'static str, String); 5] {
-  let skill = skill_ref(host.kind, "pr-babysit", "babysit");
   if host.no_babysit {
     [
       ("PR_AUTH", ", and open the PR".to_owned()),
@@ -121,6 +120,7 @@ fn babysit_lines(host: BriefHost) -> [(&'static str, String); 5] {
       ("BABYSIT", "babysit".to_owned()),
     ]
   } else {
+    let skill = skill_ref(host.kind, "pr-babysit", "babysit");
     // Step 5 names the skill itself, so it lands before the skill fills in.
     [
       ("PR_AUTH", format!(", open the PR, and run {skill}")),

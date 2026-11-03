@@ -117,9 +117,20 @@ fn a_fix_verdict_returns_to_babysit_and_disarms_what_the_engine_armed() {
   let mut world = self::world();
   let local =
     json!({"outcome": "fix", "reasons": ["2 unresolved review threads"], "local_gate": true});
-  let names = names(&commit(&mut world, "a", &local.to_string()).expect("fix"));
-  assert!(names.iter().any(|name| name
-    == "prompt:The merge gate needs you: [\"2 unresolved review threads\"]. Fix and push, then `toolu epic report babysit --pr <n>` again."), "{names:?}");
+  let steps = commit(&mut world, "a", &local.to_string()).expect("fix");
+  // Nothing retries an undelivered prompt without babysit: it raises attention.
+  assert!(steps.iter().any(|step| matches!(step, Step::Prompt { text, fallback, .. }
+    if fallback.as_deref() == Some("gate") && text == "The merge gate needs you: [\"2 unresolved review threads\"]. Fix it, re-run the gate, push, then `toolu epic report babysit --pr 1` again.")));
+  // A local-gate wait the worker owes prompts the same way and leaves the queue.
+  let mut world = self::world();
+  let owed = json!({"outcome": "waiting", "reasons": ["local gate: steps not fresh-green: s3: stale"], "local_gate": true});
+  let owed = self::names(&commit(&mut world, "a", &owed.to_string()).expect("waiting"));
+  assert!(
+    owed.iter().any(|name| name
+      .starts_with("prompt:The merge gate needs you: [\"local gate: steps not fresh-green")),
+    "{owed:?}"
+  );
+  assert_eq!(world.issues["a"].phase, "babysit");
 }
 
 #[test]

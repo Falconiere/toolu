@@ -98,20 +98,19 @@ fn run(input: &StepJob) -> Result<Map<String, Value>, String> {
     number: input.pr,
   };
   let (mut result, facts) = assess(&gh, &pr)?;
-  if let Some(local) = &input.local {
-    crate::gate::local::apply(&mut result, local, &input.env);
-  }
-  let armed = result.get("auto_merge_armed") == Some(&Value::Bool(true));
-  let head = text(&result, "head");
   let parked = match input.mode {
     Mode::Disarm => {
+      let armed = result.get("auto_merge_armed") == Some(&Value::Bool(true));
       disarm(&gh, &facts, armed)?;
       return Ok(outcome("disarmed"));
     }
     Mode::Head { parked } => parked,
   };
+  if let Some(local) = &input.local {
+    crate::gate::local::apply(&mut result, local, &input.env);
+  }
   let out = act(input, (&gh, &pr, &facts), &result, parked)?;
-  Ok(with(out, "head", json!(head)))
+  Ok(with(out, "head", json!(text(&result, "head"))))
 }
 
 /// The step's outcome for the assessed verdict.
@@ -138,7 +137,11 @@ fn act(
       rebased(input, result, parked)
     }
     // Nothing arms auto-merge for a local gate: GitHub never sees it pass.
-    "wait" if input.local.is_some() => with(outcome("waiting"), "reasons", reasons()),
+    "wait" if input.local.is_some() => {
+      let waiting = with(outcome("waiting"), "reasons", reasons());
+      let owed = result.get("local_wait") == Some(&Value::Bool(true));
+      with(waiting, "local_gate", json!(owed))
+    }
     "wait" => waiting(gh, pr, facts, &head, armed)?,
     "merge" => merged(gh, pr, facts, &head, &input.env)?,
     other => return Err(format!("unknown verdict {other:?}")),

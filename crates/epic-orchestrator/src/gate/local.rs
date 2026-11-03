@@ -18,7 +18,7 @@ use toolu_state::diff_sha::diff_sha;
 use toolu_state::git::{base_branch, current_branch};
 
 /// Where the worker's local gate evidence lives.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct LocalGate {
   /// The worker's worktree, when recorded.
   pub worktree: Option<PathBuf>,
@@ -48,7 +48,9 @@ pub(crate) fn policy(state_dir: &Path, record: &Value, fallback: &LocalGate) -> 
 }
 
 /// Replace a checks-only `wait` or a checks-backed `merge` with the local
-/// gate's verdict. Rebase, fix, merged and closed stand; so does a wait on
+/// gate's verdict: `merge` on a fresh-green ledger at the pull request head,
+/// else `wait` naming the missing evidence, with `local_wait` set when the
+/// worker owes it. Rebase, fix, merged and closed stand; so does a wait on
 /// GitHub still computing mergeability.
 pub(crate) fn apply(result: &mut Map<String, Value>, local: &LocalGate, env: &Env) {
   let field = |key: &str| {
@@ -61,19 +63,19 @@ pub(crate) fn apply(result: &mut Map<String, Value>, local: &LocalGate, env: &En
   if !matches!(field("verdict").as_str(), "wait" | "merge") || field("mergeable") == "UNKNOWN" {
     return;
   }
-  let (verdict, reason) = match evidence(local, &field("head"), env) {
-    Ok(reason) => ("merge", reason),
-    Err(reason) => ("wait", reason),
-  };
-  result.insert("verdict".to_owned(), json!(verdict));
+  let (verdict, reason) = evidence(local, &field("head"), env);
+  result.insert(
+    "verdict".to_owned(),
+    json!(if verdict == "merge" { "merge" } else { "wait" }),
+  );
   result.insert("reasons".to_owned(), json!([reason]));
   result.insert("local_gate".to_owned(), json!(verdict == "merge"));
+  result.insert("local_wait".to_owned(), json!(verdict == "fix"));
 }
 
 fn git_head(env: &Env, worktree: &Path) -> Option<String> {
-  let mut spec = Spec::new(["git", "-C"]);
-  spec.argv.push(worktree.display().to_string());
-  spec.argv.extend(["rev-parse", "HEAD"].map(str::to_owned));
+  let mut spec = Spec::new(["git", "rev-parse", "HEAD"]);
+  spec.cwd = Some(worktree.to_path_buf());
   spec.env = Some(env.clone());
   run(&spec)
     .ok()
@@ -81,25 +83,32 @@ fn git_head(env: &Env, worktree: &Path) -> Option<String> {
     .map(|out| out.stdout.trim().to_owned())
 }
 
-/// The plan gate's reason for `head` being merge-ready, or why it is not.
-fn evidence(local: &LocalGate, head: &str, env: &Env) -> Result<String, String> {
-  let worktree = local
-    .worktree
-    .as_deref()
-    .ok_or("local gate: no worktree recorded")?;
-  let host = local
-    .host
-    .as_deref()
-    .and_then(Host::parse)
-    .ok_or("local gate: no host recorded")?;
-  let at = git_head(env, worktree)
-    .ok_or_else(|| format!("local gate: no git HEAD in {}", worktree.display()))?;
+/// The local gate's verdict for `head` with its reason: `merge`, `fix` for
+/// evidence only the worker can produce (its worktree elsewhere, its ledger
+/// missing or stale), `wait` for what the engine itself lacks. Nothing else
+/// prompts an idle worker under `--no-babysit`, and a waiting head blocks its
+/// repository's queue, so the queue step turns a `fix` into a prompt. The
+/// engine's own rebase stales the ledger (`diff_sha` hashes against the local
+/// base branch, which only the worker's next gate run catches up with), so
+/// this is the common path, not an error.
+fn evidence(local: &LocalGate, head: &str, env: &Env) -> (&'static str, String) {
+  let Some(worktree) = local.worktree.as_deref() else {
+    return ("wait", "local gate: no worktree recorded".to_owned());
+  };
+  let Some(host) = local.host.as_deref().and_then(Host::parse) else {
+    return ("wait", "local gate: no host recorded".to_owned());
+  };
+  let Some(at) = git_head(env, worktree) else {
+    let reason = format!("local gate: no git HEAD in {}", worktree.display());
+    return ("wait", reason);
+  };
   if at != head {
-    return Err(format!(
+    let reason = format!(
       "local gate: worktree at {}, pull request head {}",
       short(&at),
       short(head)
-    ));
+    );
+    return ("fix", reason);
   }
   let base = base_branch(env, Some(worktree), worktree);
   let ctx = GateContext {
@@ -117,9 +126,12 @@ fn evidence(local: &LocalGate, head: &str, env: &Env) -> Result<String, String> 
     _ => String::new(),
   };
   if text("state") == "pass" {
-    Ok(format!("local gate on {}: {}", short(head), text("reason")))
+    (
+      "merge",
+      format!("local gate on {}: {}", short(head), text("reason")),
+    )
   } else {
-    Err(format!("local gate: {}", text("reason")))
+    ("fix", format!("local gate: {}", text("reason")))
   }
 }
 
