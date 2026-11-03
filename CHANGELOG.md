@@ -6,6 +6,20 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.12.0](https://github.com/Falconiere/toolu/compare/v8.11.0...v8.12.0) (2026-11-03)
+
+
+### Features
+
+* **epic:** add a no-CI merge policy with --no-babysit ([#834](https://github.com/Falconiere/toolu/issues/834)) ([39d822f](https://github.com/Falconiere/toolu/commit/39d822fef3c34c928ff91374434615cfc2fe8593))
+* **workflows:** add epic updater and local review ([cdef402](https://github.com/Falconiere/toolu/commit/cdef4027d4cfc61e11e813b5b3f5e0fe6908205e))
+
+
+### Bug Fixes
+
+* **delegation:** unattended relay workers, relay only with --relay ([#836](https://github.com/Falconiere/toolu/issues/836)) ([678efbe](https://github.com/Falconiere/toolu/commit/678efbec3ef9d7775c8e0e82c5a2a29ab060c8ad))
+* **plugins:** enforce docs coverage and use native code review ([#835](https://github.com/Falconiere/toolu/issues/835)) ([3cf4154](https://github.com/Falconiere/toolu/commit/3cf41546ca586a0586a96acaa35cbbb4f29c1c32))
+
 ## [8.11.0](https://github.com/Falconiere/toolu/compare/v8.10.0...v8.11.0) (2026-11-02)
 
 
