@@ -39,6 +39,7 @@ pub(crate) fn line(side: Side, line: u32, text: &str) -> ChangedLine {
 pub(crate) fn shaped(files: Vec<ShapedFile>, reviewed: &[&str]) -> Shaped {
   Shaped {
     base_ref: "main".to_owned(),
+    source_ref: "HEAD".into(),
     merge_base: "abc".to_owned(),
     diff_sha: "def".to_owned(),
     gate_files: files.iter().map(|file| file.path.clone()).collect(),

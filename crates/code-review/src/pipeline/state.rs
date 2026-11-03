@@ -1,5 +1,7 @@
 //! Branch memory, usage log, and shared v2 push-review write.
 
+pub(crate) use super::output::settle_coverage as settle;
+use super::output::state_blocker;
 use crate::contract::{Finding, Omitted, Report, Source};
 use crate::memory;
 use crate::prepass::{NoticeKind, PrepassResult};
@@ -36,14 +38,13 @@ pub(super) fn persist(
   recap: &Recap,
 ) -> Result<(), String> {
   let RunState {
-    env,
-    ctx,
     roots,
     root,
     shaped,
     prepass,
     scoped,
     memory_path,
+    ..
   } = *state;
   let complete = mark_coverage(report, scoped, shaped, prepass);
   let remembered: Vec<Finding> = report
@@ -64,18 +65,42 @@ pub(super) fn persist(
     },
   )
   .and_then(|()| log_usage(roots, root, &shaped.diff_sha, report));
+  publish(state, report, saved)
+}
+
+fn publish(
+  state: &RunState<'_>,
+  report: &mut Report,
+  saved: Result<(), String>,
+) -> Result<(), String> {
   if saved.is_err() {
     state_blocker(report);
   }
-  let count = report.blocking_count();
+  let shaped = state.shaped;
+  if shaped.uncommitted {
+    report.notes.push(
+      "Local snapshot includes uncommitted changes; commit and re-run for push approval".to_owned(),
+    );
+  }
+  let sha = if shaped.uncommitted {
+    // Local coverage is incomplete: replace stale approval, never approve another commit.
+    diff_sha(state.env, state.root, &shaped.base_ref).ok_or("gate diff hash failed")?
+  } else {
+    shaped.diff_sha.clone()
+  };
   let findings = serde_json::to_string(&report.findings).map_err(|err| err.to_string())?;
-  let diff = (shaped.base_ref.as_str(), shaped.diff_sha.as_str());
+  let gate = write_gate(
+    (state.env, state.ctx),
+    state.root,
+    (&shaped.base_ref, &sha),
+    report.blocking_count(),
+    &findings,
+  );
   if let Err(err) = saved {
-    write_gate((env, ctx), root, diff, count, &findings)
-      .map_err(|gate| format!("{err}; failed to block push-review state: {gate}"))?;
+    gate.map_err(|gate| format!("{err}; failed to block push-review state: {gate}"))?;
     return Err(err);
   }
-  write_gate((env, ctx), root, diff, count, &findings)
+  gate
 }
 
 /// Mark `report` incomplete for every condition production gates on: a scoped
@@ -101,32 +126,6 @@ pub(crate) fn mark_coverage(
   }
   // Every incomplete condition above left an unreviewed entry.
   settle(report)
-}
-
-/// Whether `report` is complete; an incomplete one with no blocking finding gains a
-/// system blocker, so its gate state can never pass.
-pub(crate) fn settle(report: &mut Report) -> bool {
-  let complete = report.is_complete();
-  if !complete && report.blocking_count() == 0 {
-    report.findings.push(super::output::system_blocker(
-      "code-review:incomplete",
-      "coverage",
-      "The review did not cover a clean committed diff",
-      "review incomplete",
-    ));
-  }
-  complete
-}
-
-fn state_blocker(report: &mut Report) {
-  if report.blocking_count() == 0 {
-    report.findings.push(super::output::system_blocker(
-      "code-review:state",
-      "state",
-      "The review state could not be saved",
-      "state unavailable",
-    ));
-  }
 }
 
 /// Dismiss exactly one stored finding; only a complete unchanged review can refresh gate state.

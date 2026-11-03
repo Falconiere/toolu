@@ -1,5 +1,5 @@
 //! The evidence package of each shaped file: its masked patch plus bounded
-//! surrounding source from `HEAD`. Added files carry no source (their patch is the
+//! surrounding source from snapshot. Added files carry no source (their patch is the
 //! whole file) and deleted files have none. A source over the level's per-file cap
 //! sends the line windows around its changes that fit that cap instead, with a
 //! note; one with no window that fits, or that would take its package (parent
@@ -28,9 +28,9 @@ pub(crate) struct Package {
   pub path: String,
   /// The masked zero-context patch.
   pub patch: String,
-  /// The masked `HEAD` source, when it fits the caps.
+  /// The masked snapshot source, when it fits the caps.
   pub source: Option<String>,
-  /// The masked `HEAD` lines naming the changed definitions, at levels that send them.
+  /// The masked snapshot lines naming the changed definitions, at levels that send them.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub context: Option<String>,
 }
@@ -75,7 +75,7 @@ pub(crate) fn packages(
     .enumerate()
     .map(|(index, file)| {
       let text = if chunked.contains(&index) {
-        head((env, root), file, &mut notes)
+        head((env, root), &shaped.source_ref, file, &mut notes)
       } else {
         None
       };
@@ -113,13 +113,18 @@ fn fit(file: &ShapedFile, text: String, cap: usize, notes: &mut Vec<String>) -> 
   Some(kept)
 }
 
-/// `file`'s `HEAD` text when its kind needs context; a note when unreadable.
-fn head((env, root): (&Env, &Path), file: &ShapedFile, notes: &mut Vec<String>) -> Option<String> {
+/// `file`'s snapshot text when its kind needs context; a note when unreadable.
+fn head(
+  (env, root): (&Env, &Path),
+  source_ref: &str,
+  file: &ShapedFile,
+  notes: &mut Vec<String>,
+) -> Option<String> {
   if matches!(file.kind, FileKind::Added | FileKind::Deleted) {
     return None;
   }
   let path = &file.path;
-  let object = format!("HEAD:{path}");
+  let object = format!("{source_ref}:{path}");
   let read = git_process(env, root, &["cat-file", "blob", &object], BLOB_MAX_BYTES);
   let text = match read {
     Ok(out) if out.exit_code == 0 && !out.timed_out && !out.truncated => {
@@ -134,7 +139,9 @@ fn head((env, root): (&Env, &Path), file: &ShapedFile, notes: &mut Vec<String>) 
     Ok(_) | Err(_) => None,
   };
   if text.is_none() {
-    notes.push(format!("source of {path} left out: unreadable at HEAD"));
+    notes.push(format!(
+      "source of {path} left out: unreadable at {source_ref}"
+    ));
   }
   text
 }

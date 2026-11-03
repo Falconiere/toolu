@@ -1,6 +1,6 @@
 ---
 name: review
-description: Review a committed push diff using native review, with toolu-review fallback when it cannot complete. Use for code review or before pushing.
+description: Review branch and uncommitted changes using native review, with toolu-review fallback when it cannot complete. Use for code review or before pushing.
 ---
 
 # Code review
@@ -17,6 +17,14 @@ repeated `--path PATH`, or `--effort small|medium|high|xhigh` only when supplied
 by the user/caller. Otherwise settings/Jev choose effort. Return the JSON's
 verdict, validated findings, coverage, recap and usage. The native command
 reads the diff; read source to investigate findings or perform fallback.
+
+The command includes committed branch changes plus staged, unstaged and non-ignored
+untracked files, compared with the chosen merge-base. Patches, scanners and source
+context use one captured snapshot; HEAD and the user's index stay unchanged.
+Local review reports findings and revokes earlier push approval. If its only unreviewed
+entry is `(review): worktree has uncommitted changes` and it has no operational
+error, return the local result without fallback. Commit and re-review only when
+authorized and push approval is needed. Other incomplete coverage still uses fallback.
 
 Native review requires exported `OPENROUTER_API_KEY` and network access; Muse
 must forward the key. Review calls run on a Jev-selected host CLI with

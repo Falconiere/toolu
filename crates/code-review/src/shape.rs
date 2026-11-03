@@ -1,11 +1,14 @@
-//! The committed review diff: base, noise, renames, and citable changed lines.
+//! The review diff: base, noise, renames, and citable changed lines.
 
 mod dirty;
 mod file;
 pub(crate) mod git_io;
 mod noise;
 mod parse;
+mod snapshot;
 mod source;
+pub(crate) use snapshot::review;
+use snapshot::start;
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -20,10 +23,10 @@ use crate::budget::DIFF_CHUNK_MAX_BYTES;
 use crate::contract::{Coverage, Omitted, Side};
 pub(crate) use dirty::dirty_except_state;
 use file::{FileDecision, inspect_file};
-use git_io::{git, git_found, git_output, text};
+use git_io::{git, git_found, text};
 use noise::status_noise;
+use parse::Status;
 pub(crate) use parse::hunk_start;
-use parse::{Status, names, statuses};
 use source::batch_generated;
 
 /// Status bytes read to tell whether the worktree has any change.
@@ -105,16 +108,18 @@ pub struct Chunk {
   pub bytes: usize,
 }
 
-/// A complete, gate-aligned committed diff for later review stages.
+/// Complete evidence for a committed branch or local snapshot.
 #[derive(Debug, Serialize)]
 pub struct Shaped {
   /// Base ref resolved like the push-review gate.
   pub base_ref: String,
   /// The common commit behind base...HEAD.
   pub merge_base: String,
-  /// The exact gate hash of the committed patch.
+  /// Immutable new-side tree or commit used by every review stage.
+  pub source_ref: String,
+  /// The gate hash for committed reviews, or a distinct local snapshot hash.
   pub diff_sha: String,
-  /// Exact path set from the gate's name-only diff.
+  /// Exact path set from the reviewed name-only diff.
   pub gate_files: Vec<String>,
   /// Fully reviewed text files.
   pub files: Vec<ShapedFile>,
@@ -124,7 +129,7 @@ pub struct Shaped {
   pub coverage: Coverage,
   /// Old-to-new rename map, including noisy files.
   pub renames: Vec<Rename>,
-  /// Whether the worktree contains changes outside the committed diff.
+  /// Whether local changes prevent this review from approving a push.
   pub uncommitted: bool,
 }
 
@@ -139,7 +144,7 @@ pub fn shape(env: &Env, root: &Path, requested_base: Option<&str>) -> Result<Sha
   let top =
     toplevel(env, root).ok_or_else(|| ShapeError::Git("not inside a Git work tree".to_owned()))?;
   let root = top.as_path();
-  let (mut shaped, statuses) = start(env, root, requested_base)?;
+  let (mut shaped, statuses) = start(env, root, requested_base, None)?;
   populate(env, root, statuses, &mut shaped)?;
   // A commit or base move mid-run would pair the hash with other evidence; patches
   // use the merge-base resolved before the first hash, so it must still hold too.
@@ -153,49 +158,6 @@ pub fn shape(env: &Env, root: &Path, requested_base: Option<&str>) -> Result<Sha
     ));
   }
   Ok(shaped)
-}
-
-fn start(
-  env: &Env,
-  root: &Path,
-  requested_base: Option<&str>,
-) -> Result<(Shaped, Vec<Status>), ShapeError> {
-  let (base_ref, merge_base) = resolve_base(env, root, requested_base)?;
-  let diff_sha = diff_sha(env, root, &base_ref)
-    .ok_or_else(|| ShapeError::Git("gate diff hash failed".to_owned()))?;
-  let range = format!("{base_ref}...HEAD");
-  let gate_files = names(&git(env, root, &["diff", &range, "--name-only", "-z"])?)?;
-  if gate_files.is_empty() {
-    return Err(ShapeError::EmptyDiff);
-  }
-  let metadata = git(env, root, &["diff", "-M", "--name-status", "-z", &range])?;
-  let statuses = statuses(&metadata)?;
-  // Only emptiness matters, so a dropped tail still means uncommitted changes.
-  let (status, truncated) = git_output(
-    env,
-    root,
-    &[
-      "--no-optional-locks",
-      "status",
-      "--porcelain=v1",
-      "-z",
-      "--untracked-files=normal",
-    ],
-    STATUS_PROBE_BYTES,
-  )?;
-  let uncommitted = truncated || !status.is_empty();
-  let shaped = Shaped {
-    base_ref,
-    merge_base,
-    diff_sha,
-    gate_files,
-    files: Vec::new(),
-    chunks: Vec::new(),
-    coverage: Coverage::default(),
-    renames: Vec::new(),
-    uncommitted,
-  };
-  Ok((shaped, statuses))
 }
 
 fn resolve_base(
@@ -241,6 +203,7 @@ struct FileContext<'a> {
   root: &'a Path,
   range: &'a str,
   merge_base: &'a str,
+  source_ref: &'a str,
   generated: Option<&'a BTreeSet<String>>,
 }
 
@@ -256,14 +219,22 @@ fn populate(
     .iter()
     .filter(|status| status_noise(status).is_none())
     .collect();
-  let generated = batch_generated(env, root, &candidates, &shaped.merge_base);
+  let generated = batch_generated(
+    env,
+    root,
+    &candidates,
+    &shaped.merge_base,
+    &shaped.source_ref,
+  );
   let merge_base = shaped.merge_base.clone();
-  let patch_range = format!("{merge_base}..HEAD");
+  let source_ref = shaped.source_ref.clone();
+  let patch_range = format!("{merge_base}..{source_ref}");
   let context = FileContext {
     env,
     root,
     range: &patch_range,
     merge_base: &merge_base,
+    source_ref: &source_ref,
     generated: generated.as_ref(),
   };
   let mut seen = BTreeSet::new();

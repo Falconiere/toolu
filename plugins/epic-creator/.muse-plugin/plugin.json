@@ -3,7 +3,7 @@
   "name": "epic-creator",
   "displayName": "epic-creator",
   "version": "8.11.0",
-  "description": "Turn an idea into a GitHub epic the epic-orchestrator engine can run: brainstorm it, split it into one-PR sub-issues with cited decisions and runnable checks, confirm once, then create the epic, native sub-issues and dependencies.",
+  "description": "Create and refresh GitHub epics with cited decisions, coherent sub-issues, observable acceptance criteria and test plans. Includes epic-creator and epic-updater, with graph verification before worker handoff.",
   "compat": {
     "source": "native",
     "manifestDir": ".muse-plugin"
@@ -13,6 +13,10 @@
       {
         "id": "epic-creator",
         "path": "skills/epic-creator/SKILL.md"
+      },
+      {
+        "id": "epic-updater",
+        "path": "skills/epic-updater/SKILL.md"
       }
     ],
     "commands": [],

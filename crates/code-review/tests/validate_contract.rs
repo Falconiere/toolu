@@ -10,6 +10,7 @@ use toolu_code_review::validate::{Input, Recap, SeverityChange, Validated, finge
 fn shaped() -> Shaped {
   Shaped {
     base_ref: "main".to_owned(),
+    source_ref: "HEAD".into(),
     merge_base: "abc".to_owned(),
     diff_sha: "def".to_owned(),
     gate_files: vec!["src/a.rs".to_owned()],

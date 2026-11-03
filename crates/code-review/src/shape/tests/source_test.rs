@@ -69,7 +69,7 @@ fn batch_reads_base_attributes_and_requires_both_sides_of_a_changed_file() {
   ];
   let refs: Vec<&Status> = statuses.iter().collect();
   assert_eq!(
-    batch_generated(&isolated_env(), root, &refs, &base),
+    batch_generated(&isolated_env(), root, &refs, &base, "HEAD"),
     Some(BTreeSet::from([
       "attr.rs".to_owned(),
       "gen.rs".to_owned(),

@@ -128,6 +128,11 @@ pub(super) fn clean_case() -> (tempfile::TempDir, tempfile::TempDir, Fixture) {
 pub(super) fn finding_case(approved: bool) -> (tempfile::TempDir, tempfile::TempDir, Fixture) {
   let repo = repo();
   let state = tempfile::tempdir().unwrap();
+  let fixture = finding_fixture(approved);
+  (repo, state, fixture)
+}
+
+fn finding_fixture(approved: bool) -> Fixture {
   let fixture = Fixture::start().unwrap();
   let finding = json!({"path":"src.txt","line":1,"end_line":1,"side":"new",
     "severity":"high","category":"correctness","claim":"the new value breaks callers",
@@ -140,7 +145,7 @@ pub(super) fn finding_case(approved: bool) -> (tempfile::TempDir, tempfile::Temp
   fixture
     .route("/api/v1/chat/completions", Reply::new(200, response))
     .unwrap();
-  (repo, state, fixture)
+  fixture
 }
 
 pub(super) fn saved_state(state: &Path) -> serde_json::Value {
@@ -163,4 +168,23 @@ pub(super) fn invoke(env: &Env, options: &Options<'_>) -> crate::contract::Repor
     options,
   )
   .unwrap()
+}
+
+pub(super) fn review_with_finding(root: &Path, state: &Path) -> Env {
+  let fixture = finding_fixture(false);
+  let env = env(root, state, &fixture);
+  let report = invoke(
+    &env,
+    &Options {
+      skip_judge: true,
+      ..options(&fixture)
+    },
+  );
+  assert!(
+    report
+      .findings
+      .iter()
+      .any(|item| item.path == "src.txt" && item.severity.blocking())
+  );
+  env
 }

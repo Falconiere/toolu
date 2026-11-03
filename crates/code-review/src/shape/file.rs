@@ -22,14 +22,7 @@ pub(super) fn inspect_file(
   context: &FileContext<'_>,
   status: &Status,
 ) -> Result<FileDecision, ShapeError> {
-  let generated = match context.generated {
-    Some(paths) => paths.contains(&status.path),
-    // A failed batch is retried for this path alone, so one bad path cannot hide the rest.
-    None => batch_generated(context.env, context.root, &[status], context.merge_base)
-      .ok_or_else(|| ShapeError::Git("generated-file classification failed".to_owned()))?
-      .contains(&status.path),
-  };
-  if generated {
+  if generated(context, status)? {
     return Ok(FileDecision::Skipped("generated"));
   }
   let (patch, truncated) = file_patch(context, status)?;
@@ -65,6 +58,22 @@ pub(super) fn inspect_file(
   }))
 }
 
+fn generated(context: &FileContext<'_>, status: &Status) -> Result<bool, ShapeError> {
+  Ok(match context.generated {
+    Some(paths) => paths.contains(&status.path),
+    // A failed batch is retried for this path alone, so one bad path cannot hide the rest.
+    None => batch_generated(
+      context.env,
+      context.root,
+      &[status],
+      context.merge_base,
+      context.source_ref,
+    )
+    .ok_or_else(|| ShapeError::Git("generated-file classification failed".to_owned()))?
+    .contains(&status.path),
+  })
+}
+
 /// Git's binary verdict as a skip, unless only one committed side holds a NUL byte:
 /// the branch must not hide a text change behind one.
 fn binary(context: &FileContext<'_>, status: &Status) -> Result<FileDecision, ShapeError> {
@@ -72,7 +81,7 @@ fn binary(context: &FileContext<'_>, status: &Status) -> Result<FileDecision, Sh
     return Ok(FileDecision::Skipped("binary"));
   }
   let base = has_nul(context, context.merge_base, old_side(status))?;
-  if base != has_nul(context, "HEAD", &status.path)? {
+  if base != has_nul(context, context.source_ref, &status.path)? {
     return Ok(FileDecision::Unreviewed(
       "content switched between text and binary",
     ));

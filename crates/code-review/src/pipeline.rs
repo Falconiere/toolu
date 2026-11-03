@@ -96,15 +96,10 @@ fn review_shape(
   root: &std::path::Path,
   base: Option<&str>,
 ) -> Result<Shaped, String> {
-  let mut shaped = shape::shape(env, root, base).map_err(|err| format!("shape: {err:?}"))?;
-  if shaped.uncommitted {
-    let state_root = roots
-      .project_state_root(None, Some(root))
-      .ok_or("state root unavailable")?;
-    shaped.uncommitted =
-      shape::dirty_except_state(env, root, &state_root).map_err(|err| format!("shape: {err:?}"))?;
-  }
-  Ok(shaped)
+  let state_root = roots
+    .project_state_root(None, Some(root))
+    .ok_or("state root unavailable")?;
+  shape::review(env, root, base, &state_root).map_err(|err| format!("shape: {err:?}"))
 }
 
 fn project_root(roots: &Roots) -> Result<std::path::PathBuf, String> {

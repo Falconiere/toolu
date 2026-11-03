@@ -16,6 +16,7 @@ fn per_path_fallback_leaves_missing_blobs_unreviewed_and_fails_without_a_base() 
     root: dir.path(),
     range: "HEAD...HEAD",
     merge_base,
+    source_ref: "HEAD",
     generated: None,
   };
   assert!(matches!(

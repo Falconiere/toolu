@@ -25,6 +25,7 @@ pub(super) fn added(line: u32, text: &str) -> ChangedLine {
 pub(super) fn shaped(path: &str, lines: Vec<ChangedLine>) -> Shaped {
   Shaped {
     base_ref: "main".to_owned(),
+    source_ref: "HEAD".into(),
     merge_base: String::new(),
     diff_sha: String::new(),
     gate_files: vec![path.to_owned()],

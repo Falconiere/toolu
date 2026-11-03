@@ -562,8 +562,8 @@ the babysit slot state) and is skipped while cooling.
 ### Native code review (`codeReview`)
 
 `toolu code-review run` is enabled by default. With an exported
-`OPENROUTER_API_KEY`, it sends the committed diff to OpenRouter without a
-per-repository opt-in. Set `"codeReview": {"enabled": false}` in user or project
+`OPENROUTER_API_KEY`, it reviews branch and uncommitted changes using host CLIs
+or OpenRouter without a per-repository opt-in. Set `"codeReview": {"enabled": false}` in user or project
 `toolu.config.json` to opt out; project settings take precedence. Disabled or
 invalid configuration makes no request and exits 69 with
 `error.kind: "not-enabled"` and a reason. Malformed JSON, invalid envelopes,
@@ -577,9 +577,9 @@ disable review; genuinely missing files use the defaults.
 | `effort` | `auto` | User or project. `auto` lets Jev pick `small`, `medium`, `high` or `xhigh` from shape metadata, floored to `high` for secrets, CI workflows, gate policy, credential or security paths, and diffs over 1,000 changed lines; `--effort` wins over this setting. An unknown value is ignored with a note. |
 
 What leaves the machine: the base-ref conventions and prompt override, the
-masked zero-context patch, bounded `HEAD` source of modified files (line
+masked zero-context patch, bounded snapshot source of modified files (line
 windows around the changes when a file is over the level's cap), at `high` and
-`xhigh` the bounded `HEAD` lines elsewhere in the repository that name the
+`xhigh` the bounded snapshot lines elsewhere in the repository that name the
 changed definitions, pre-pass findings, and open prior findings with
 dismissals. Secrets found by the pre-pass
 are replaced with `[REDACTED]` before any request.
@@ -587,7 +587,10 @@ are replaced with `[REDACTED]` before any request.
 The [review skill](../plugins/code-review/skills/review/SKILL.md) runs
 `toolu --json code-review run` and automatically invokes `toolu-review:review`
 if native review is disabled, unavailable, unconfigured, fails operationally or
-has incomplete coverage. Fallback preserves scope and real findings; failed or
+has incomplete coverage. A local review whose only coverage restriction is
+uncommitted changes returns its findings without fallback and replaces earlier
+push approval with blocked state.
+Fallback preserves scope and real findings; failed or
 unavailable fallback never records approval. Standalone CLI failures keep their
 exit codes and JSON interfaces. The command `toolu code-review dismiss <finding-id> --reason TEXT`
 settles an exact finding without another model call. The run reports a derived

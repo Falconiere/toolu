@@ -11,7 +11,7 @@ Owner: `plugins/epic-creator`.
 ```text
 epic-creator is a Markdown-only plugin: it has no verbs. Its skill thinks an idea through, splits it into one-PR sub-issues with cited decisions and runnable acceptance checks, and after one confirmation creates the GitHub epic, its native sub-issues and their dependencies.
 
-Run it as /epic-creator:epic-creator in Claude Code or $epic-creator:epic-creator in Codex, then run the epic with epic-orchestrator.
+Run it as /epic-creator:epic-creator in Claude Code or $epic-creator:epic-creator in Codex. Refresh an existing epic with /epic-creator:epic-updater or $epic-creator:epic-updater: it checks current code, descriptions, acceptance criteria and test plans before applying body edits. Use --dry-run to audit without GitHub writes. Run the epic with epic-orchestrator.
 
 Usage: toolu epic-creator [OPTIONS]
 

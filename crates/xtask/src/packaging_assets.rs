@@ -9,7 +9,7 @@ use serde_json::Value;
 /// Published plugins in the marketplace.
 pub(crate) const PLUGINS: usize = 17;
 /// Discoverable plugin skills.
-pub(crate) const SKILLS: usize = 21;
+pub(crate) const SKILLS: usize = 22;
 /// Published Codex agent profiles.
 pub(crate) const AGENTS: usize = 6;
 /// Claude-compatible hook manifests.

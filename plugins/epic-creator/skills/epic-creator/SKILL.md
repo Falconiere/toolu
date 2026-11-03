@@ -9,6 +9,7 @@ Each sub-issue body becomes the prompt an unattended worker re-reads on every
 turn, and the text the engine routes on. Write bodies that let a worker build
 the right thing with the least reading. This skill creates issues; it never
 edits code, commits or starts the engine.
+To refresh existing issues, use the sibling `epic-updater` skill instead.
 
 ## Inputs
 
@@ -54,28 +55,32 @@ the input is an approved spec, skip it and reuse the spec's decisions.
 
 ## 3. Decompose
 
-Read [issue bodies](references/issue-bodies.md) and draft the epic and every
-child under its rules. While drafting:
+Read [evidence and handoff](references/evidence.md) and
+[issue bodies](references/issue-bodies.md), then draft the epic and every
+child under their rules. While drafting:
 
 - Read each file once and cite from that read. Leave out what you did not read.
-- Make each child one PR: one module, at most five criteria, each with a check.
+- Make each child one coherent PR with observable criteria and focused checks.
+  Account for callers, tests, fixtures and docs; prefer at most five criteria.
 - Order children by dependency and confirm the draft has no cycle.
 - State a shared decision once, in the epic. A child repeats only what it obeys.
 
-Check every body before showing it, and fix rather than explain:
+Check every body before showing it; fix broken claims, links and relationships:
 
-- a child under 1200 characters, the epic under 4000;
-- fewer than six `- [ ]` boxes;
+- target a child under 1200 characters and the epic under 4000; explain any
+  larger body or six-plus criteria instead of dropping necessary requirements;
 - no "blocked by" or "depends on" outside `## Relationships`, and no `#N` task lines in the epic;
 - every linked file passes `git cat-file -e "$SHA:<path>"`;
 - every `path:line` exists at the base commit.
 
-A child that blocks three or more others routes as `complex` whatever its body
-says. Keep it when the fan-out is real, and say so in the table.
+Body length, task count and fan-out can raise heuristic routing cost; title
+and labels also affect it. Keep real dependencies and complete contracts,
+and show expected routing costs in the table rather than promising Standard.
 
 ## 4. Confirm
 
-Show one table (child, title, blocked by, characters) and the full bodies, then
+Show one table (child, title, blocked by, characters, expected tier/reason)
+and the full bodies, then
 ask one structured question: create, revise or cancel (`AskUserQuestion` in
 Claude Code, `request_user_input` in Codex). Revise returns to step 3.
 `--dry-run` and cancel stop here with nothing written.
@@ -98,8 +103,9 @@ toolu epic route --graph "$DIR/graph.json" --dry-run --no-jev --issue "$REPO#$CH
 Repeat `--issue` once per child. `--no-jev` keeps the check on the body shape;
 the engine may still score with Jev when it runs. The epic is ready when the
 graph lists every child, each child's `blockers` match the drafted edges and
-`cycle` is empty. A child above `standard` that the confirmed table did not
-mark as fan-out is a body to shorten. Fix a body with `gh issue edit`; add a
+`cycle` is empty. Explain unexpected routing tiers; remove repetition or split
+at a coherent boundary only when the full contract survives. Fix a body with
+`gh issue edit`; add a
 missing link or dependency with the calls in GitHub writes. Removing a link or
 dependency needs the user's approval. Then prove again.
 

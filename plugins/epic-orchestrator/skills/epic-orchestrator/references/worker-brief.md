@@ -64,7 +64,15 @@ directly.
    merged PRs only as far as this issue needs. Read the repository's agent
    instructions (`AGENTS.md` or `CLAUDE.md`) and the quality-bar documents they
    link (for toolu's Rust crates, `docs/rust-quality-bar.md`): the PR must pass that bar.
-2. **Deliver.** Invoke {{DELIVERY}} for this issue. Within that
+   If the issue pins a `Base:`, compare its cited files and interfaces with
+   the current base and relevant merged blockers. Reuse settled decisions and
+   verification plans; investigate only missing evidence or drift. A listed
+   test plan is not a passing test. Contradictory or changed sibling contracts
+   need a `contract-changed` notice; reconcile the contract before implementing
+   affected work, reporting `needs-human` for unresolved contradictions.
+2. **Deliver.** Invoke {{DELIVERY}} for this issue. Carry the verified issue
+   contract into the spec and plan; do not reopen settled choices without new
+   evidence. Within that
    single skill invocation, run `report brainstorm`, `report spec`,
    `report spec-review`, `report plan`, `report plan-review`, and
    `report execution` as each phase starts. Follow its private phase

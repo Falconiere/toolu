@@ -1,8 +1,8 @@
 //! Caller context for one changed file: the definitions its changes sit in, and
-//! every other `HEAD` line that names them, so the model sees who depends on what
+//! every other snapshot line that names them, so the model sees who depends on what
 //! changed even when those files are not in the diff. Definitions are found by a
 //! language-agnostic keyword pattern and references by `git grep -w` over the
-//! committed `HEAD` tree, never the worktree. A name with too many hits says too
+//! captured tree, never the live worktree. A name with too many hits says too
 //! little to be worth its bytes and is skipped with a note.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -23,11 +23,11 @@ const DEFINITION: &str =
 /// The most `git grep` output read for one name; more is too many hits anyway.
 const GREP_MAX_BYTES: usize = 64 * 1024;
 
-/// One `HEAD` line naming a definition: `(path, line, text)`.
+/// One snapshot line naming a definition: `(path, line, text)`.
 type Hit = (String, u32, String);
 
 /// The state of one review's caller search: the definition pattern compiled
-/// once, and each name's raw `HEAD` hits (`None` when over the limit or
+/// once, and each name's raw snapshot hits (`None` when over the limit or
 /// unreadable) so a name enclosing changes in several files is searched once.
 pub(super) struct Callers {
   pattern: Result<Regex, String>,
@@ -71,7 +71,7 @@ impl Callers {
     for (name, defined_at) in names {
       let cached = self.hits.entry(name.clone()).or_insert_with(|| {
         self.searches += 1;
-        references(env, root, &name)
+        references(env, root, &shaped.source_ref, &name)
       });
       let Some(hits) = cached else {
         notes.push(format!(
@@ -143,22 +143,23 @@ fn enclosing(pattern: &Regex, file: &ShapedFile, text: &str) -> BTreeMap<String,
     .collect()
 }
 
-/// Every `HEAD` line naming `name` as a whole word, as `(path, line, text)`;
+/// Every snapshot line naming `name` as a whole word, as `(path, line, text)`;
 /// `None` when Git fails or there are more than `CONTEXT_HITS_MAX`.
-fn references(env: &Env, root: &Path, name: &str) -> Option<Vec<Hit>> {
+fn references(env: &Env, root: &Path, source_ref: &str, name: &str) -> Option<Vec<Hit>> {
   // `-z` ends the path and the line number with NUL, so a path may hold `:`.
   let args = [
-    "grep", "-n", "-z", "-w", "-I", "-F", "-e", name, "HEAD", "--",
+    "grep", "-n", "-z", "-w", "-I", "-F", "-e", name, source_ref, "--",
   ];
   let out = git_process(env, root, &args, GREP_MAX_BYTES).ok()?;
   // Exit 1 is Git's "no match": an empty answer, not a failure.
   if out.timed_out || out.truncated || !matches!(out.exit_code, 0 | 1) {
     return None;
   }
+  let prefix = format!("{source_ref}:");
   let hits: Vec<Hit> = String::from_utf8_lossy(&out.stdout_bytes)
     .lines()
     .filter_map(|hit| {
-      let mut parts = hit.strip_prefix("HEAD:")?.splitn(3, '\0');
+      let mut parts = hit.strip_prefix(&prefix)?.splitn(3, '\0');
       let (path, line, text) = (parts.next()?, parts.next()?, parts.next()?);
       Some((
         path.to_owned(),

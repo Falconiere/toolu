@@ -32,6 +32,7 @@ pub(crate) fn shaped(files: &[(&str, &[&str])]) -> Shaped {
     .collect();
   Shaped {
     base_ref: "main".into(),
+    source_ref: "HEAD".into(),
     merge_base: "abc".into(),
     diff_sha: "def".into(),
     gate_files: files.iter().map(|file| file.path.clone()).collect(),
