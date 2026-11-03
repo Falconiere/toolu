@@ -120,7 +120,7 @@ pub(super) fn page(
   }
   match read_page(dir, lock, since, limit) {
     Err(err) if err.starts_with("corrupt journal index") => {
-      let _held = super::journal_held(lock)?;
+      let _held = super::journal_held(lock, super::LOCK_WAIT)?;
       scan::rebuild(dir)?;
       read_page(dir, lock, since, limit)
     }
@@ -143,7 +143,7 @@ fn ensure(dir: &Path, lock: &Path) -> Result<Summary, String> {
   if let Some(summary) = ready(dir)? {
     return Ok(summary);
   }
-  let _held = super::journal_held(lock)?;
+  let _held = super::journal_held(lock, super::LOCK_WAIT)?;
   fresh(dir)
 }
 

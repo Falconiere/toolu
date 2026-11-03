@@ -33,3 +33,11 @@ threads-required = 'num-test-threads'
 [[profile.default.overrides]]
 filter = 'binary(golden_quality) & test(=ts_quality_replays_every_golden_case)'
 threads-required = 'num-test-threads'
+
+# fixture_cases replays fixtures/shell/issue-283.json, whose latency case bounds
+# one analysis of a long command at 50 ms of wall time. Beside the whole
+# workspace it measured 539 ms and alone about 5 ms, so it keeps every test
+# slot and nothing runs beside it.
+[[profile.default.overrides]]
+filter = 'package(toolu-shell) & binary(fixture_cases)'
+threads-required = 'num-test-threads'

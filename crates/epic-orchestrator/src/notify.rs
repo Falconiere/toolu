@@ -21,6 +21,8 @@ use crate::server::Engine;
 const QUEUE: usize = 64;
 /// POST attempts per notice.
 const ATTEMPTS: u32 = 5;
+/// How long a delivery's journal row waits for the lock.
+const RECORD_WAIT: Duration = Duration::from_secs(30);
 
 /// The first reminder delay and the notifier, when notifications are on.
 pub(crate) struct AttentionOptions {
@@ -245,14 +247,18 @@ fn classify(result: &Result<toolu_http::Response, Error>) -> (String, bool) {
   }
 }
 
+/// Journal the delivery. The state loop gives up the journal lock after 2 s;
+/// nothing waits on this thread, so it keeps trying for [`RECORD_WAIT`]
+/// rather than lose the row of a notice it already delivered.
 fn record(paths: &Paths, notice: &Notice, ok: bool, note: &str) {
   let name = if ok { "notify" } else { "notify-failed" };
   let row = Record::new("action", name, &notice.key, &notice.token, note);
-  let _stored = journal::append(
+  let _stored = journal::append_within(
     &paths.journal_dir(),
     &paths.journal_lock(),
     &row,
     SystemTime::now(),
+    RECORD_WAIT,
   );
 }
 

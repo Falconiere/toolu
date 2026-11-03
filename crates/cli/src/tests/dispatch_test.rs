@@ -51,22 +51,24 @@ fn under_json_a_usage_error_is_also_one_document() {
   assert!(outcome.stderr.is_some());
 }
 
+// `epic status` would ensure an engine on the developer's own resource home
+// (and spawn this test binary as it), so these use verbs that touch no state.
 #[test]
-fn json_status_is_one_document() {
-  let outcome = dispatched("epic status --json");
-  assert_eq!(outcome.exit, Exit::Success);
-  assert!(document(&outcome).get("engine").is_some());
-  assert!(document(&outcome).get("issues").is_some());
+fn json_output_is_one_document() {
+  let outcome = dispatched("commands --json");
+  assert_eq!(outcome.exit, Exit::Success, "{:?}", outcome.stdout);
+  assert!(document(&outcome).get("about").is_some());
+  assert!(document(&outcome).get("commands").is_some());
 }
 
 #[test]
-fn json_status_reports_an_unknown_key_as_a_failure() {
-  let outcome = dispatched("epic status missing --json");
+fn json_reports_a_namespace_failure_as_one_document() {
+  let outcome = dispatched("epic close --graph /nonexistent/graph.json --json");
   assert_eq!(outcome.exit, Exit::Failure);
   assert!(
     document(&outcome)["error"]["message"]
       .as_str()
-      .is_some_and(|message| message.contains("unknown epic or issue: missing"))
+      .is_some_and(|message| message.starts_with("toolu epic close: cannot read graph"))
   );
 }
 

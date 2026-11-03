@@ -6,6 +6,8 @@
 mod judge;
 #[path = "helpers/rig.rs"]
 mod rig;
+#[path = "helpers/tools.rs"]
+mod tools;
 
 use std::time::{Duration, Instant};
 

@@ -27,6 +27,9 @@ pub(crate) const KEY: &str = "private-sentinel-666";
 pub(crate) struct Rig {
   pub(crate) fixture: Fixture,
   pub(crate) repo: TempDir,
+  /// Holds the linked tools `env` points at for the rig's lifetime.
+  _tools: TempDir,
+  env: Env,
   pub(crate) shaped: Shaped,
   pub(crate) rules: Bundle,
   pub(crate) prepass: PrepassResult,
@@ -73,7 +76,8 @@ impl Rig {
     git(root, &["add", "-A"])?;
     git(root, &["commit", "-qm", "change"])?;
     let fixture = Fixture::start().map_err(|err| err.to_string())?;
-    let env = git_env();
+    let tools = tempfile::tempdir().map_err(|err| err.to_string())?;
+    let env = super::tools::tools_env(tools.path())?;
     let shaped = shape(&env, root, Some("main")).map_err(|err| format!("{err:?}"))?;
     let rules = rules::gather(&env, root, &shaped.merge_base, &shaped.gate_files)
       .map_err(|err| format!("{err:?}"))?;
@@ -81,6 +85,8 @@ impl Rig {
     Ok(Rig {
       fixture,
       repo,
+      _tools: tools,
+      env,
       shaped,
       rules,
       prepass,
@@ -89,7 +95,9 @@ impl Rig {
 
   /// The process environment a run sees: the key, the proxy, an isolated Git.
   pub(crate) fn env(&self) -> Env {
-    git_env()
+    self
+      .env
+      .clone()
       .with("OPENROUTER_API_KEY", KEY)
       .with("OPENROUTER_MODEL", "")
       .with("JEV_TIMEOUT", "5")
@@ -160,21 +168,6 @@ impl Rig {
       .map(|request| String::from_utf8_lossy(&request.body).into_owned())
       .collect()
   }
-}
-
-fn git_env() -> Env {
-  let mut env = Env::from_pairs([
-    ("GIT_CONFIG_NOSYSTEM", "1".to_owned()),
-    ("GIT_CONFIG_GLOBAL", "/dev/null".to_owned()),
-    ("XDG_CONFIG_HOME", "/dev/null".to_owned()),
-  ]);
-  let process = Env::process();
-  for name in ["PATH", "HOME", "TMPDIR"] {
-    if let Some(value) = process.get(name) {
-      env = env.with(name, value);
-    }
-  }
-  env
 }
 
 /// A completed structured call whose visible content is `content`.

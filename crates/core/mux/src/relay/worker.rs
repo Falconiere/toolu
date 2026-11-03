@@ -96,17 +96,6 @@ fn build_prerequisites(checkout: &Transfer<'_>) -> Result<(), String> {
 }
 
 fn checkout(transfer: &Transfer<'_>, task: &Task, worktree: &str) -> Result<(), String> {
-  let paths = transfer
-    .git(&["worktree", "list", "--porcelain"])
-    .map_err(|e| error(&e))?;
-  if !paths
-    .lines()
-    .any(|line| line == format!("worktree {worktree}"))
-  {
-    transfer
-      .git(&["worktree", "add", "--detach", worktree, &task.request.base])
-      .map_err(|e| error(&e))?;
-  }
   let checkout = Transfer {
     target: Target {
       machine: transfer.target.machine,
@@ -115,6 +104,22 @@ fn checkout(transfer: &Transfer<'_>, task: &Task, worktree: &str) -> Result<(), 
     env: transfer.env,
     run: transfer.run,
   };
+  // `worktree list` prints canonical paths (`/private/tmp` for macOS's
+  // `/tmp`), so the prepared tree is matched by the path git resolves for it.
+  let prepared = checkout
+    .git(&["rev-parse", "--show-toplevel"])
+    .ok()
+    .filter(|top| !top.is_empty());
+  let paths = transfer
+    .git(&["worktree", "list", "--porcelain"])
+    .map_err(|e| error(&e))?;
+  let listed =
+    prepared.is_some_and(|top| paths.lines().any(|line| line == format!("worktree {top}")));
+  if !listed {
+    transfer
+      .git(&["worktree", "add", "--detach", worktree, &task.request.base])
+      .map_err(|e| error(&e))?;
+  }
   if checkout
     .git(&["rev-parse", "HEAD"])
     .map_err(|e| error(&e))?

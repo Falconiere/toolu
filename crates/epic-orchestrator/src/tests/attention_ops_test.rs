@@ -301,7 +301,7 @@ fn journal_names(paths: &Paths) -> Vec<String> {
   journal::tail(&paths.journal_dir(), std::time::SystemTime::now())
     .expect("tail")
     .into_iter()
-    .filter(|row| row.kind == "judgment" || row.name == "notify")
+    .filter(|row| row.kind == "judgment" || row.name.starts_with("notify"))
     .map(|row| row.name)
     .collect()
 }
