@@ -244,6 +244,8 @@ fn high_effort_sends_the_callers_of_the_definition_a_change_sits_in() {
   );
 }
 
+mod source_local_test;
+
 /// The high-effort caller context and notes for a body change in `src/levels.rs`
 /// when the repository also holds `others`.
 fn high_callers(others: &[(&str, String)]) -> (Option<String>, Vec<String>) {

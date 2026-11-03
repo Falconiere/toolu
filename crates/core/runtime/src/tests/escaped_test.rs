@@ -24,7 +24,7 @@ impl Escape {
       "exec 3<&0; perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; sleep 30' \"$1\" {redirect} 3<&- & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0"
     );
     let mut spec = Spec::new(["sh", "-c", &script, "sh", &pidfile.to_string_lossy()]);
-    spec.timeout = Duration::from_millis(150);
+    spec.timeout = Duration::from_secs(2);
     if mode == "stdin" {
       spec.stdin = vec![b'x'; 8 * 1024 * 1024];
     }
@@ -124,6 +124,20 @@ fn escaped_stdin_releases_pipe_worker_before_descendant_cleanup() {
 }
 
 #[test]
+fn escaped_child_can_start_after_a_short_scheduler_delay() {
+  let (escape, mut spec) = Escape::new("stdout");
+  spec.argv[2] = spec.argv[2].replace(
+    "POSIX::setsid()",
+    "select undef, undef, undef, 0.3; POSIX::setsid()",
+  );
+  let started = Instant::now();
+  let output = run(&spec).unwrap();
+  assert!(output.timed_out);
+  assert!(started.elapsed() < Duration::from_secs(3));
+  assert!(group::pid_alive(i64::from(escape.pid())).unwrap());
+}
+
+#[test]
 fn escaped_group_returns_before_deadline_with_unread_stdin() {
   let baseline = resource_counts();
   let (escape, mut spec) = Escape::new("stdin");
@@ -162,7 +176,7 @@ fn escaped_slow_reader_receives_full_stdin_before_deadline() {
     _dir: dir,
     pidfile: pidfile.clone(),
   };
-  let script = "exec 3<&0; perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; select undef, undef, undef, 0.35; my $n = 0; while (my $r = sysread(STDIN, my $b, 8192)) { $n += $r }; open my $out, \">\", $ARGV[1] or die; print $out $n; close $out' \"$1\" \"$2\" <&3 3<&- >/dev/null 2>&1 & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0";
+  let script = "exec 3<&0; perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; select undef, undef, undef, 0.35; my $n = 0; while (my $r = sysread(STDIN, my $b, 8192)) { $n += $r }; open my $out, \">\", \"$ARGV[1].tmp\" or die; select undef, undef, undef, 0.3; print $out $n; close $out or die; rename \"$ARGV[1].tmp\", $ARGV[1] or die' \"$1\" \"$2\" <&3 3<&- >/dev/null 2>&1 & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0";
   let mut spec = Spec::new([
     "sh",
     "-c",

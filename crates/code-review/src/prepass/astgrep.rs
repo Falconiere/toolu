@@ -1,5 +1,5 @@
-//! The structural scanner: the engine's `scan_inline` over the HEAD blobs of the
-//! shaped files, so the review sees committed text, not the worktree. Hits count
+//! The structural scanner: the engine's `scan_inline` over the snapshot blobs of the
+//! shaped files, so the review sees captured text. Hits count
 //! only on lines the diff added or changed.
 
 use std::collections::BTreeSet;
@@ -38,8 +38,14 @@ fn message(id: &str) -> String {
     .map_or_else(|| format!("structural rule {id} matched"), str::to_owned)
 }
 
-/// Write the HEAD blob of `path` under `temp` at the same relative path.
-fn materialize(env: &Env, top: &Path, temp: &Path, path: &str) -> Result<EditedFile, String> {
+/// Write the snapshot blob of `path` under `temp` at the same relative path.
+fn materialize(
+  env: &Env,
+  top: &Path,
+  temp: &Path,
+  source_ref: &str,
+  path: &str,
+) -> Result<EditedFile, String> {
   if path.starts_with('-') {
     return Err("path starts with '-' and could be read as a flag".to_owned());
   }
@@ -52,7 +58,7 @@ fn materialize(env: &Env, top: &Path, temp: &Path, path: &str) -> Result<EditedF
     return Err("path leaves the repository".to_owned());
   }
   let mut spec = Spec::new(["git", "-C", &top.display().to_string(), "cat-file", "blob"]);
-  spec.argv.push(format!("HEAD:{path}"));
+  spec.argv.push(format!("{source_ref}:{path}"));
   spec.env = Some(env.clone());
   spec.max_output_bytes = BLOB_MAX_BYTES;
   let out = run(&spec).map_err(|err| format!("git cat-file: {err:?}"))?;
@@ -97,7 +103,7 @@ fn stage(
     if !file.lines.iter().any(|line| line.side == Side::New) {
       continue;
     }
-    match materialize(env, &top, temp.path(), &file.path) {
+    match materialize(env, &top, temp.path(), &shaped.source_ref, &file.path) {
       Ok(edited) => files.push(edited),
       Err(why) => notices.push(notice(
         NoticeKind::AstGrepFailed,

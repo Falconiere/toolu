@@ -80,7 +80,7 @@ fn prepare(input: &Input<'_>, ctx: &Ctx, env: &Env) -> Result<Prepared, String> 
   {
     return Err("committed diff changed during review".to_owned());
   }
-  if sha == EMPTY_BLOB_SHA {
+  if sha == EMPTY_BLOB_SHA && input.findings_count == 0 {
     return Err(format!(
       "diff against {base} is empty; nothing to review yet"
     ));

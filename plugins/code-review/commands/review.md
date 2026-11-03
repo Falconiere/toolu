@@ -1,5 +1,5 @@
 ---
-description: Review the committed push diff with native review and automatic toolu-review fallback.
+description: Review branch and uncommitted changes with native review and automatic toolu-review fallback.
 ---
 
 # Native code review

@@ -8,12 +8,12 @@ use crate::budget::Effort;
 /// The namespace and its `run` verb.
 pub(crate) fn command() -> Command {
   Command::new("code-review")
-    .about("Native review of the push diff: anchored findings, coverage and a computed verdict")
+    .about("Native review of branch and local changes: anchored findings, coverage and a computed verdict")
     .subcommand_required(true)
     .arg_required_else_help(true)
     .subcommand(
       Command::new("run")
-        .about("Review the branch diff and print the verdict report")
+        .about("Review branch and uncommitted changes and print the verdict report")
         .arg(
           Arg::new("base")
             .long("base")

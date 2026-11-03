@@ -20,22 +20,32 @@ pub(crate) fn dirty_except_state(
   root: &Path,
   state_root: &Path,
 ) -> Result<bool, ShapeError> {
+  let (excludes, complete) = exclusions(env, root, state_root)?;
+  Ok(!complete || dirty_with_excludes(env, root, &excludes)?)
+}
+
+/// Exact state paths shared by the dirty probe and local snapshot.
+pub(super) fn exclusions(
+  env: &Env,
+  root: &Path,
+  state_root: &Path,
+) -> Result<(Vec<String>, bool), ShapeError> {
   // Pathspecs resolve against `root`, which may sit below the toplevel that
   // porcelain paths are relative to; Git also keeps own state out of the bounded probe.
   let mut excludes = Vec::new();
   if let Ok(prefix) = state_root.strip_prefix(root) {
     for name in OWN_STATE {
       let Some(path) = prefix.join(name).to_str().map(str::to_owned) else {
-        return Ok(true);
+        return Ok((excludes, false));
       };
       excludes.push(format!(":(exclude,literal){path}"));
     }
     let Some(archives) = archive_excludes(env, root, state_root, prefix)? else {
-      return Ok(true);
+      return Ok((excludes, false));
     };
     excludes.extend(archives);
   }
-  dirty_with_excludes(env, root, &excludes)
+  Ok((excludes, true))
 }
 
 fn archive_excludes(
@@ -92,7 +102,12 @@ fn writer_archive(name: &str) -> bool {
   })
 }
 
-fn dirty_with_excludes(env: &Env, root: &Path, excludes: &[String]) -> Result<bool, ShapeError> {
+/// Probe user changes without refreshing the real index.
+pub(super) fn dirty_with_excludes(
+  env: &Env,
+  root: &Path,
+  excludes: &[String],
+) -> Result<bool, ShapeError> {
   let mut args = vec![
     "--no-optional-locks",
     "status",

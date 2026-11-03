@@ -39,7 +39,7 @@ fn shared_name(
     .files
     .iter()
     .map(|file| {
-      let text = head((&env, dir.path()), file, &mut notes).unwrap();
+      let text = head((&env, dir.path()), &shaped.source_ref, file, &mut notes).unwrap();
       callers.of((&env, dir.path()), &shaped, (file, &text), &mut notes)
     })
     .collect();

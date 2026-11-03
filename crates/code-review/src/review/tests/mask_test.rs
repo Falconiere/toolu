@@ -6,6 +6,7 @@ use crate::shape::{ChangedLine, FileKind, Shaped, ShapedFile};
 fn shaped(line: &str) -> Shaped {
   Shaped {
     base_ref: "main".into(),
+    source_ref: "HEAD".into(),
     merge_base: "abc".into(),
     diff_sha: "def".into(),
     gate_files: vec!["src/a.rs".into()],

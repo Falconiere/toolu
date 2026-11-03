@@ -46,6 +46,7 @@ fn prior(id: &str, path: &str) -> PriorFinding {
 fn shaped() -> Shaped {
   Shaped {
     base_ref: "main".into(),
+    source_ref: "HEAD".into(),
     merge_base: String::new(),
     diff_sha: String::new(),
     gate_files: vec!["a.rs".into(), "new.rs".into()],

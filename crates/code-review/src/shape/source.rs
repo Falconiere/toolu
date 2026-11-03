@@ -21,6 +21,7 @@ pub(super) fn batch_generated(
   root: &Path,
   statuses: &[&Status],
   merge_base: &str,
+  source_ref: &str,
 ) -> Option<BTreeSet<String>> {
   let new_paths: Vec<&str> = statuses
     .iter()
@@ -38,7 +39,9 @@ pub(super) fn batch_generated(
   let attributes = batched(&all_paths, |batch| {
     attribute_paths(env, root, merge_base, batch)
   })?;
-  let new = batched(&new_paths, |batch| marker_batch(env, root, "HEAD", batch))?;
+  let new = batched(&new_paths, |batch| {
+    marker_batch(env, root, source_ref, batch)
+  })?;
   let old = batched(&old_paths, |batch| {
     marker_batch(env, root, merge_base, batch)
   })?;

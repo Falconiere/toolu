@@ -1,6 +1,6 @@
 # code-review
 
-Native review of the committed push diff with OpenRouter and Jev. It returns anchored findings, a compact verdict, coverage and usage, then writes gate-compatible push state.
+Native review of branch and local changes with OpenRouter and Jev. It returns anchored findings, a compact verdict, coverage and usage. A complete review of a clean committed diff can approve a push.
 
 ## Install
 
@@ -18,13 +18,17 @@ It needs `git`, which `toolu doctor` checks, and an exported `OPENROUTER_API_KEY
 
 ## Crate
 
-`crates/code-review` contributes `toolu code-review run [--base REF] [--path PATH]... [--effort auto|small|medium|high|xhigh]` and `toolu code-review dismiss <finding-id> --reason TEXT`. The generated reference is in [docs/cli/](../../docs/cli/README.md). Review is enabled by default; set `"codeReview": {"enabled": false}` in user or project `toolu.config.json` to opt out (project settings win; see [configuration](../../docs/config.md#native-code-review-codereview)). Disabled or invalid configuration sends nothing and exits 69 with `error.kind: "not-enabled"` and a reason. The agent skill automatically invokes `toolu-review:review` when native review cannot complete, including missing credentials, operational failures and incomplete coverage; it preserves scope and real findings and never approves failed or partial reviews. Standalone CLI exits remain unchanged. `--effort` defaults to `codeReview.effort`, else `auto`.
+`crates/code-review` contributes `toolu code-review run [--base REF] [--path PATH]... [--effort auto|small|medium|high|xhigh]` and `toolu code-review dismiss <finding-id> --reason TEXT`. The generated reference is in [docs/cli/](../../docs/cli/README.md). Review is enabled by default; set `"codeReview": {"enabled": false}` in user or project `toolu.config.json` to opt out (project settings win; see [configuration](../../docs/config.md#native-code-review-codereview)). Disabled or invalid configuration sends nothing and exits 69 with `error.kind: "not-enabled"` and a reason. The agent skill automatically invokes `toolu-review:review` when native review cannot complete, including missing credentials, operational failures and incomplete coverage (local-only push ineligibility does not trigger fallback); it preserves scope and real findings and never approves failed or partial reviews. Standalone CLI exits remain unchanged. `--effort` defaults to `codeReview.effort`, else `auto`.
 
-The native pipeline lets Jev pick the host CLI, the model, and the effort, builds a bounded prompt from the committed diff and base-ref conventions, calls the selected host CLI by chunk (falling back to OpenRouter), and judges fresh findings with Jev. It anchors and validates findings before deriving the verdict. Under `--json`, it prints the report contract (`schema_version`, `toolu_version`, `verdict`, `effort`, `findings`, `coverage`, `usage`, `error`, plus nonempty recap, Mechanical checks and notes). The schema is `$defs/codeReview` in [docs/cli/commands.schema.json](../../docs/cli/commands.schema.json).
+The native pipeline lets Jev pick the host CLI, the model, and the effort, builds a bounded prompt from the reviewed diff and base-ref conventions, calls the selected host CLI by chunk (falling back to OpenRouter), and judges fresh findings with Jev. It anchors and validates findings before deriving the verdict. Under `--json`, it prints the report contract (`schema_version`, `toolu_version`, `verdict`, `effort`, `findings`, `coverage`, `usage`, `error`, plus nonempty recap, Mechanical checks and notes). The schema is `$defs/codeReview` in [docs/cli/commands.schema.json](../../docs/cli/commands.schema.json).
 
 The command writes v2 push-review state through the same `toolu-state` writer as `toolu review write-state`; the last writer wins. Medium and above count as blocking. Path-scoped, dirty or incomplete reviews cannot write passing state. A separate locked branch file holds finding memory and recent passes. The append-only usage log records model, provider, reported quantization, tokens, cost and timing without source or credentials. Its active file is `<project-state>/code-review-usage.jsonl`; each file is limited to 1 MiB, with up to four complete archives in `<project-state>/code-review-usage/`, named by increasing sequence. Read archived files in sequence order, then the active file, while reviews are idle. The oldest archives are reclaimed after a successful append; an oversized legacy active file is reclaimed at its first rotation. A failed usage write, lock, rotation or cleanup blocks passing review state.
 
-The dirty-worktree check excludes only this plugin's untracked review state and usage files. Other untracked host files still count as uncommitted changes; ignore them in the repository if they are intentionally local.
+Staged, unstaged and non-ignored untracked files are included alongside committed branch changes against the selected merge-base. One temporary Git index captures the final working-tree contents; patches, structural scanning, surrounding source and caller context all read that snapshot. HEAD and the user's index are preserved. Resolve merge conflicts before reviewing.
+
+Local reviews return findings and exit 2 because they cannot approve a push; the report includes a note to commit and re-run. They replace earlier approval with blocked state, even when the committed diff is empty or the files are committed during the review. Persistence failures also block approval.
+
+The dirty-worktree check excludes only this plugin's review state and valid untracked usage archives. Other untracked host files still count as uncommitted changes; ignore them in the repository if they are intentionally local.
 
 ## What it provides
 

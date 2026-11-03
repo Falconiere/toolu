@@ -126,7 +126,7 @@
     {
       "name": "epic-creator",
       "source": "./plugins/epic-creator",
-      "description": "Turn an idea into a GitHub epic the epic-orchestrator engine can run: brainstorm it, split it into one-PR sub-issues with cited decisions and runnable checks, confirm once, then create the epic, native sub-issues and dependencies.",
+      "description": "Create and refresh GitHub epics with cited decisions, coherent sub-issues, observable acceptance criteria and test plans. Includes epic-creator and epic-updater, with graph verification before worker handoff.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["epic", "planning", "github", "issues", "skills"],
@@ -183,7 +183,7 @@
     {
       "name": "code-review",
       "source": "./plugins/code-review",
-      "description": "Native code review of the committed push diff with OpenRouter and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
+      "description": "Native code review of branch and uncommitted changes with OpenRouter and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["code-review", "review", "openrouter", "jev"],

@@ -199,6 +199,32 @@ fn recap_lines(recap: &Recap, passes: &[memory::Pass]) -> Vec<String> {
   lines
 }
 
+/// Whether `report` is complete; an incomplete one with no blocking finding gains a
+/// system blocker, so its gate state can never pass.
+pub(crate) fn settle_coverage(report: &mut Report) -> bool {
+  let complete = report.is_complete();
+  if !complete && report.blocking_count() == 0 {
+    report.findings.push(system_blocker(
+      "code-review:incomplete",
+      "coverage",
+      "The review did not cover a clean committed diff",
+      "review incomplete",
+    ));
+  }
+  complete
+}
+
+pub(super) fn state_blocker(report: &mut Report) {
+  if report.blocking_count() == 0 {
+    report.findings.push(system_blocker(
+      "code-review:state",
+      "state",
+      "The review state could not be saved",
+      "state unavailable",
+    ));
+  }
+}
+
 #[cfg(test)]
 #[path = "tests/output_test.rs"]
 mod tests;

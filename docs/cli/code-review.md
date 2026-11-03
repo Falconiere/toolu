@@ -2,19 +2,19 @@
 
 # `toolu code-review`
 
-Native review of the push diff: anchored findings, coverage and a computed verdict.
+Native review of branch and local changes: anchored findings, coverage and a computed verdict.
 
 Owner: `plugins/code-review`.
 
 ## `toolu code-review`
 
 ```text
-Native review of the push diff: anchored findings, coverage and a computed verdict
+Native review of branch and local changes: anchored findings, coverage and a computed verdict
 
 Usage: toolu code-review [OPTIONS] <COMMAND>
 
 Commands:
-  run      Review the branch diff and print the verdict report
+  run      Review branch and uncommitted changes and print the verdict report
   eval     Compare a baseline and a Jev-enhanced review against committed expectations; replays recorded responses unless --live
   dismiss  Settle a branch finding by exact ID without a model call
   help     Print this message or the help of the given subcommand(s)
@@ -30,7 +30,7 @@ Options:
 ## `toolu code-review run`
 
 ```text
-Review the branch diff and print the verdict report
+Review branch and uncommitted changes and print the verdict report
 
 Usage: toolu code-review run [OPTIONS]
 

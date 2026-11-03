@@ -1,21 +1,24 @@
 # Issue bodies
 
 A sub-issue body is the prompt an unattended worker re-reads on every turn.
-It is also what the engine routes on: a body over 1200 characters or with six
-task boxes routes as `complex`, to a bigger model. Write what the worker needs
-to build the right thing, and nothing else.
+It is also what the engine routes on: absent title/label overrides, an excerpt
+over 1200 characters, six task boxes or fan-out of three raises the heuristic
+tier. Jev can judge it differently. Keep the complete contract; brevity is a
+cost target, not a reason to hide complexity or omit a failure case.
 
 ## Rules
 
 1. **Cite or omit.** Name a file, symbol, field, constraint or behavior only
-   with a `path:line` you read at the base commit. No citation, no claim.
+   with a `path:line` you read at the base commit. Label new files and
+   interfaces as proposed; do not invent citations for them.
 2. **Decisions, not research.** State the approach, interface, files,
    non-goals and failure behavior. Alternatives and reasoning stay in the
    brainstorm record.
-3. **One check per criterion.** Each acceptance criterion names the command or
-   test that proves it on a real input. At most five; more means split.
-4. **Front-load and stay small.** Keep the order below and stay under 1200
-   characters. An interface too large for that goes in the epic once. Do not
+3. **One check per criterion.** State the input and observable result, plus
+   the focused command/test that proves it. Mark tests still to add as planned.
+   Prefer at most five criteria; split only at a coherent delivery boundary.
+4. **Front-load and stay small.** Keep the order below and target under 1200
+   characters. A shared interface goes in the epic once. Do not
    repeat the title or add a "Part of" header: the parent link carries both.
 5. **Dependencies only under Relationships.** On any line, the reader takes
    every issue named after "blocked by" or "depends on" as a dependency, so use
@@ -23,9 +26,9 @@ to build the right thing, and nothing else.
 6. **Links resolve.** Link a repository file only when
    `git cat-file -e "$SHA:<path>"` succeeds at the base commit; otherwise
    state the fact inline or drop it.
-7. **One module each.** A child reads as Standard: one module, existing
-   patterns, clear criteria. Split anything bigger along a dependency instead
-   of adding caveats.
+7. **One coherent PR each.** Include callers, tests, fixtures and docs that
+   must change together. Make sibling contracts and dependencies explicit.
+   Explain necessary larger scope rather than forcing a Standard route.
 
 ## Sub-issue
 
@@ -46,7 +49,7 @@ Base: <sha>
 - `<path>`: <what changes>
 
 ## Acceptance criteria
-- [ ] <observable outcome on a real input>. Check: `<command>`
+- [ ] <input → observable outcome>. Check: `<command>` (<existing test or planned test to add>)
 
 ## Non-goals
 - <boundary>
@@ -59,7 +62,7 @@ Omit Relationships when the child has no blocker.
 
 ## Epic
 
-Title `Epic: <name>`, label `epic`, under 4000 characters: every worker skims
+Title `Epic: <name>`, label `epic`, target under 4000 characters: every worker skims
 it.
 
 ```markdown

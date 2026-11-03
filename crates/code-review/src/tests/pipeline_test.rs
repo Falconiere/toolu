@@ -20,6 +20,9 @@ mod fixture_test;
 mod state_failure_test;
 use fixture_test::{clean_case, env, finding_case, invoke, options, repo, saved_state};
 
+mod pipeline_local_test;
+mod pipeline_reset_test;
+
 #[test]
 fn default_enabled_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usage() {
   let (repo, state, fixture) = clean_case();

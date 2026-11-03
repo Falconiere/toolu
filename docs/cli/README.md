@@ -36,7 +36,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`delivery-flow`](delivery-flow.md) | `plugins/delivery-flow` | available | Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin) |
 | [`epic-creator`](epic-creator.md) | `plugins/epic-creator` | available | Turn an idea into a GitHub epic the epic engine can run (a Markdown-only plugin) |
 | [`review`](review.md) | `plugins/toolu-review` | available | Pre-push code review state for the native push-review gate |
-| [`code-review`](code-review.md) | `plugins/code-review` | available | Native review of the push diff: anchored findings, coverage and a computed verdict |
+| [`code-review`](code-review.md) | `plugins/code-review` | available | Native review of branch and local changes: anchored findings, coverage and a computed verdict |
 | [`docs`](docs.md) | `plugins/documentation-gate` | available | Inspect and record documentation reviews |
 | [`jev`](jev.md) | `plugins/jev` | available | Typed judgments from Jev: yes/no probabilities, choices and scores |
 | [`statusline`](statusline.md) | `plugins/statusline` | available | Render and set up the native Claude status line |
@@ -82,7 +82,7 @@ Commands:
   delivery-flow   Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin)
   epic-creator    Turn an idea into a GitHub epic the epic engine can run (a Markdown-only plugin)
   review          Pre-push code review state for the native push-review gate [alias: toolu-review]
-  code-review     Native review of the push diff: anchored findings, coverage and a computed verdict
+  code-review     Native review of branch and local changes: anchored findings, coverage and a computed verdict
   docs            Inspect and record documentation reviews [alias: documentation-gate]
   jev             Typed judgments from Jev: yes/no probabilities, choices and scores
   statusline      Render and set up the native Claude status line

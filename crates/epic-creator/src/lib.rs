@@ -14,7 +14,10 @@ const GUIDE: Guide = Guide {
    through, splits it into one-PR sub-issues with cited decisions and runnable acceptance \
    checks, and after one confirmation creates the GitHub epic, its native sub-issues and \
    their dependencies.\n\nRun it as /epic-creator:epic-creator in Claude Code or \
-   $epic-creator:epic-creator in Codex, then run the epic with epic-orchestrator.",
+   $epic-creator:epic-creator in Codex. Refresh an existing epic with \
+   /epic-creator:epic-updater or $epic-creator:epic-updater: it checks current code, \
+   descriptions, acceptance criteria and test plans before applying body edits. \
+   Use --dry-run to audit without GitHub writes. Run the epic with epic-orchestrator.",
 };
 
 /// The `toolu epic-creator` namespace.
