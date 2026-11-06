@@ -165,7 +165,7 @@ jobs:
           rustup target add x86_64-unknown-linux-musl
           sudo python3 .github/scripts/configure_musl_apt_mirror.py x86_64-unknown-linux-musl
           sudo apt-get update -y
-          sudo apt-get install -y musl-tools
+          sudo apt-get install -y musl-tools strace
           CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
           mkdir -p target/release
           cp target/x86_64-unknown-linux-musl/release/toolu target/release/toolu
@@ -250,6 +250,10 @@ jobs:
             done
           } > "$diagnostics/runner.txt"
           target/release/xtask measure --out "$diagnostics/noop-floor.json" -- /usr/bin/true
+          python3 .github/scripts/capture_statusline_memory.py \
+            "${{ github.workspace }}/target/release/xtask" \
+            "${{ github.workspace }}/target/release/toolu" \
+            "${{ github.workspace }}" "$diagnostics/render-maps"
 
       - name: Upload the statusline result
         if: always() && runner.os == 'Linux'
