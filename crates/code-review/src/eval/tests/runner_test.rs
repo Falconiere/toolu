@@ -36,7 +36,8 @@ fn enhanced_at_the_known_weak_none_setting_runs_no_arm() {
   let fixtures = golden();
   let empty = tempfile::tempdir().unwrap();
   let mode = Mode::Replay(Store::new(empty.path()));
-  let env = Env::from_pairs([("GIT_CONFIG_NOSYSTEM", "1")]);
+  let env = Env::from_pairs([("GIT_CONFIG_NOSYSTEM", "1")])
+    .with("PATH", Env::process().get("PATH").unwrap_or_default());
   let plan = replay_plan(&env, &mode, ArmChoice::Enhanced, &[Setting::None]);
   let case = fixtures
     .set()
@@ -76,7 +77,8 @@ fn silent_arm(notices: Vec<Notice>) -> Result<(), String> {
   let fixtures = golden();
   let empty = tempfile::tempdir().map_err(|err| err.to_string())?;
   let mode = Mode::Replay(Store::new(empty.path()));
-  let env = Env::from_pairs([("GIT_CONFIG_NOSYSTEM", "1")]);
+  let env = Env::from_pairs([("GIT_CONFIG_NOSYSTEM", "1")])
+    .with("PATH", Env::process().get("PATH").unwrap_or_default());
   let plan = replay_plan(&env, &mode, ArmChoice::Baseline, &[Setting::Small]);
   let case = fixtures
     .set()
@@ -123,7 +125,8 @@ fn an_unreexamined_prior_in_the_diff_stays_open_and_blocks_coverage() {
   let fixtures = golden();
   let empty = tempfile::tempdir().unwrap();
   let mode = Mode::Replay(Store::new(empty.path()));
-  let env = Env::from_pairs([("GIT_CONFIG_NOSYSTEM", "1")]);
+  let env = Env::from_pairs([("GIT_CONFIG_NOSYSTEM", "1")])
+    .with("PATH", Env::process().get("PATH").unwrap_or_default());
   let plan = replay_plan(&env, &mode, ArmChoice::Baseline, &[Setting::Small]);
   let case = fixtures.set().case("memory-unreexamined").unwrap();
   let (_repo, prepared) = prepare(&fixtures, case, &plan).unwrap();
