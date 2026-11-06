@@ -193,6 +193,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$RUNNER_OS" = macOS ]; then cargo build --release -p toolu-cli --locked; fi
+          [ -x target/release/toolu ] || { echo "::error::Missing executable release binary: target/release/toolu"; exit 1; }
           if [ "$RUNNER_OS" = macOS ]; then brew_bin=/opt/homebrew/bin; else brew_bin=/home/linuxbrew/.linuxbrew/bin; fi
           for dir in "$brew_bin" /usr/local/bin; do
             sudo mkdir -p "$dir"
