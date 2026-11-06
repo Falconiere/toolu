@@ -255,10 +255,12 @@ jobs:
             "${{ github.workspace }}/target/release/toolu" \
             "${{ github.workspace }}" "$diagnostics/render-maps"
 
-      # Diagnostic controls retain the normal profile and its required result.
+      # These controls report observations; only the shipped-profile benchmark gates.
       # The pinned published baseline uses a different linker and is non-PIE.
       - name: Compare the pinned pre-PR statusline binary
-        if: always() && runner.os == 'Linux'
+        id: statusline_published
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        continue-on-error: true
         timeout-minutes: 2
         run: |
           set -euo pipefail
@@ -276,7 +278,9 @@ jobs:
             --bin "$comparison/toolu" --out "$comparison/statusline-bench.json"
 
       - name: Compare an isolated size-optimized statusline binary
-        if: always() && runner.os == 'Linux'
+        id: statusline_opt_s
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        continue-on-error: true
         timeout-minutes: 8
         run: |
           set -euo pipefail
@@ -299,6 +303,36 @@ jobs:
           XTASK_MEASURER="${{ github.workspace }}/target/release/xtask" \
             target/release/xtask bench-statusline --root "${{ github.workspace }}" --assert \
             --bin "$comparison/toolu" --out "$comparison/statusline-bench.json"
+
+      - name: Record statusline comparison outcomes
+        if: always() && runner.os == 'Linux'
+        env:
+          COMPARISON_DIRECTORY: ${{ runner.temp }}/statusline-diagnostics
+          PUBLISHED_OUTCOME: ${{ steps.statusline_published.outcome }}
+          PUBLISHED_CONCLUSION: ${{ steps.statusline_published.conclusion }}
+          OPT_S_OUTCOME: ${{ steps.statusline_opt_s.outcome }}
+          OPT_S_CONCLUSION: ${{ steps.statusline_opt_s.conclusion }}
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ['COMPARISON_DIRECTORY'])
+          root.mkdir(parents=True, exist_ok=True)
+          results = {}
+          for name, prefix in [('published-baseline', 'PUBLISHED'), ('opt-s', 'OPT_S')]:
+              outcome = os.environ.get(f'{prefix}_OUTCOME', '') or 'inconclusive'
+              conclusion = os.environ.get(f'{prefix}_CONCLUSION', '') or 'inconclusive'
+              available = (root / name / 'statusline-bench.json').is_file()
+              assessment = outcome if available and outcome in ('success', 'failure') else 'inconclusive'
+              results[name] = dict(outcome=outcome, conclusion=conclusion, measurementAvailable=available, assessment=assessment)
+          (root / 'comparison-outcomes.json').write_text(json.dumps(results, indent=2) + '\n')
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
+              summary.write('### Diagnostic statusline comparisons (not required gates)\n')
+              for name, result in results.items():
+                  summary.write(f"- {name}: outcome={result['outcome']}, conclusion={result['conclusion']}, assessment={result['assessment']}\n")
+          PYTHON
 
       - name: Upload the statusline result
         if: always() && runner.os == 'Linux'

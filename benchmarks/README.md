@@ -23,6 +23,11 @@ fabricated counterfactual.
 - **Statusline render (CI):** `cargo xtask bench-statusline --assert` times
   `toolu statusline render` against the payload in
   `fixtures/statusline/performance.json` and gates the warm p50 wall and max RSS.
+  Only the shipped release binary's assertion is required. The Linux job also
+  records non-gating comparisons with a pinned published v8.12.0 non-PIE binary
+  (different linker) and an isolated, unshipped size-optimized static PIE binary.
+  Raw failures remain visible; missing measurements are inconclusive. Neither
+  comparison changes the shipped profile or establishes production clearance.
 - **Retired:** the `live` (`whole-session`) and `container` tiers went with the
   TypeScript harness (#440). `cases/whole-session/` keeps the task inputs.
 
