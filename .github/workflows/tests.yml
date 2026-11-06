@@ -192,7 +192,7 @@ jobs:
       - name: Launcher end to end
         run: |
           set -euo pipefail
-          cargo build --release -p toolu-cli --locked
+          if [ "$RUNNER_OS" = macOS ]; then cargo build --release -p toolu-cli --locked; fi
           if [ "$RUNNER_OS" = macOS ]; then brew_bin=/opt/homebrew/bin; else brew_bin=/home/linuxbrew/.linuxbrew/bin; fi
           for dir in "$brew_bin" /usr/local/bin; do
             sudo mkdir -p "$dir"
@@ -204,7 +204,7 @@ jobs:
           done
 
       # The `toolu --version` startup budget (#442, docs/resource-budgets.md) on
-      # the release binary the previous step built. Linux gates; macOS is not gated.
+      # the shipped static Linux release. macOS is not gated.
       - name: toolu --version startup budget
         if: runner.os == 'Linux'
         run: cargo xtask check-startup --bin target/release/toolu
