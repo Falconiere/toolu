@@ -79,7 +79,8 @@ def main():
                 raise RuntimeError(f'Trace exited {process.returncode}; see coordinator.log')
         finally:
             stop(process)
-    assert len(snapshots) == 5, f'Expected all 3 warmups + 1 warm + 1 cold render, captured {len(snapshots)}'
+    if len(snapshots) != 5:
+        raise RuntimeError(f'Expected all 3 warmups + 1 warm + 1 cold render, captured {len(snapshots)}')
     report = {'observationOnly': True, 'delayedSyscall': 'every write per process, 150ms',
               'budgetAssertion': 'unchanged separate CI step; not evaluated by this probe', 'renders': list(snapshots.values())}
     target.joinpath('render-memory.json').write_text(json.dumps(report, indent=2) + '\n')
