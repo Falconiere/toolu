@@ -115,6 +115,7 @@ fn an_aggregate_missing_a_gated_job_is_named() {
 fn rust_legs_and_review_name_what_is_missing() {
   let lines = found(|f| rust_legs(&json!({}), f));
   assert!(lines.contains(&"tests.yml:rust lacks rust-macos on macos-15".to_owned()));
+  assert!(lines.iter().all(|line| !line.contains("macos-14")));
   assert!(lines.contains(&"tests.yml:rust-musl lacks aarch64-unknown-linux-musl".to_owned()));
   let root = tempfile::tempdir().unwrap();
   let lines = found(|f| review(root.path(), &json!({}), f));
