@@ -165,7 +165,7 @@ jobs:
           rustup target add x86_64-unknown-linux-musl
           sudo python3 .github/scripts/configure_musl_apt_mirror.py x86_64-unknown-linux-musl
           sudo apt-get update -y
-          sudo apt-get install -y musl-tools strace
+          sudo apt-get install -y musl-tools
           CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
           mkdir -p target/release
           cp target/x86_64-unknown-linux-musl/release/toolu target/release/toolu
@@ -221,127 +221,12 @@ jobs:
           cargo xtask bench-statusline --assert --bin target/release/toolu
           --out "${{ runner.temp }}/statusline-bench.json"
 
-      - name: Capture statusline binary identities
-        if: always() && runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          diagnostics="${{ runner.temp }}/statusline-diagnostics"
-          mkdir -p "$diagnostics"
-          {
-            git rev-parse HEAD
-            sha256sum target/x86_64-unknown-linux-musl/release/toolu
-            for binary in target/release/toolu target/release/xtask; do
-              sha256sum "$binary"
-              file "$binary"
-              readelf --program-headers --section-headers --wide "$binary"
-              cp "$binary" "$diagnostics/${binary##*/}"
-            done
-          } > "$diagnostics/identity.txt"
-          {
-            uname -a
-            getconf PAGESIZE
-            cat /etc/os-release
-            printf 'ImageOS=%s\nImageVersion=%s\n' "${ImageOS:-unknown}" "${ImageVersion:-unknown}"
-            for setting in /sys/kernel/mm/transparent_hugepage/{enabled,defrag,shmem_enabled,hugepages-*/enabled}; do
-              if [ -r "$setting" ]; then
-                printf '\n%s\n' "$setting"
-                cat "$setting"
-              fi
-            done
-          } > "$diagnostics/runner.txt"
-          target/release/xtask measure --out "$diagnostics/noop-floor.json" -- /usr/bin/true
-          python3 .github/scripts/capture_statusline_memory.py \
-            "${{ github.workspace }}/target/release/xtask" \
-            "${{ github.workspace }}/target/release/toolu" \
-            "${{ github.workspace }}" "$diagnostics/render-maps"
-
-      # These controls report observations; only the shipped-profile benchmark gates.
-      # The pinned published baseline uses a different linker and is non-PIE.
-      - name: Compare the pinned pre-PR statusline binary
-        id: statusline_published
-        if: ${{ !cancelled() && runner.os == 'Linux' }}
-        continue-on-error: true
-        timeout-minutes: 2
-        run: |
-          set -euo pipefail
-          comparison="${{ runner.temp }}/statusline-diagnostics/published-baseline"
-          mkdir -p "$comparison"
-          curl --fail --location --retry 3 --proto =https --proto-redir =https --tlsv1.2 \
-            https://github.com/Falconiere/toolu/releases/download/v8.12.0/toolu-linux-amd64.tar.gz \
-            --output "$comparison/toolu.tar.gz"
-          printf '%s  %s\n' c3f31326d874add9d2266cc300f1743a5ebb256173831076000e0aa806bd1c79 "$comparison/toolu.tar.gz" | sha256sum --check
-          tar -xzf "$comparison/toolu.tar.gz" -C "$comparison" toolu
-          test -x "$comparison/toolu" && test -s "$comparison/toolu" || { echo "::error::Published comparison binary must be nonempty and executable" >&2; exit 1; }
-          { sha256sum "$comparison/toolu"; file "$comparison/toolu"; readelf --file-header --program-headers "$comparison/toolu"; } > "$comparison/identity.txt"
-          XTASK_MEASURER="${{ github.workspace }}/target/release/xtask" \
-            target/release/xtask bench-statusline --root "${{ github.workspace }}" --assert \
-            --bin "$comparison/toolu" --out "$comparison/statusline-bench.json"
-
-      - name: Compare an isolated size-optimized statusline binary
-        id: statusline_opt_s
-        if: ${{ !cancelled() && runner.os == 'Linux' }}
-        continue-on-error: true
-        timeout-minutes: 8
-        run: |
-          set -euo pipefail
-          comparison="${{ runner.temp }}/statusline-diagnostics/opt-s"
-          mkdir -p "$comparison"
-          sha256sum target/release/toolu target/release/xtask > "$comparison/default-binaries.sha256"
-          CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="${{ runner.temp }}/statusline-opt-s-target" \
-            CARGO_PROFILE_RELEASE_OPT_LEVEL=s CC_x86_64_unknown_linux_musl=musl-gcc \
-            cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
-          candidate="${{ runner.temp }}/statusline-opt-s-target/x86_64-unknown-linux-musl/release/toolu"
-          test -x "$candidate" && test -s "$candidate" || { echo "::error::Size comparison binary must be nonempty and executable" >&2; exit 1; }
-          cp "$candidate" "$comparison/toolu"
-          { sha256sum "$comparison/toolu"; file "$comparison/toolu"; readelf --file-header --program-headers --section-headers --wide "$comparison/toolu"; } > "$comparison/identity.txt"
-          readelf --file-header "$comparison/toolu" | grep -Eq 'Type:.*DYN'
-          if readelf --program-headers "$comparison/toolu" | grep -q INTERP; then
-            echo "::error::Size comparison must preserve the static PIE target" >&2
-            exit 1
-          fi
-          sha256sum --check "$comparison/default-binaries.sha256"
-          XTASK_MEASURER="${{ github.workspace }}/target/release/xtask" \
-            target/release/xtask bench-statusline --root "${{ github.workspace }}" --assert \
-            --bin "$comparison/toolu" --out "$comparison/statusline-bench.json"
-
-      - name: Record statusline comparison outcomes
-        if: always() && runner.os == 'Linux'
-        env:
-          COMPARISON_DIRECTORY: ${{ runner.temp }}/statusline-diagnostics
-          PUBLISHED_OUTCOME: ${{ steps.statusline_published.outcome }}
-          PUBLISHED_CONCLUSION: ${{ steps.statusline_published.conclusion }}
-          OPT_S_OUTCOME: ${{ steps.statusline_opt_s.outcome }}
-          OPT_S_CONCLUSION: ${{ steps.statusline_opt_s.conclusion }}
-        run: |
-          python3 - <<'PYTHON'
-          import json
-          import os
-          from pathlib import Path
-
-          root = Path(os.environ['COMPARISON_DIRECTORY'])
-          root.mkdir(parents=True, exist_ok=True)
-          results = {}
-          for name, prefix in [('published-baseline', 'PUBLISHED'), ('opt-s', 'OPT_S')]:
-              outcome = os.environ.get(f'{prefix}_OUTCOME', '') or 'inconclusive'
-              conclusion = os.environ.get(f'{prefix}_CONCLUSION', '') or 'inconclusive'
-              available = (root / name / 'statusline-bench.json').is_file()
-              assessment = outcome if available and outcome in ('success', 'failure') else 'inconclusive'
-              results[name] = dict(outcome=outcome, conclusion=conclusion, measurementAvailable=available, assessment=assessment)
-          (root / 'comparison-outcomes.json').write_text(json.dumps(results, indent=2) + '\n')
-          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
-              summary.write('### Diagnostic statusline comparisons (not required gates)\n')
-              for name, result in results.items():
-                  summary.write(f"- {name}: outcome={result['outcome']}, conclusion={result['conclusion']}, assessment={result['assessment']}\n")
-          PYTHON
-
       - name: Upload the statusline result
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@v7
         with:
           name: statusline-bench
-          path: |
-            ${{ runner.temp }}/statusline-bench.json
-            ${{ runner.temp }}/statusline-diagnostics/
+          path: ${{ runner.temp }}/statusline-bench.json
           if-no-files-found: warn
 
   # Static Linux builds (#411) from the first Rust PR, not first at release

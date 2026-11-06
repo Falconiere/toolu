@@ -37,6 +37,7 @@ Use when running toolu's required Rust gates as root on a shared Linux host, esp
 - On a constrained shared VM disk, use `CARGO_INCREMENTAL=0` for verification and monitor free space. If storage fills, stop the owned runner and discard only its build cache and incomplete coverage data before rerunning; never prune another worker's volumes.
 - Ledger state retains only the end of a failed command's output. Capture its temporary `.run.<pid>.<step>` log while the check runs when full failure diagnostics are needed; the temporary log is removed when the command finishes.
 - With a shared `CARGO_TARGET_DIR`, a reused `xtask` binary can carry another worktree's compile-time default root. Pass `--root "$PWD"` to `cargo xtask deploy-gate` and confirm `target/deploy/gate.json` names this worktree's `git rev-parse HEAD` before treating the gate as green.
+- Before changing a memory budget, bind the tested merge tree and application/measurer digests to the candidate, then compare builds on the same failing reference host. Preserve PIE and verify startup, shell and hook CPU limits as well as RSS. Archive the proof and remove temporary diagnostics after the fixed profile passes all real gates.
 
 ## Verification
 
