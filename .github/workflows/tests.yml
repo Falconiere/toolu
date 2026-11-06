@@ -139,6 +139,10 @@ jobs:
       - name: Install ast-grep
         run: npm install -g @ast-grep/cli@0.50.0
 
+      - name: Install tmux for real multiplexer tests
+        if: runner.os == 'macOS'
+        run: brew install tmux
+
       - name: Test native release helper
         if: matrix.os == 'ubuntu-24.04'
         run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
@@ -232,6 +236,19 @@ jobs:
               cp "$binary" "$diagnostics/${binary##*/}"
             done
           } > "$diagnostics/identity.txt"
+          {
+            uname -a
+            getconf PAGESIZE
+            cat /etc/os-release
+            printf 'ImageOS=%s\nImageVersion=%s\n' "${ImageOS:-unknown}" "${ImageVersion:-unknown}"
+            for setting in /sys/kernel/mm/transparent_hugepage/{enabled,defrag,shmem_enabled,hugepages-*/enabled}; do
+              if [ -r "$setting" ]; then
+                printf '\n%s\n' "$setting"
+                cat "$setting"
+              fi
+            done
+          } > "$diagnostics/runner.txt"
+          target/release/xtask measure --out "$diagnostics/noop-floor.json" -- /usr/bin/true
 
       - name: Upload the statusline result
         if: always() && runner.os == 'Linux'
