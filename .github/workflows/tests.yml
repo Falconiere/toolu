@@ -216,12 +216,31 @@ jobs:
           cargo xtask bench-statusline --assert --bin target/release/toolu
           --out "${{ runner.temp }}/statusline-bench.json"
 
+      - name: Capture statusline binary identities
+        if: always() && runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          diagnostics="${{ runner.temp }}/statusline-diagnostics"
+          mkdir -p "$diagnostics"
+          {
+            git rev-parse HEAD
+            sha256sum target/x86_64-unknown-linux-musl/release/toolu
+            for binary in target/release/toolu target/release/xtask; do
+              sha256sum "$binary"
+              file "$binary"
+              readelf --program-headers --section-headers --wide "$binary"
+              cp "$binary" "$diagnostics/${binary##*/}"
+            done
+          } > "$diagnostics/identity.txt"
+
       - name: Upload the statusline result
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@v7
         with:
           name: statusline-bench
-          path: ${{ runner.temp }}/statusline-bench.json
+          path: |
+            ${{ runner.temp }}/statusline-bench.json
+            ${{ runner.temp }}/statusline-diagnostics/
           if-no-files-found: warn
 
   # Static Linux builds (#411) from the first Rust PR, not first at release
