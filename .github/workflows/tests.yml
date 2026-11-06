@@ -169,6 +169,7 @@ jobs:
           CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
           mkdir -p target/release
           cp target/x86_64-unknown-linux-musl/release/toolu target/release/toolu
+          test -x target/release/toolu && test -s target/release/toolu || { echo "::error::Release binary must be nonempty and executable: target/release/toolu" >&2; exit 1; }
 
       # The quality bar: every cargo xtask gate step, including check-gate-change
       # against the PR base (or the pushed range).
@@ -404,6 +405,7 @@ jobs:
             CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
             mkdir -p target/release
             cp target/x86_64-unknown-linux-musl/release/toolu target/release/toolu
+            test -x target/release/toolu && test -s target/release/toolu || { echo "::error::Release binary must be nonempty and executable: target/release/toolu" >&2; exit 1; }
           else
             cargo build --release -p toolu-cli --locked
           fi
