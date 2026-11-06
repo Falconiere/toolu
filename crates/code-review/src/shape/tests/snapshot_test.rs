@@ -5,6 +5,30 @@ use crate::shape::ShapeError;
 use crate::shape::tests::{git, isolated_env, repo};
 
 #[test]
+fn own_state_through_a_repository_alias_keeps_the_committed_diff_and_index() {
+  let dir = repo();
+  let parent = tempfile::tempdir().unwrap();
+  let alias = parent.path().join("alias");
+  std::os::unix::fs::symlink(dir.path(), &alias).unwrap();
+  fs::write(dir.path().join("readme.txt"), "committed change\n").unwrap();
+  crate::shape::tests::commit(dir.path());
+  let state = alias.join(".codex/tmp");
+  fs::create_dir_all(state.join("code-review")).unwrap();
+  fs::write(state.join("code-review/feature.json"), "private state\n").unwrap();
+  let index = fs::read(dir.path().join(".git/index")).unwrap();
+  for root in [dir.path(), alias.as_path()] {
+    let shaped = review(&isolated_env(), root, Some("main"), &state).unwrap();
+    assert!(!shaped.uncommitted, "{root:?}");
+    assert_eq!(shaped.gate_files, ["readme.txt"]);
+    assert_eq!(
+      shaped.diff_sha,
+      toolu_state::diff_sha::diff_sha(&isolated_env(), root, "main").unwrap()
+    );
+    assert_eq!(fs::read(dir.path().join(".git/index")).unwrap(), index);
+  }
+}
+
+#[test]
 fn staged_own_state_is_excluded_without_altering_the_real_index() {
   let dir = repo();
   let root = dir.path();
