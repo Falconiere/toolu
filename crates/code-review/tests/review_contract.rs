@@ -292,7 +292,7 @@ fn recheck_response(rig: &rig::Rig, response: &str) -> std::io::Result<()> {
   let review = quote(&bin.join("response.json"));
   let recheck = quote(&bin.join("recheck.json"));
   let script = format!(
-    "#!/bin/sh\n/bin/cat > {prompt}\nif /bin/grep -q 'You recheck code review findings' {prompt}; then /bin/cat {recheck}; else /bin/cat {review}; fi\n"
+    "#!/bin/sh\n/bin/cat > {prompt}\nif grep -q 'You recheck code review findings' {prompt}; then /bin/cat {recheck}; else /bin/cat {review}; fi\n"
   );
   std::fs::write(bin.join("codex"), script)
 }

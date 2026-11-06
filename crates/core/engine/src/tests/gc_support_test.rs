@@ -9,20 +9,21 @@ use toolu_runtime::process::{Spec, run};
 
 use super::Request;
 
-/// Git and nothing else.
-pub(crate) const PATH: &str = "/usr/bin:/bin";
-
 /// The environment every test command and sweep runs with.
-pub(crate) fn env(home: &Path) -> Env {
-  Env::from_pairs([
-    ("PATH", PATH),
+pub(crate) fn env(home: &Path) -> Result<Env, String> {
+  let bin = home.join("bin");
+  std::fs::create_dir(&bin).map_err(|err| err.to_string())?;
+  std::os::unix::fs::symlink("/usr/bin/git", bin.join("git")).map_err(|err| err.to_string())?;
+  let path = bin.display().to_string();
+  Ok(Env::from_pairs([
+    ("PATH", path.as_str()),
     ("HOME", &home.display().to_string()),
     ("GIT_CONFIG_NOSYSTEM", "1"),
     ("GIT_AUTHOR_NAME", "t"),
     ("GIT_AUTHOR_EMAIL", "t@t"),
     ("GIT_COMMITTER_NAME", "t"),
     ("GIT_COMMITTER_EMAIL", "t@t"),
-  ])
+  ]))
 }
 
 /// `git -C dir args`, failing with git's stderr.
@@ -51,7 +52,7 @@ impl Repo {
   pub(crate) fn new() -> Result<Repo, String> {
     let dir = tempfile::tempdir().map_err(|err| err.to_string())?;
     let tmp = std::fs::canonicalize(dir.path()).map_err(|err| err.to_string())?;
-    let env = env(&tmp);
+    let env = env(&tmp)?;
     let origin = tmp.join("origin.git");
     let root = tmp.join("repo");
     git(

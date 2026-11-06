@@ -28,6 +28,7 @@ pub(crate) fn release_binary() -> io::Result<PathBuf> {
     .arg(&target)
     .env_remove("RUSTFLAGS")
     .env_remove("CARGO_ENCODED_RUSTFLAGS")
+    .env_remove("RUSTC_WRAPPER")
     .output();
   let output = contextual(output, "build release status binary")?;
   if !output.status.success() {

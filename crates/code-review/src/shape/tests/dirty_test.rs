@@ -16,6 +16,46 @@ fn init_repo(root: &Path) {
 }
 
 #[test]
+fn symlinked_repository_paths_ignore_only_the_same_physical_own_state() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("real");
+  std::fs::create_dir(&root).unwrap();
+  init_repo(&root);
+  let alias = dir.path().join("alias");
+  std::os::unix::fs::symlink(&root, &alias).unwrap();
+  let state = root.join(".codex/tmp");
+  std::fs::create_dir_all(state.join("code-review")).unwrap();
+  std::fs::write(state.join("code-review/feature.json"), "{}\n").unwrap();
+  let alias_state = alias.join(".codex/tmp");
+  let env = Env::process();
+  for entry in [&root, &alias] {
+    assert!(
+      !dirty_except_state(&env, entry, &alias_state).unwrap(),
+      "{entry:?}"
+    );
+    std::fs::write(root.join("user.txt"), "user change\n").unwrap();
+    assert!(
+      dirty_except_state(&env, entry, &alias_state).unwrap(),
+      "{entry:?}"
+    );
+    std::fs::remove_file(root.join("user.txt")).unwrap();
+  }
+}
+
+#[test]
+fn a_state_symlink_outside_the_repository_is_not_an_owned_git_path() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("repo");
+  let outside = dir.path().join("outside");
+  std::fs::create_dir(&root).unwrap();
+  std::fs::create_dir(&outside).unwrap();
+  init_repo(&root);
+  let link = root.join("code-review");
+  std::os::unix::fs::symlink(&outside, &link).unwrap();
+  assert!(dirty_except_state(&Env::process(), &root, &link).unwrap());
+}
+
+#[test]
 fn only_untracked_plugin_state_is_ignored() {
   let dir = tempfile::tempdir().unwrap();
   let root = dir.path();

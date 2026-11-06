@@ -4,7 +4,9 @@ The native workspace tests run through `cargo test --workspace` (and through the
 
 The gate's coverage build uses line-table debug information, disables incremental compilation, and keeps 256 codegen units. Its required workspace cleanup discards incremental state before every run, so writing that state wastes work. Line tables retain backtrace file names and line numbers, but omit debugger variable information. These settings apply only to the gate's coverage build; ordinary `cargo test`, development builds, and release builds keep their profiles. Coverage cleanup, instrumentation, and thresholds are unchanged.
 
-CI runs that gate in the Linux leg of the `rust` matrix job. The `docs` job runs `cargo xtask gate --only context-budget --only ci-paths` and `cargo xtask check-markdown-cli`. Other jobs depend on overlapping path groups in [`.github/ci-paths.json`](../.github/ci-paths.json): for example, `docs/cli/**` also selects Rust checks and plugin Markdown also selects hook benchmarks. The macOS `rust (macos-14)` leg runs clippy, tests and the launcher, and `hook-bench (macos-latest)` reports hook resources.
+CI runs that gate in the Linux leg of the `rust` matrix job. The `docs` job runs `cargo xtask gate --only context-budget --only ci-paths` and `cargo xtask check-markdown-cli`. Other jobs depend on overlapping path groups in [`.github/ci-paths.json`](../.github/ci-paths.json): for example, `docs/cli/**` also selects Rust checks and plugin Markdown also selects hook benchmarks. The macOS `rust-macos` leg on `macos-15` runs clippy, tests and the launcher, and `hook-bench (macos-latest)` reports hook resources.
+
+Linux resource checks measure the static `x86_64-unknown-linux-musl` release shipped by the installer. CI places that artifact at `target/release/toolu`, so the legacy three-epic idle check, `TOOLU_RELEASE_BIN`, and hook benchmarks measure the same binary. The hook measurer keeps its native release build, and resource budgets remain unchanged.
 
 ## Real, not mocked
 

@@ -33,14 +33,24 @@ pub(super) fn exclusions(
   // Pathspecs resolve against `root`, which may sit below the toplevel that
   // porcelain paths are relative to; Git also keeps own state out of the bounded probe.
   let mut excludes = Vec::new();
-  if let Ok(prefix) = state_root.strip_prefix(root) {
+  // Git reports the physical toplevel even when the configured project path
+  // goes through a symlink. Compare both paths in that same coordinate system.
+  let root = root
+    .canonicalize()
+    .map_err(|err| ShapeError::Git(format!("resolve repository path: {err}")))?;
+  let state_root = match state_root.canonicalize() {
+    Ok(path) => path,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok((excludes, true)),
+    Err(err) => return Err(ShapeError::Git(format!("resolve review state path: {err}"))),
+  };
+  if let Ok(prefix) = state_root.strip_prefix(&root) {
     for name in OWN_STATE {
       let Some(path) = prefix.join(name).to_str().map(str::to_owned) else {
         return Ok((excludes, false));
       };
       excludes.push(format!(":(exclude,literal){path}"));
     }
-    let Some(archives) = archive_excludes(env, root, state_root, prefix)? else {
+    let Some(archives) = archive_excludes(env, &root, &state_root, prefix)? else {
       return Ok((excludes, false));
     };
     excludes.extend(archives);

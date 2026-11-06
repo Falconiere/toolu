@@ -62,10 +62,26 @@ fn default_enabled_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usa
     std::fs::read_to_string(repo.path().join(".codex/tmp/code-review-usage.jsonl")).unwrap();
   assert!(usage.contains("codex") && usage.contains(r#""outcome":"ok""#));
   assert!(!usage.contains("private-sentinel-669") && !usage.contains("pub fn value"));
-  assert_eq!(
-    invoke(&env, &options(&fixture)).verdict(),
-    Verdict::Approved
-  );
+  let repeated = invoke(&env, &options(&fixture));
+  assert_eq!(repeated.verdict(), Verdict::Approved, "{repeated:?}");
+}
+
+#[test]
+fn repeated_review_through_a_repository_symlink_stays_approved() {
+  let (repo, state, fixture) = clean_case();
+  let parent = tempfile::tempdir().unwrap();
+  let alias = parent.path().join("alias");
+  std::os::unix::fs::symlink(repo.path(), &alias).unwrap();
+  let env = env(&alias, state.path(), &fixture);
+  let index = std::fs::read(repo.path().join(".git/index")).unwrap();
+  for _ in 0..2 {
+    let report = invoke(&env, &options(&fixture));
+    assert_eq!(report.verdict(), Verdict::Approved, "{report:?}");
+    assert_eq!(
+      std::fs::read(repo.path().join(".git/index")).unwrap(),
+      index
+    );
+  }
 }
 
 #[test]
