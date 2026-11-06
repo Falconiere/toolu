@@ -39,7 +39,7 @@ fn rss_kib(binary: &Path) -> u64 {
   let registry = json!({"version": 1, "epics": epics});
   std::fs::write(tmp.path().join("registry.json"), format!("{registry}\n")).expect("registry");
   let mut child = Command::new(binary)
-    .args(["epic", "engine"])
+    .args(["epic", "engine", "--http", "127.0.0.1:0"])
     .env_clear()
     .env("HOME", tmp.path())
     .env("TOOLU_RESOURCE_HOME", tmp.path())

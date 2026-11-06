@@ -7,7 +7,7 @@
 
 | OS | Status |
 |----|--------|
-| macOS | The plugin runs in CI on `macos-14` (the `rust` matrix job) and `macos-latest` (`hook-bench`). |
+| macOS | The plugin runs in CI on `macos-15` (the `rust-macos` job) and `macos-latest` (`hook-bench`). |
 | Linux | The plugin runs in CI on `ubuntu-24.04`. |
 | Windows | **N/A**: not probed for this port |
 
