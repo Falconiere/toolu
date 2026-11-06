@@ -255,6 +255,51 @@ jobs:
             "${{ github.workspace }}/target/release/toolu" \
             "${{ github.workspace }}" "$diagnostics/render-maps"
 
+      # Diagnostic controls retain the normal profile and its required result.
+      # The pinned published baseline uses a different linker and is non-PIE.
+      - name: Compare the pinned pre-PR statusline binary
+        if: always() && runner.os == 'Linux'
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          comparison="${{ runner.temp }}/statusline-diagnostics/published-baseline"
+          mkdir -p "$comparison"
+          curl --fail --location --retry 3 \
+            https://github.com/Falconiere/toolu/releases/download/v8.12.0/toolu-linux-amd64.tar.gz \
+            --output "$comparison/toolu.tar.gz"
+          printf '%s  %s\n' c3f31326d874add9d2266cc300f1743a5ebb256173831076000e0aa806bd1c79 "$comparison/toolu.tar.gz" | sha256sum --check
+          tar -xzf "$comparison/toolu.tar.gz" -C "$comparison" toolu
+          test -x "$comparison/toolu" && test -s "$comparison/toolu" || { echo "::error::Published comparison binary must be nonempty and executable" >&2; exit 1; }
+          { sha256sum "$comparison/toolu"; file "$comparison/toolu"; readelf --file-header --program-headers "$comparison/toolu"; } > "$comparison/identity.txt"
+          XTASK_MEASURER="${{ github.workspace }}/target/release/xtask" \
+            target/release/xtask --root "${{ github.workspace }}" bench-statusline --assert \
+            --bin "$comparison/toolu" --out "$comparison/statusline-bench.json"
+
+      - name: Compare an isolated size-optimized statusline binary
+        if: always() && runner.os == 'Linux'
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          comparison="${{ runner.temp }}/statusline-diagnostics/opt-s"
+          mkdir -p "$comparison"
+          sha256sum target/release/toolu target/release/xtask > "$comparison/default-binaries.sha256"
+          CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="${{ runner.temp }}/statusline-opt-s-target" \
+            CARGO_PROFILE_RELEASE_OPT_LEVEL=s CC_x86_64_unknown_linux_musl=musl-gcc \
+            cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
+          candidate="${{ runner.temp }}/statusline-opt-s-target/x86_64-unknown-linux-musl/release/toolu"
+          test -x "$candidate" && test -s "$candidate" || { echo "::error::Size comparison binary must be nonempty and executable" >&2; exit 1; }
+          cp "$candidate" "$comparison/toolu"
+          { sha256sum "$comparison/toolu"; file "$comparison/toolu"; readelf --file-header --program-headers --section-headers --wide "$comparison/toolu"; } > "$comparison/identity.txt"
+          readelf --file-header "$comparison/toolu" | grep -Eq 'Type:.*DYN'
+          if readelf --program-headers "$comparison/toolu" | grep -q INTERP; then
+            echo "::error::Size comparison must preserve the static PIE target" >&2
+            exit 1
+          fi
+          sha256sum --check "$comparison/default-binaries.sha256"
+          XTASK_MEASURER="${{ github.workspace }}/target/release/xtask" \
+            target/release/xtask --root "${{ github.workspace }}" bench-statusline --assert \
+            --bin "$comparison/toolu" --out "$comparison/statusline-bench.json"
+
       - name: Upload the statusline result
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@v7
