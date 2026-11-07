@@ -172,7 +172,7 @@ jobs:
           cargo xtask gate ${GATE_BASE:+--base "$GATE_BASE"} ${PR_TITLE:+--title "$PR_TITLE"}
 
       - name: macOS clippy and Rust tests
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-latest'
         run: cargo xtask gate --only clippy --only tests
 
       # Shell analysis latency (#416): parse and walk p99 within 0.1 ms over the
