@@ -16,8 +16,11 @@ Version 1, missing, corrupt, stale or incomplete state fails the gate. A review
 round above five on the same diff, unresolved target branch, missing base or
 empty diff also fails. For detached review, preserve the target branch with
 the writer's `--branch` and the pushed repository with `--repo`.
-The writer defaults to the changed paths; use `--reviewed-files` only to
-record the paths actually reviewed.
+The writer defaults to the changed paths, spelled as
+`git -c core.quotepath=true diff --name-only` prints them (non-ASCII names
+C-quoted) whatever the user's `core.quotepath`; the push gate and the
+`toolu ledger verdict status` review gate compare that same spelling. Use
+`--reviewed-files` only to record the paths actually reviewed.
 
 Push detection parses shell commands, including git global options and command
 substitutions; prose mentioning a push does not trigger it. Static `git -C`
