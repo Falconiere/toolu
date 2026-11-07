@@ -5,32 +5,7 @@ use crate::eval::{
   Arm, ArmReport, Class, EvalReport, Expectation, Kind, Revisions, Run, Setting, match_findings,
 };
 
-fn arm(setting: Setting, found: bool) -> ArmReport {
-  let rows = [Expectation {
-    id: "d".to_owned(),
-    path: "src/lib.rs".to_owned(),
-    claim: "underflow".to_owned(),
-    kind: Kind::Defect,
-  }];
-  let findings = if found {
-    vec![Finding {
-      id: "f1".to_owned(),
-      path: "src/lib.rs".to_owned(),
-      line: 1,
-      end_line: 1,
-      side: Side::New,
-      severity: Severity::High,
-      category: "correctness".to_owned(),
-      source: Source::Llm,
-      claim: "slice underflow".to_owned(),
-      quote: "q".to_owned(),
-      suggestion: None,
-      redaction_spans: Vec::new(),
-      assessment: None,
-    }]
-  } else {
-    Vec::new()
-  };
+fn arm_from(setting: Setting, rows: &[Expectation], findings: &[Finding]) -> ArmReport {
   ArmReport::new(
     Run {
       arm: Arm::Baseline,
@@ -40,9 +15,30 @@ fn arm(setting: Setting, found: bool) -> ArmReport {
       calls: Vec::new(),
       runtime_ms: 1,
     },
-    &findings,
-    match_findings(&rows, &findings),
+    findings,
+    match_findings(rows, findings),
   )
+}
+
+fn arm(setting: Setting, found: bool) -> ArmReport {
+  let rows = [Expectation {
+    id: "d".to_owned(),
+    path: "src/lib.rs".to_owned(),
+    claim: "underflow".to_owned(),
+    kind: Kind::Defect,
+  }];
+  let findings = if found {
+    vec![sample_finding(
+      "f1",
+      1,
+      Severity::High,
+      "correctness",
+      "slice underflow",
+    )]
+  } else {
+    Vec::new()
+  };
+  arm_from(setting, &rows, &findings)
 }
 
 fn case(arms: Vec<ArmReport>, unverified: &[&str], gate: &[&str]) -> CaseReport {
@@ -69,6 +65,52 @@ fn suite(cases: Vec<CaseReport>) -> SuiteReport {
   }
 }
 
+fn sample_finding(id: &str, line: u32, severity: Severity, category: &str, claim: &str) -> Finding {
+  Finding {
+    id: id.to_owned(),
+    path: "src/lib.rs".to_owned(),
+    line,
+    end_line: line,
+    side: Side::New,
+    severity,
+    category: category.to_owned(),
+    source: Source::Llm,
+    claim: claim.to_owned(),
+    quote: "q".to_owned(),
+    suggestion: None,
+    redaction_spans: Vec::new(),
+    assessment: None,
+  }
+}
+
+fn arm_flagged_fp(setting: Setting) -> ArmReport {
+  let rows = [
+    Expectation {
+      id: "d".to_owned(),
+      path: "src/lib.rs".to_owned(),
+      claim: "underflow".to_owned(),
+      kind: Kind::Defect,
+    },
+    Expectation {
+      id: "fp".to_owned(),
+      path: "src/lib.rs".to_owned(),
+      claim: "prefer rewrite".to_owned(),
+      kind: Kind::FalsePositive,
+    },
+  ];
+  let findings = vec![
+    sample_finding("f1", 1, Severity::High, "correctness", "slice underflow"),
+    sample_finding(
+      "f2",
+      2,
+      Severity::Low,
+      "style",
+      "prefer rewrite in iterator style",
+    ),
+  ];
+  arm_from(setting, &rows, &findings)
+}
+
 #[test]
 fn caught_defects_satisfy_and_a_miss_or_a_gate_violation_fails() {
   let ok = suite(vec![case(vec![arm(Setting::Small, true)], &[], &[])]);
@@ -81,6 +123,18 @@ fn caught_defects_satisfy_and_a_miss_or_a_gate_violation_fails() {
     &["advisory"],
   )]);
   assert_eq!(gate.verdict(), Verdict::Missed);
+}
+
+#[test]
+fn a_flagged_false_positive_on_a_non_none_arm_fails_the_suite() {
+  let flagged = suite(vec![case(vec![arm_flagged_fp(Setting::Small)], &[], &[])]);
+  assert_eq!(flagged.verdict(), Verdict::Missed);
+  let weak_fp = suite(vec![case(
+    vec![arm(Setting::Small, true), arm_flagged_fp(Setting::None)],
+    &[],
+    &[],
+  )]);
+  assert_eq!(weak_fp.verdict(), Verdict::Satisfied);
 }
 
 #[test]

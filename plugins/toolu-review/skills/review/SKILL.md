@@ -5,6 +5,11 @@ description: "Review committed changes and record push-review state for review b
 
 # Review the committed diff
 
+Fallback when native `code-review:review` cannot complete. Prefer that skill for
+local pre-CI review. Report a finding only when it is meaningful, actionable,
+introduced by this change, demonstrated from evidence, and something the author
+would likely fix — not style or pre-existing debt.
+
 Resolve the requested repository, target branch and base before reviewing
 `git diff <base>...HEAD`. Read applicable repository instructions and conventions
 from the base ref. A review request authorizes inspection; edit and commit fixes

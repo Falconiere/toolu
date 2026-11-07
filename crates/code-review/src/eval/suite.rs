@@ -55,9 +55,10 @@ pub enum Verdict {
 
 impl SuiteReport {
   /// How the run ended. A `none` arm is the known-weak baseline calibration measures
-  /// against, so its misses never fail the run; every other arm must catch every
-  /// defect row. A case with no arm, or only `none` arms, proved nothing, so it is
-  /// never satisfied.
+  /// against, so its misses and flagged rows never fail the run; every other arm must
+  /// catch every defect row and must not raise a known false-positive row. A case with
+  /// no arm, or only `none` arms, proved nothing, so it is never satisfied.
+  /// Unclassified findings stay reported for adjudication and do not fail this verdict.
   pub fn verdict(&self) -> Verdict {
     if self
       .cases
@@ -68,11 +69,9 @@ impl SuiteReport {
     }
     let missed = self.cases.iter().any(|case| {
       !case.gate_violations.is_empty()
-        || case
-          .report
-          .arms
-          .iter()
-          .any(|arm| arm.setting != Setting::None && arm.tally.missed > 0)
+        || case.report.arms.iter().any(|arm| {
+          arm.setting != Setting::None && (arm.tally.missed > 0 || arm.tally.flagged > 0)
+        })
     });
     if missed {
       Verdict::Missed

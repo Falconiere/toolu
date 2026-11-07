@@ -48,7 +48,7 @@ To replay older recordings made with a custom `OPENROUTER_MODEL`, set that same 
 
 ### Quality bar
 
-Fewer findings or fewer tokens alone is not better. A review is judged by expectation outcomes: defects caught, false positives raised and unclassified findings. A finding that matches no expectation is reported as unclassified; it is neither credited nor silently dropped. Compare arms and effort levels on those outcomes first, and read tokens per finding only as a cost beside them.
+Fewer findings or fewer tokens alone is not better. A review is judged by expectation outcomes: defects caught, false positives raised and unclassified findings. A finding that matches no expectation is reported as unclassified; it is neither credited nor silently dropped. Eval suite success requires catching every defect row **and** raising no known false-positive row on non-`none` arms; unclassified findings stay reported for adjudication and do not alone fail the suite. Compare arms and effort levels on those outcomes first, and read tokens per finding only as a cost beside them.
 
 ## Muse
 

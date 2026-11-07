@@ -32,7 +32,7 @@ pub(super) fn keyless(dir: &Path) -> Result<Env, String> {
 pub(super) fn answer() -> String {
   let content = json!({"findings": [{
     "path": "src/lib.rs", "line": 2, "end_line": 2, "side": "new", "severity": "high",
-    "category": "correctness", "claim": "The slice underflows when count exceeds the length",
+    "category": "correctness", "claim": "The slice panics when count exceeds the length",
     "quote": "let start = items.len() - count;", "suggestion": null, "prior_id": null
   }]});
   json!({
