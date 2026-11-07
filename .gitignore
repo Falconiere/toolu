@@ -23,3 +23,5 @@ node_modules/
 *.profraw
 # `claude plugin eval` run output (scores, traces, HTML report)
 /plugins/*/evals/results/
+# `toolu code-review eval --live` recordings (review-*.json, judge-*.json); local only
+/fixtures/code-review-eval/replay/
