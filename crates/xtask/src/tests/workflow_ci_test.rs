@@ -9,6 +9,61 @@ fn found(run: impl FnOnce(&mut Findings)) -> Vec<String> {
   found.0
 }
 
+fn committed_tests_workflow() -> Value {
+  let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+  let text = std::fs::read_to_string(root.join(".github/workflows/tests.yml")).unwrap();
+  crate::ci_yaml::yaml_to_json(&text).unwrap()
+}
+
+#[test]
+fn the_supported_macos_runner_executes_both_rust_gates() {
+  let tests = committed_tests_workflow();
+  assert_eq!(found(|f| rust_legs(&tests, f)), Vec::<String>::new());
+}
+
+#[test]
+fn a_retired_macos_runner_is_rejected() {
+  let mut tests = committed_tests_workflow();
+  let mac = tests["jobs"]["rust"]["strategy"]["matrix"]["include"]
+    .as_array_mut()
+    .unwrap()
+    .iter_mut()
+    .find(|leg| leg["check"] == "rust-macos")
+    .unwrap();
+  mac["os"] = json!("macos-14");
+  assert_eq!(
+    found(|f| rust_legs(&tests, f)),
+    ["tests.yml:rust lacks rust-macos on macos-15"]
+  );
+}
+
+#[test]
+fn macos_clippy_and_tests_cannot_be_skipped_by_a_stale_condition_or_missing_gate() {
+  for (condition, run) in [
+    (
+      "matrix.os == 'macos-14'",
+      "cargo xtask gate --only clippy --only tests",
+    ),
+    ("matrix.os == 'macos-15'", "cargo xtask gate --only clippy"),
+    ("matrix.os == 'macos-15'", "cargo xtask gate --only tests"),
+  ] {
+    let mut tests = committed_tests_workflow();
+    let mac = tests["jobs"]["rust"]["steps"]
+      .as_array_mut()
+      .unwrap()
+      .iter_mut()
+      .find(|step| step["name"] == "macOS clippy and Rust tests")
+      .unwrap();
+    mac["if"] = json!(condition);
+    mac["run"] = json!(run);
+    assert_eq!(
+      found(|f| rust_legs(&tests, f)),
+      ["tests.yml:rust macOS leg must run clippy and Rust tests"],
+      "{condition}: {run}"
+    );
+  }
+}
+
 #[test]
 fn a_path_filter_on_a_required_trigger_is_named() {
   let tests = json!({"on": {"push": {"branches": ["main"], "paths": ["x"]},
@@ -59,7 +114,8 @@ fn an_aggregate_missing_a_gated_job_is_named() {
 #[test]
 fn rust_legs_and_review_name_what_is_missing() {
   let lines = found(|f| rust_legs(&json!({}), f));
-  assert!(lines.contains(&"tests.yml:rust lacks rust-macos on macos-14".to_owned()));
+  assert!(lines.contains(&"tests.yml:rust lacks rust-macos on macos-15".to_owned()));
+  assert!(lines.iter().all(|line| !line.contains("macos-14")));
   assert!(lines.contains(&"tests.yml:rust-musl lacks aarch64-unknown-linux-musl".to_owned()));
   let root = tempfile::tempdir().unwrap();
   let lines = found(|f| review(root.path(), &json!({}), f));

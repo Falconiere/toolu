@@ -88,7 +88,7 @@ jobs:
         include:
           - os: ubuntu-24.04
             check: rust
-          - os: macos-14
+          - os: macos-15
             check: rust-macos
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -139,6 +139,10 @@ jobs:
       - name: Install ast-grep
         run: npm install -g @ast-grep/cli@0.50.0
 
+      - name: Install tmux for real multiplexer tests
+        if: runner.os == 'macOS'
+        run: brew install tmux
+
       - name: Test native release helper
         if: matrix.os == 'ubuntu-24.04'
         run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
@@ -152,12 +156,20 @@ jobs:
         run: cargo xtask gate --only layers
 
       # The Linux budget tests (idle_budget, status_budget) measure a release
-      # toolu. Built once here and passed as TOOLU_RELEASE_BIN, the gate skips a
+      # toolu from the shipped static Linux target. Passed as TOOLU_RELEASE_BIN, the gate skips a
       # second fat-LTO build in its own target directory, and the launcher step
       # below reuses it.
       - name: Build the release binary
         if: matrix.os == 'ubuntu-24.04'
-        run: cargo build --release -p toolu-cli --locked
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          sudo python3 .github/scripts/configure_musl_apt_mirror.py x86_64-unknown-linux-musl
+          sudo apt-get update -y
+          sudo apt-get install -y musl-tools
+          CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
+          mkdir -p target/release
+          cp target/x86_64-unknown-linux-musl/release/toolu target/release/toolu
+          test -x target/release/toolu && test -s target/release/toolu || { echo "::error::Release binary must be nonempty and executable: target/release/toolu" >&2; exit 1; }
 
       # The quality bar: every cargo xtask gate step, including check-gate-change
       # against the PR base (or the pushed range).
@@ -172,7 +184,7 @@ jobs:
           cargo xtask gate ${GATE_BASE:+--base "$GATE_BASE"} ${PR_TITLE:+--title "$PR_TITLE"}
 
       - name: macOS clippy and Rust tests
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-15'
         run: cargo xtask gate --only clippy --only tests
 
       # Shell analysis latency (#416): parse and walk p99 within 0.1 ms over the
@@ -185,7 +197,8 @@ jobs:
       - name: Launcher end to end
         run: |
           set -euo pipefail
-          cargo build --release -p toolu-cli --locked
+          if [ "$RUNNER_OS" = macOS ]; then cargo build --release -p toolu-cli --locked; fi
+          [ -x target/release/toolu ] || { echo "::error::Missing executable release binary: target/release/toolu"; exit 1; }
           if [ "$RUNNER_OS" = macOS ]; then brew_bin=/opt/homebrew/bin; else brew_bin=/home/linuxbrew/.linuxbrew/bin; fi
           for dir in "$brew_bin" /usr/local/bin; do
             sudo mkdir -p "$dir"
@@ -197,7 +210,7 @@ jobs:
           done
 
       # The `toolu --version` startup budget (#442, docs/resource-budgets.md) on
-      # the release binary the previous step built. Linux gates; macOS is not gated.
+      # the shipped static Linux release. macOS is not gated.
       - name: toolu --version startup budget
         if: runner.os == 'Linux'
         run: cargo xtask check-startup --bin target/release/toolu
@@ -350,7 +363,20 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build the measurer and the hooks
-        run: cargo build --release --locked -p xtask -p toolu-cli
+        run: |
+          cargo build --release --locked -p xtask
+          if [ "$RUNNER_OS" = Linux ]; then
+            rustup target add x86_64-unknown-linux-musl
+            sudo python3 .github/scripts/configure_musl_apt_mirror.py x86_64-unknown-linux-musl
+            sudo apt-get update -y
+            sudo apt-get install -y musl-tools
+            CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
+            mkdir -p target/release
+            cp target/x86_64-unknown-linux-musl/release/toolu target/release/toolu
+            test -x target/release/toolu && test -s target/release/toolu || { echo "::error::Release binary must be nonempty and executable: target/release/toolu" >&2; exit 1; }
+          else
+            cargo build --release -p toolu-cli --locked
+          fi
 
       - name: bench-hooks
         env:
