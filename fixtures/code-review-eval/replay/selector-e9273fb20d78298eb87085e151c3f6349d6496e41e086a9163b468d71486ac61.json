@@ -1,0 +1,1 @@
+{"model":"jev-1.14.0","answers":{"host":{"type":"choice","choice":"claude","confidence":0.35,"probabilities":{"claude":0.48,"codex":0.36,"cursor":0.01,"muse":0.14,"opencode":0.01}}},"usage":{"input_tokens":529,"output_tokens":58}}

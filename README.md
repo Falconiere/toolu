@@ -200,7 +200,7 @@ plugins.
 | Code intel | **`ast-grep`** | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
 | Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
 | Workflow | **`documentation-gate`** | Jev-routed editing worker and committed-diff documentation review. |
-| Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
+| Workflow | **`toolu-review`** | Fallback pre-push review and push-review state writer when native `code-review` cannot complete. |
 | Workflow | **`code-review`** | Native review of branch and local changes through host CLIs and direct TypeSafe Jev, with anchored findings, coverage, and push-review state. |
 | Workflow | **`brainstorm`** | Evidence-backed design triage, alternatives, and a recommended approach — standalone, and phase 1 of delivery-flow. |
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
