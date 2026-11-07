@@ -1,7 +1,9 @@
 # toolu-review
 
-Review committed changes for actionable defects and record complete-coverage
-`push-review` state. Also serves as the native review fallback.
+Fallback review of committed changes and recording of complete-coverage
+`push-review` state. Prefer native **`code-review:review`** for local pre-CI
+review; use this plugin when native review cannot complete, or to write state
+after an authorized review.
 
 ## Install
 
@@ -15,11 +17,14 @@ Standalone, no dependencies.
 
 ## What it provides
 
-- **`toolu-review:review` skill** — reviews the branch diff against what the CI Toolu Code Review action (`github-actions[bot]` verdict comment, optionally App-branded) flags, so the first-push verdict is clean instead of bouncing low/nit findings back as rework. It also records a clean `push-review` state, satisfying toolu's `push-review` gate.
+- **`toolu-review:review` skill** — fallback agent review of the branch diff and
+  recording of clean `push-review` state for the push gate.
+- **`toolu review write-state`** — native writer for schema v2 push-review state.
 
-Run `toolu review write-state --findings-count 0` after reviewing and committing the branch diff.
+Run `toolu review write-state --findings-count 0` only after reviewing and
+committing the branch diff.
 
-Explicit — it does not auto-fire on edits. Run it before pushing a feature branch, or when `pr-babysit` needs a reviewer.
+Explicit — it does not auto-fire on edits.
 
 ## Muse
 

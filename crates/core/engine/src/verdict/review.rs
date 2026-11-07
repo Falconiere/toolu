@@ -62,6 +62,23 @@ fn schema_gate(
   None
 }
 
+/// Changed paths in the gate's quoted `--name-only` spelling (`core.quotepath=true`).
+fn changed_paths(ctx: &GateContext<'_>) -> Vec<String> {
+  let range = format!("{}...HEAD", ctx.base);
+  output_lines(
+    &ctx
+      .git(&[
+        "-c",
+        "core.quotepath=true",
+        "diff",
+        "--no-color",
+        &range,
+        "--name-only",
+      ])
+      .unwrap_or_default(),
+  )
+}
+
 /// The v2 checks once the state parses: schema, reviewer, round cap, staleness, coverage, findings.
 fn state_gate(ctx: &GateContext<'_>, state: &Ordered, file: &str) -> Ordered {
   let round = round_of(state);
@@ -92,13 +109,7 @@ fn state_gate(ctx: &GateContext<'_>, state: &Ordered, file: &str) -> Ordered {
       code("stale-diff"),
     );
   }
-  let range = format!("{}...HEAD", ctx.base);
-  let changed = output_lines(
-    &ctx
-      .git(&["diff", "--no-color", &range, "--name-only"])
-      .unwrap_or_default(),
-  );
-  if sorted_unique(&changed) != sorted_unique(&reviewed_files(state)) {
+  if sorted_unique(&changed_paths(ctx)) != sorted_unique(&reviewed_files(state)) {
     let reason = "reviewed_files does not match the current diff's changed paths";
     return gate("fail", reason, code("file-coverage"));
   }

@@ -74,10 +74,14 @@ pub(crate) fn files(
 ) -> Result<Vec<String>, String> {
   let names = match override_files {
     Some(names) => names.to_owned(),
+    // Force quoted C-style names so `reviewed_files` matches the push gate even
+    // when the user's `core.quotepath` is false.
     None => git(
       env,
       root,
       &[
+        "-c",
+        "core.quotepath=true",
         "diff",
         "--no-color",
         &format!("{base}...HEAD"),

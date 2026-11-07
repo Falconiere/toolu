@@ -144,6 +144,17 @@ pub(crate) fn colima(request: &Request, idle: &Result<bool, String>) -> Value {
   }
 }
 
+fn docker_skip_reason(err: &str) -> &str {
+  if err.contains("context not found")
+    || err.contains("unable to resolve docker endpoint")
+    || err.contains("Cannot connect to the Docker daemon")
+  {
+    "no docker"
+  } else {
+    err
+  }
+}
+
 /// Dangling images in the gate context, pruned with `apply`; the gate image tags stay.
 pub(crate) fn docker(request: &Request) -> Value {
   if !on_path(&request.env, "docker") {
@@ -158,7 +169,12 @@ pub(crate) fn docker(request: &Request) -> Value {
   );
   let dangling = match listed {
     Ok(text) => text.lines().filter(|line| !line.is_empty()).count(),
-    Err(err) => return json!({"skipped": err}),
+    // A docker CLI without the gate context (or daemon) is the same as absent
+    // docker for GC: skip. Keep the stable reason so tests and reports do not
+    // depend on docker's exact error text.
+    Err(err) => {
+      return json!({"skipped": docker_skip_reason(&err)});
+    }
   };
   let tags = capture(
     &request.env,

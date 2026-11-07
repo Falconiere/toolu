@@ -65,6 +65,33 @@ fn staged_own_state_alone_does_not_create_a_review_diff() {
 }
 
 #[test]
+fn ignored_state_tree_does_not_break_local_capture() {
+  let dir = repo();
+  let root = dir.path();
+  fs::write(root.join(".gitignore"), ".claude/tmp/\n").unwrap();
+  git(root, &["add", ".gitignore"]);
+  git(root, &["commit", "-m", "ignore state"]);
+  let state = root.join(".claude/tmp");
+  fs::create_dir_all(state.join("code-review")).unwrap();
+  fs::write(state.join("code-review/feature.json"), "private\n").unwrap();
+  fs::write(root.join("readme.txt"), "local change\n").unwrap();
+  let shaped = review(&isolated_env(), root, Some("main"), &state).unwrap();
+  assert!(
+    shaped.gate_files.iter().any(|path| path == "readme.txt"),
+    "{:?}",
+    shaped.gate_files
+  );
+  assert!(
+    shaped
+      .files
+      .iter()
+      .any(|file| file.path == "readme.txt" && file.patch.contains("local change")),
+    "{:?}",
+    shaped.files
+  );
+}
+
+#[test]
 fn missing_index_can_capture_local_content_without_recreating_it() {
   let dir = repo();
   let root = dir.path();
