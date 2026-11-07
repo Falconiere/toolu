@@ -61,7 +61,7 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-drifted", "path": "src/lib.rs", "claim": "exceeds", "kind": "defect"}
+        {"id": "defect-drifted", "path": "src/lib.rs", "claim": "underflow", "kind": "defect"}
       ]
     },
     {
@@ -101,7 +101,7 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-label-index", "path": "src/levels.rs", "claim": "off by one", "kind": "defect"}
+        {"id": "defect-label-index", "path": "src/levels.rs", "claim": "labels", "kind": "defect"}
       ],
       "gate": {
         "blocking_severities_drive_count": true,

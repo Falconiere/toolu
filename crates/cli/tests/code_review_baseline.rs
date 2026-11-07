@@ -55,9 +55,9 @@ fn the_committed_replay_store_answers_every_case_and_pins_the_baseline() {
   let settings = doc["calibration"]["settings"].as_array().unwrap();
   assert_eq!(settings.len(), 4);
   for setting in settings {
-    // Live re-record after the defect-first RULES/prompt change (2026-11-07);
-    // claim substrings retuned so medium catches 6 and high catches 7 of 8.
-    let caught = if setting["setting"] == "high" { 7 } else { 6 };
+    // Live re-record after the defect-first RULES change (2026-11-07) keeps the
+    // prior baseline: medium catches 7 and high catches 8 of 8.
+    let caught = if setting["setting"] == "high" { 8 } else { 7 };
     assert_eq!(setting["cases"], 10, "{setting}");
     assert_eq!(setting["defects_caught"], caught, "{setting}");
     assert_eq!(setting["defects_missed"], 8 - caught, "{setting}");
