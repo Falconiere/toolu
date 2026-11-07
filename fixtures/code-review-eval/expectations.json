@@ -7,7 +7,7 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-underflow", "path": "src/lib.rs", "claim": "exceeds", "kind": "defect"},
+        {"id": "defect-underflow", "path": "src/lib.rs", "claim": "panic", "kind": "defect"},
         {"id": "fp-rewrite", "path": "src/lib.rs", "claim": "prefer rewrite", "kind": "false_positive"}
       ],
       "gate": {
@@ -101,7 +101,7 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-label-index", "path": "src/levels.rs", "claim": "out of", "kind": "defect"}
+        {"id": "defect-label-index", "path": "src/levels.rs", "claim": "off by one", "kind": "defect"}
       ],
       "gate": {
         "blocking_severities_drive_count": true,

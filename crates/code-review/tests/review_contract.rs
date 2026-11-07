@@ -13,6 +13,7 @@ mod rig;
 mod tools;
 
 use std::cell::RefCell;
+use std::os::unix::fs::PermissionsExt as _;
 
 use judge::{GUARD, choices, rig};
 use rig::{JEV, KEY, completion, finding, findings};
@@ -219,7 +220,6 @@ fn memory_sends_open_findings_and_dismissals_and_skips_re_raised_ones() {
 /// the host CLI, the usage log names it, and the loopback origin hears nothing.
 #[test]
 fn a_host_cli_reviews_the_chunk_with_no_network() {
-  use std::os::unix::fs::PermissionsExt as _;
   let rig = judge::rig().unwrap();
   let content = json!({"findings": [{
     "path": "src/lib.rs", "line": 3, "end_line": 3, "side": "new", "severity": "high",
@@ -291,8 +291,21 @@ fn recheck_response(rig: &rig::Rig, response: &str) -> std::io::Result<()> {
   let prompt = quote(&bin.join("prompt.txt"));
   let review = quote(&bin.join("response.json"));
   let recheck = quote(&bin.join("recheck.json"));
+  // macOS ships grep at /usr/bin/grep; /bin/grep is absent. Detect recheck via
+  // Codex `--output-schema` (contains `rechecks`) with a prompt-text fallback.
   let script = format!(
-    "#!/bin/sh\n/bin/cat > {prompt}\nif /bin/grep -q 'You recheck code review findings' {prompt}; then /bin/cat {recheck}; else /bin/cat {review}; fi\n"
+    "#!/bin/sh\n\
+     /bin/cat > {prompt}\n\
+     schema=\n\
+     prev=\n\
+     for a in \"$@\"; do\n\
+       if [ \"$prev\" = \"--output-schema\" ]; then schema=$a; fi\n\
+       prev=$a\n\
+     done\n\
+     if [ -n \"$schema\" ] && /usr/bin/grep -q rechecks \"$schema\"; then /bin/cat {recheck}; \
+elif /usr/bin/grep -q 'Recheck these findings' {prompt}; then /bin/cat {recheck}; \
+else /bin/cat {review}; fi\n"
   );
-  std::fs::write(bin.join("codex"), script)
+  std::fs::write(bin.join("codex"), script)?;
+  std::fs::set_permissions(bin.join("codex"), std::fs::Permissions::from_mode(0o755))
 }

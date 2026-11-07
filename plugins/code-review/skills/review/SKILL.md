@@ -5,6 +5,9 @@ description: Review branch and uncommitted changes using native review, with too
 
 # Code review
 
+This is the **primary** local pre-CI review. `toolu-review:review` is fallback
+only when native review cannot complete — not a CI mirror.
+
 Resolve the repository/worktree, branch and requested scope. Prefer an installed,
 enabled `ponytail-review` skill first: discover it through the host's skill
 catalog, read its instructions and pass this exact scope. It is a full read-only
@@ -17,6 +20,16 @@ repeated `--path PATH`, or `--effort small|medium|high|xhigh` only when supplied
 by the user/caller. Otherwise settings/Jev choose effort. Return the JSON's
 verdict, validated findings, coverage, recap and usage. The native command
 reads the diff; read source to investigate findings or perform fallback.
+
+## Filter contract
+
+Native review is a **find → verify → rank → publish** filter, not a volume
+maximizer. Keep a finding only when every gate holds: meaningful
+production impact; discrete and actionable; introduced by this change;
+demonstrated from code/tests/conventions; and something the author would
+likely fix. Style, pre-existing debt, speculation, and lint CI already owns
+are noise. Unanchored or contradicted model claims must not survive verify
+(validate / Jev judge / recheck). Prefer fewer precise findings over catch rate.
 
 The command includes committed branch changes plus staged, unstaged and non-ignored
 untracked files, compared with the chosen merge-base. Patches, scanners and source

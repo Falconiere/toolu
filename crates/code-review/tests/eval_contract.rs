@@ -133,7 +133,7 @@ fn the_probe_defects_are_caught_and_the_known_false_positive_is_flagged() {
       &shaped,
       "src/lib.rs",
       "items.len() - count",
-      "The slice underflows when count exceeds the length",
+      "The slice panics when count exceeds the length",
     )
     .expect("fixture"),
     cite(

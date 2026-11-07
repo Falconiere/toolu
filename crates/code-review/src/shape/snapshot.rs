@@ -4,7 +4,7 @@ use std::path::Path;
 use toolu_runtime::env::Env;
 use toolu_runtime::git::toplevel;
 
-use super::git_io::{git, git_process_input, text};
+use super::git_io::{git, git_found, git_process_input, text};
 use super::parse::{Status, names, statuses};
 use super::{ShapeError, Shaped, dirty, populate, resolve_base};
 use crate::contract::Coverage;
@@ -55,8 +55,13 @@ fn capture(env: &Env, root: &Path, excludes: &[String]) -> Result<String, ShapeE
       "resolve merge conflicts before reviewing".to_owned(),
     ));
   }
+  // `git add` fails when a pathspec names a gitignored path (git 2.54+). Own
+  // state under an ignored tree is already omitted from `add -A`, so drop those
+  // from the add pathspecs; keep every exclude for the reset that clears
+  // force-added state already present in the copied index.
+  let addable = addable_excludes(env, root, excludes)?;
   let mut args = vec!["add", "-A", "--", ":/"];
-  args.extend(excludes.iter().map(String::as_str));
+  args.extend(addable.iter().map(String::as_str));
   git(&snapshot, root, &args)?;
   // A copied index may already contain staged plugin state; restore only those entries.
   if !excludes.is_empty() {
@@ -69,6 +74,26 @@ fn capture(env: &Env, root: &Path, excludes: &[String]) -> Result<String, ShapeE
     git(&snapshot, root, &args)?;
   }
   text(git(&snapshot, root, &["write-tree"])?).map(|tree| tree.trim().to_owned())
+}
+
+/// Keep only exclude pathspecs that `git add -A` could otherwise stage.
+fn addable_excludes(
+  env: &Env,
+  root: &Path,
+  excludes: &[String],
+) -> Result<Vec<String>, ShapeError> {
+  let mut kept = Vec::new();
+  for spec in excludes {
+    let Some(path) = spec.strip_prefix(":(exclude,literal)") else {
+      kept.push(spec.clone());
+      continue;
+    };
+    match git_found(env, root, &["check-ignore", "-q", "--", path])? {
+      Some(_) => {}
+      None => kept.push(spec.clone()),
+    }
+  }
+  Ok(kept)
 }
 
 /// Identify local evidence separately from the committed push-gate hash.
