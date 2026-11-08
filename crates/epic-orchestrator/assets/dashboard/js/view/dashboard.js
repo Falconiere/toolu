@@ -181,6 +181,7 @@ const HOST_NAMES = {
   codex: "Codex",
   cursor: "Cursor Agent",
   muse: "Muse Code",
+  grok: "Grok Build",
 };
 
 function renderHosts(hosts, now) {
