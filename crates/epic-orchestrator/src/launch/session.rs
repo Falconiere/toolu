@@ -175,7 +175,7 @@ fn session_of(kind: HostKind, entry: &Value, worktree: &str) -> Option<String> {
       (payload.get("cwd"), payload.get("id"))
     }
     HostKind::Claude => (entry.get("cwd"), entry.get("sessionId")),
-    HostKind::Codex | HostKind::Cursor | HostKind::Muse => return None,
+    HostKind::Codex | HostKind::Cursor | HostKind::Muse | HostKind::Grok => return None,
   };
   let id = id?.as_str()?;
   (cwd?.as_str()? == worktree && valid_id(id)).then(|| id.to_owned())
@@ -235,6 +235,7 @@ pub(crate) fn capture_session(
   match kind {
     HostKind::Cursor => cursor(worktree, since_f, env),
     HostKind::Muse => super::muse_session::capture(worktree, since, env),
+    HostKind::Grok => super::grok_session::capture(worktree, since, env),
     HostKind::Claude | HostKind::Codex => transcripts(kind, worktree, since, env),
   }
 }

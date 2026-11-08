@@ -1,7 +1,7 @@
 # epic-orchestrator — Epic Orchestrator
 
 Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr
-worktrees, parallel workers on Claude Code, Codex, Cursor Agent, or Muse Code
+worktrees, parallel workers on Claude Code, Codex, Cursor Agent, Muse Code or Grok Build
 (delivery-flow from brainstorm through PR and babysit) routed by Jev
 complexity, a merge gate with GitHub auto-merge, rate-limit and progress
 guardrails, and cleanup. See the plugin README for trackers, hosts, and
@@ -21,6 +21,10 @@ toolu plugins install delivery-flow epic-orchestrator --host codex
 toolu plugins install delivery-flow epic-orchestrator --host cursor
 toolu plugins install delivery-flow epic-orchestrator --host muse --approve
 ```
+
+Grok Build runs workers only, with the plugins installed for Claude Code,
+which it loads through its Claude compatibility layer; its `SessionStart`
+hooks do not run (see the plugin README).
 
 Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `toolu`, `gh`, and the selected multiplexer: `herdr`, `hc` (`herdr-app` backend), or `tmux`.
 
@@ -273,8 +277,8 @@ again.
 
 ## Hosts
 
-`toolu epic hosts pause <host>` takes one host (`claude`, `codex`, `cursor` or
-`muse`) out of rotation, and `toolu epic hosts resume <host>` brings it back;
+`toolu epic hosts pause <host>` takes one host (`claude`, `codex`, `cursor`, `muse` or
+`grok`) out of rotation, and `toolu epic hosts resume <host>` brings it back;
 the dashboard does the same through `POST /api/v1/actions/host-pause` and
 `host-resume`. The pause lives in the shared resource store, so it is
 machine-wide and survives an engine restart. New agents route to the other
@@ -337,7 +341,7 @@ beside the TypeScript baseline; `--json` prints the document, which
 
 Real runs report the same table: `toolu epic summary <epic>` prints it with the
 measures beside the baseline and token use per worker (Claude Code
-transcripts, Codex rollouts and Muse session logs; OpenCode and Cursor rows say
+transcripts, Codex rollouts, Muse session logs and Grok usage records; OpenCode and Cursor rows say
 `unavailable`).
 The engine appends the same section, without token rows, to the epic's
 closing comment.

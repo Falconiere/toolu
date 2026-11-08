@@ -1,8 +1,8 @@
 //! Token use per worker, read from the host's own session records (#451):
-//! Claude Code transcripts (with their subagent transcripts), Codex rollouts
-//! and Muse session logs (`muse_tokens`). `opencode` keeps usage in a database
-//! and `cursor` in no readable store, so their rows say `unavailable`; nothing
-//! is estimated.
+//! Claude Code transcripts (with their subagent transcripts), Codex rollouts,
+//! Muse session logs (`muse_tokens`) and Grok usage records. `opencode` keeps
+//! usage in a database and `cursor` in no readable store, so their rows say
+//! `unavailable`; nothing is estimated.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -15,7 +15,7 @@ use toolu_runtime::env::Env;
 pub(crate) struct Agent {
   /// The issue key.
   pub key: String,
-  /// `claude`, `codex`, `muse`, `opencode` or `cursor`.
+  /// `claude`, `codex`, `muse`, `grok`, `opencode` or `cursor`.
   pub host: String,
   /// The host's session id, when the launch captured it.
   pub session: Option<String>,
@@ -30,6 +30,15 @@ const CLAUDE_FIELDS: [&str; 4] = [
   "output_tokens",
   "cache_read_input_tokens",
   "cache_creation_input_tokens",
+];
+
+const GROK_FIELDS: [&str; 6] = [
+  "inputTokens",
+  "outputTokens",
+  "cachedReadTokens",
+  "cacheCreationTokens",
+  "reasoningTokens",
+  "totalTokens",
 ];
 
 /// The agents of the issue records in `<state>/issues/`.
@@ -69,6 +78,7 @@ pub(crate) fn row(agent: &Agent, env: &Env) -> Value {
     ("claude", Some(session)) => claude(agent, session, env),
     ("codex", Some(session)) => codex(session, env),
     ("muse", Some(session)) => super::muse_tokens::muse(session, env),
+    ("grok", Some(session)) => grok(agent, session, env),
     ("opencode", Some(_)) => Err("OpenCode keeps usage in its database, which toolu does not read"),
     (_, Some(_)) => Err("this host records no token use toolu can read"),
   };
@@ -134,6 +144,21 @@ pub(super) fn field_totals(usages: &BTreeMap<String, Value>, fields: &[&str]) ->
     .map(|field| ((*field).to_owned(), json!(sum(field))))
     .collect();
   Value::Object(tokens)
+}
+
+/// Grok's per-session totals, which already include its subagents' calls.
+fn grok(agent: &Agent, session: &str, env: &Env) -> Result<(&'static str, Value), &'static str> {
+  let path = crate::launch::grok_session::group(env, &agent.worktree)
+    .join(session)
+    .join("usage.json");
+  let text = std::fs::read_to_string(path).map_err(|_err| "no usage record for the session")?;
+  let usage = serde_json::from_str::<Value>(&text)
+    .ok()
+    .and_then(|usage| usage.get("session").cloned())
+    .filter(Value::is_object)
+    .ok_or("the usage record cannot be read")?;
+  let totals = BTreeMap::from([(session.to_owned(), usage)]);
+  Ok(("grok usage record", field_totals(&totals, &GROK_FIELDS)))
 }
 
 fn codex(session: &str, env: &Env) -> Result<(&'static str, Value), &'static str> {

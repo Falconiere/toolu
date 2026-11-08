@@ -431,7 +431,7 @@ Stop sending new agents to HOST; running workers keep running
 Usage: toolu epic hosts pause [OPTIONS] <HOST>
 
 Arguments:
-  <HOST>  The host: claude, codex, cursor or muse
+  <HOST>  The host: claude, codex, cursor, muse or grok
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -448,7 +448,7 @@ Return HOST to rotation and clear its usage-limit cooldown
 Usage: toolu epic hosts resume [OPTIONS] <HOST>
 
 Arguments:
-  <HOST>  The host: claude, codex, cursor or muse
+  <HOST>  The host: claude, codex, cursor, muse or grok
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -517,7 +517,7 @@ Options:
       --issue <REF>             The sub-issue: reference, key or URL
   -q, --quiet                   Drop the diagnostics of a successful run
       --host <HOST>             The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --kind <HOST>             The host: claude, codex, cursor or muse; default the route's
+      --kind <HOST>             The host: claude, codex, cursor, muse or grok; default the route's
       --config-dir <DIR>        Read the toolu config from DIR instead of the host's default
       --model <MODEL>           The model; default the route's
       --effort <EFFORT>         The effort; default the route's

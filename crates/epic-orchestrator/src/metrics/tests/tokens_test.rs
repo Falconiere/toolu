@@ -12,11 +12,13 @@ fn fixtures() -> PathBuf {
 fn env() -> Env {
   let claude = fixtures().join("claude");
   let codex = fixtures().join("codex");
+  let grok = fixtures().join("grok");
   Env::from_pairs([
     ("HOME", "/nonexistent"),
     ("CLAUDE_CONFIG_DIR", claude.to_str().unwrap()),
     ("CODEX_HOME", codex.to_str().unwrap()),
     ("XDG_DATA_HOME", fixtures().to_str().unwrap()),
+    ("GROK_HOME", grok.to_str().unwrap()),
   ])
 }
 
@@ -24,7 +26,7 @@ fn env() -> Env {
 fn each_host_row_sums_its_own_records_or_says_why_it_cannot() {
   let agents = agents(&fixtures().join("state")).unwrap();
   let keys: Vec<&str> = agents.iter().map(|agent| agent.key.as_str()).collect();
-  assert_eq!(keys, ["a", "b", "c", "d", "e"]);
+  assert_eq!(keys, ["a", "b", "c", "d", "e", "f"]);
   let rows: Vec<serde_json::Value> = agents.iter().map(|agent| row(agent, &env())).collect();
   assert_eq!(
     rows[0],
@@ -46,6 +48,39 @@ fn each_host_row_sums_its_own_records_or_says_why_it_cannot() {
     json!({"key": "e", "host": "muse", "source": "muse session log", "complete": true,
       "tokens": {"input_tokens": 683_287, "output_tokens": 19_083, "cached_tokens": 558_797,
         "reasoning_tokens": 14_805}})
+  );
+  // The parent's totals already hold its subagent's 3 model calls.
+  assert_eq!(
+    rows[5],
+    json!({"key": "f", "host": "grok", "source": "grok usage record", "complete": true,
+      "tokens": {"inputTokens": 82_655, "outputTokens": 1_318, "cachedReadTokens": 54_528,
+        "cacheCreationTokens": 0, "reasoningTokens": 979, "totalTokens": 83_973}})
+  );
+}
+
+#[test]
+fn a_missing_or_unreadable_grok_usage_record_is_unavailable() {
+  let mut agents = agents(&fixtures().join("state")).unwrap();
+  let grok = &mut agents[5];
+  grok.session = Some("01a1bd47-0000-7000-8000-000000000000".to_owned());
+  assert_eq!(
+    row(grok, &env())["reason"],
+    "no usage record for the session"
+  );
+  let tmp = tempfile::tempdir().unwrap();
+  let session = tmp
+    .path()
+    .join("sessions/%2Fprivate%2Ftmp%2Fgrok-subagent-846")
+    .join(grok.session.as_deref().unwrap());
+  std::fs::create_dir_all(&session).unwrap();
+  std::fs::write(session.join("usage.json"), r#"{"sessionId": "x"}"#).unwrap();
+  let home = Env::from_pairs([
+    ("HOME", "/nonexistent"),
+    ("GROK_HOME", tmp.path().to_str().unwrap()),
+  ]);
+  assert_eq!(
+    row(grok, &home)["reason"],
+    "the usage record cannot be read"
   );
 }
 

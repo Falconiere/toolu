@@ -5,8 +5,9 @@
 //! pane's interactive shell.
 
 use regex::RegexBuilder;
+use toolu_protocol::host::Host;
 
-/// The four worker hosts.
+/// The five worker hosts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum HostKind {
   /// Claude Code.
@@ -17,19 +18,24 @@ pub(crate) enum HostKind {
   Cursor,
   /// Muse Code.
   Muse,
+  /// Grok Build.
+  Grok,
 }
 
 /// Every host, in pool order.
-pub(crate) const HOST_KINDS: [HostKind; 4] = [
+pub(crate) const HOST_KINDS: [HostKind; 5] = [
   HostKind::Claude,
   HostKind::Codex,
   HostKind::Cursor,
   HostKind::Muse,
+  HostKind::Grok,
 ];
 
 /// Usage-limit or rate-limit messages the agent CLIs print when throttled.
-/// Muse also says `model limit reached` and `You've used your <plan> quota`.
-pub(crate) const HOST_LIMIT: &str = "usage limit|rate[- ]limit(ed)?\\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit will reset|try again (at|in) |model limit reached|you've used your [a-z0-9 -]*quota";
+/// Muse also says `model limit reached` and `You've used your <plan> quota`;
+/// Grok says `You've hit the credit limit for your plan.` and
+/// `free-usage-exhausted`.
+pub(crate) const HOST_LIMIT: &str = "usage limit|rate[- ]limit(ed)?\\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit will reset|try again (at|in) |model limit reached|you've used your [a-z0-9 -]*quota|hit the credit limit|free[-_]usage[-_]exhausted";
 
 impl HostKind {
   /// The herdr `--kind` and record name.
@@ -39,7 +45,13 @@ impl HostKind {
       Self::Codex => "codex",
       Self::Cursor => "cursor",
       Self::Muse => "muse",
+      Self::Grok => "grok",
     }
+  }
+
+  /// The key that cancels a running turn; Grok ignores `esc` during one.
+  pub(crate) fn cancel_key(self) -> &'static str {
+    if self == Self::Grok { "ctrl+c" } else { "esc" }
   }
 }
 
@@ -50,6 +62,7 @@ pub(crate) fn parse_host_kind(name: &str) -> Option<HostKind> {
     "codex" => Some(HostKind::Codex),
     "cursor" | "cursor-agent" => Some(HostKind::Cursor),
     "muse" => Some(HostKind::Muse),
+    "grok" => Some(HostKind::Grok),
     _ => None,
   }
 }
@@ -60,7 +73,17 @@ pub(crate) fn parse_host_kind(name: &str) -> Option<HostKind> {
 /// The name is no host.
 pub(crate) fn host_kind(name: &str) -> Result<HostKind, String> {
   parse_host_kind(name)
-    .ok_or_else(|| format!("unknown host {name}; use one of claude, codex, cursor, muse"))
+    .ok_or_else(|| format!("unknown host {name}; use one of claude, codex, cursor, muse, grok"))
+}
+
+/// The toolu host a worker launched as `name` runs its own `toolu` as, which
+/// places its plan ledger. Grok Build exports no marker toolu detects, so
+/// toolu there acts for Claude Code (`.claude/tmp/plan-ledger/`).
+pub(crate) fn ledger_host(name: &str) -> Option<Host> {
+  match parse_host_kind(name) {
+    Some(HostKind::Grok) => Some(Host::Claude),
+    _ => Host::parse(name),
+  }
 }
 
 /// Whether `text` holds a provider-limit message.
@@ -111,6 +134,9 @@ fn approvals(kind: HostKind, opts: &AgentOpts) -> Vec<String> {
     (HostKind::Cursor, false) => words(&["--trust"]),
     (HostKind::Muse, true) => words(&["--yolo"]),
     (HostKind::Muse, false) => words(&["--approval-mode", "on-request", "--trust-workspace"]),
+    (HostKind::Grok, true) => words(&["--always-approve"]),
+    // Explicit, or a user's `permission_mode = "always-approve"` config wins.
+    (HostKind::Grok, false) => words(&["--permission-mode", "default"]),
   }
 }
 
@@ -125,7 +151,7 @@ fn effort_args(kind: HostKind, effort: &str) -> Vec<String> {
     HostKind::Codex => vec!["-c".to_owned(), format!("model_reasoning_effort={effort}")],
     // Cursor encodes effort in the model id.
     HostKind::Cursor => Vec::new(),
-    HostKind::Muse => vec!["--reasoning-effort".to_owned(), effort.to_owned()],
+    HostKind::Muse | HostKind::Grok => vec!["--reasoning-effort".to_owned(), effort.to_owned()],
   }
 }
 
@@ -133,7 +159,9 @@ fn resume_args(kind: HostKind, opts: &AgentOpts) -> (Vec<String>, Vec<String>) {
   if let (true, Some(id)) = (opts.resume, opts.session_id.as_deref()) {
     let lead = match kind {
       HostKind::Codex | HostKind::Muse => vec!["resume".to_owned(), id.to_owned()],
-      HostKind::Claude | HostKind::Cursor => vec!["--resume".to_owned(), id.to_owned()],
+      HostKind::Claude | HostKind::Cursor | HostKind::Grok => {
+        vec!["--resume".to_owned(), id.to_owned()]
+      }
     };
     return (lead, Vec::new());
   }
@@ -142,7 +170,7 @@ fn resume_args(kind: HostKind, opts: &AgentOpts) -> (Vec<String>, Vec<String>) {
   }
   match kind {
     HostKind::Codex | HostKind::Muse => (words(&["resume", "--last"]), Vec::new()),
-    HostKind::Claude | HostKind::Cursor => (Vec::new(), words(&["--continue"])),
+    HostKind::Claude | HostKind::Cursor | HostKind::Grok => (Vec::new(), words(&["--continue"])),
   }
 }
 
@@ -191,7 +219,7 @@ pub(crate) fn agent_args(kind: HostKind, opts: &AgentOpts) -> Result<Vec<String>
 /// How a brief tells `kind` to run `plugin:skill`.
 pub(crate) fn skill_ref(kind: HostKind, plugin: &str, skill: &str) -> String {
   match kind {
-    HostKind::Claude => format!("`/{plugin}:{skill}`"),
+    HostKind::Claude | HostKind::Grok => format!("`/{plugin}:{skill}`"),
     HostKind::Codex => format!("`${plugin}:{skill}`"),
     HostKind::Cursor => format!("the `{plugin}:{skill}` skill"),
     // Muse names plugin skills `plugin:<plugin>:<skill>`.

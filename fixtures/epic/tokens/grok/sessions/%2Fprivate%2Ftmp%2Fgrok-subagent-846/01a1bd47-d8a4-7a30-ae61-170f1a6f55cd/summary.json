@@ -1,0 +1,18 @@
+{
+  "info": {
+    "id": "01a1bd47-d8a4-7a30-ae61-170f1a6f55cd",
+    "cwd": "/private/tmp/grok-subagent-846"
+  },
+  "created_at": "2026-11-08T22:29:24.795483Z",
+  "updated_at": "2026-11-08T22:29:30.972306Z",
+  "last_active_at": "2026-11-08T22:29:30.972306Z",
+  "num_messages": 18,
+  "num_chat_messages": 13,
+  "current_model_id": "grok-4.7-build-fast",
+  "reasoning_effort": "low",
+  "session_kind": "subagent",
+  "parent_session_id": null,
+  "agent_name": "deep-explore",
+  "chat_format_version": 1,
+  "sandbox_profile": "off"
+}

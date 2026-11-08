@@ -1,7 +1,56 @@
 use toolu_engine::resources::leases::{LeaseKind, LeaseRequest, acquire_lease};
 
+use serde_json::json;
+
 use crate::launch::{find_issue, launch_issue};
-use crate::launch_rig::{Rig, opts};
+use crate::launch_rig::{GROK_SESSION, Rig, opts};
+
+/// A real checkout, a herdr socket and an agent shell that writes Grok
+/// Build's own session layout: the launch records the session it wrote.
+#[test]
+fn a_live_grok_launch_records_its_grok_session() {
+  let mut rig = Rig::new();
+  rig.checkout("comemory-255");
+  rig.grok_agents();
+  let mut flags = opts();
+  flags.force = true;
+  flags.kind = Some("grok".into());
+  rig
+    .launch(&flags)
+    .unwrap_or_else(|err| panic!("{}", err.message));
+  let record = rig.record("comemory-255");
+  let fields = ["stage", "kind", "session_id"].map(|key| &record[key]);
+  assert_eq!(
+    fields,
+    [&json!("running"), &json!("grok"), &json!(GROK_SESSION)]
+  );
+  let calls = rig.herdr.calls();
+  let start = calls
+    .iter()
+    .find(|(method, _)| method == "agent.start")
+    .map(|(_, params)| params)
+    .expect("agent.start");
+  assert_eq!(start["kind"], "grok");
+  assert_eq!(start["args"][0], "--always-approve");
+}
+
+/// A Grok agent that writes no session cannot be attested.
+#[test]
+fn a_grok_launch_without_a_session_is_not_attested() {
+  let mut rig = Rig::new();
+  rig.checkout("comemory-255");
+  let mut flags = opts();
+  flags.force = true;
+  flags.kind = Some("grok".into());
+  let failed = rig.launch(&flags).expect_err("no session");
+  assert!(
+    failed
+      .message
+      .contains("cannot attest grok session identity"),
+    "{}",
+    failed.message
+  );
+}
 
 #[test]
 fn shared_capacity_refuses_before_external_work() {

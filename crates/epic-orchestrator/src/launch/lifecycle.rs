@@ -294,7 +294,7 @@ fn missing(err: &Failure) -> bool {
 /// leaves between the listing and the request is already exited, not a
 /// failure (#633).
 fn request_exit(herdr: &mut Herdr<'_>, name: &str, kind: HostKind) -> Result<(), Failure> {
-  match send(herdr, name, &["esc"]) {
+  match send(herdr, name, &[kind.cancel_key()]) {
     Err(err) if missing(&err) => return Ok(()),
     result => result?,
   }

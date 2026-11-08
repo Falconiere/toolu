@@ -123,6 +123,23 @@ fn workload_left_in_the_worktree_is_cleanup_incomplete() {
   assert_eq!(blind.message, "pane shell ownership unavailable");
 }
 
+/// The keys and prompts sent to agents, in order.
+fn typed(rig: &Rig) -> Vec<serde_json::Value> {
+  rig
+    .herdr
+    .calls()
+    .into_iter()
+    .filter(|(method, _)| method == "agent.send_keys" || method == "agent.prompt")
+    .map(|(_, params)| {
+      params
+        .get("keys")
+        .or(params.get("text"))
+        .cloned()
+        .unwrap_or_default()
+    })
+    .collect()
+}
+
 #[test]
 fn shutdown_confirms_muse_exit_even_when_it_already_left() {
   let rig = Rig::new();
@@ -136,19 +153,7 @@ fn shutdown_confirms_muse_exit_even_when_it_already_left() {
     ),
     Ok(Outcome::Exited)
   );
-  let input: Vec<serde_json::Value> = rig
-    .herdr
-    .calls()
-    .into_iter()
-    .filter(|(method, _)| method == "agent.send_keys" || method == "agent.prompt")
-    .map(|(_, params)| {
-      params
-        .get("keys")
-        .or(params.get("text"))
-        .cloned()
-        .unwrap_or_default()
-    })
-    .collect();
+  let input = typed(&rig);
   assert_eq!(
     input,
     [
@@ -156,6 +161,28 @@ fn shutdown_confirms_muse_exit_even_when_it_already_left() {
       serde_json::json!("/exit"),
       serde_json::json!(["enter"])
     ]
+  );
+}
+
+/// Grok Build 1.0.77 ignores esc during a turn; ctrl+c cancels it and its
+/// foreground tool, and `/exit` then leaves at once.
+#[test]
+fn shutdown_cancels_grok_with_ctrl_c_before_exit() {
+  let rig = Rig::new();
+  let (worktree, pane) = started(&rig, "grok");
+  let mut ctx = rig.ctx();
+  assert_eq!(
+    shutdown_agent(
+      &mut ctx.herdr,
+      "k-1",
+      &expected(HostKind::Grok, &pane, &worktree)
+    ),
+    Ok(Outcome::Exited)
+  );
+  let input = typed(&rig);
+  assert_eq!(
+    input,
+    [serde_json::json!(["ctrl+c"]), serde_json::json!("/exit")]
   );
 }
 

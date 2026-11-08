@@ -1104,6 +1104,24 @@
             "model": "muse-wonder-full-1.0",
             "effort": "xhigh"
           }
+        ],
+        "grok": [
+          {
+            "model": "grok-4.7-build-fast",
+            "effort": "low"
+          },
+          {
+            "model": "grok-4.7",
+            "effort": "medium"
+          },
+          {
+            "model": "grok-4.7",
+            "effort": "high"
+          },
+          {
+            "model": "grok-4.7",
+            "effort": "xhigh"
+          }
         ]
       }
     },
@@ -1147,6 +1165,203 @@
         "--no-daemon",
         "--dangerously-bypass-approvals-and-sandbox"
       ]
+    },
+    {
+      "name": "args grok bypass=true model=null effort=null",
+      "kind": "args",
+      "host": "grok",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--always-approve"
+      ]
+    },
+    {
+      "name": "args grok bypass=true model=grok-4.7-build-fast effort=low",
+      "kind": "args",
+      "host": "grok",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "grok-4.7-build-fast",
+        "effort": "low",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--always-approve",
+        "--model",
+        "grok-4.7-build-fast",
+        "--reasoning-effort",
+        "low"
+      ]
+    },
+    {
+      "name": "args grok bypass=false model=grok-4.7 effort=medium",
+      "kind": "args",
+      "host": "grok",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "grok-4.7",
+        "effort": "medium",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--permission-mode",
+        "default",
+        "--model",
+        "grok-4.7",
+        "--reasoning-effort",
+        "medium"
+      ]
+    },
+    {
+      "name": "args grok bypass=false model=null effort=null",
+      "kind": "args",
+      "host": "grok",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--permission-mode",
+        "default"
+      ]
+    },
+    {
+      "name": "args grok resume session=01a1bd42-396e-7cb3-9e06-4c45a5eda666",
+      "kind": "args",
+      "host": "grok",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "grok-4.7-build-fast",
+        "effort": "low",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": true,
+        "sessionId": "01a1bd42-396e-7cb3-9e06-4c45a5eda666"
+      },
+      "argv": [
+        "--resume",
+        "01a1bd42-396e-7cb3-9e06-4c45a5eda666",
+        "--always-approve",
+        "--model",
+        "grok-4.7-build-fast",
+        "--reasoning-effort",
+        "low"
+      ]
+    },
+    {
+      "name": "args grok resume session=null",
+      "kind": "args",
+      "host": "grok",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": true,
+        "sessionId": null
+      },
+      "argv": [
+        "--always-approve",
+        "--continue"
+      ]
+    },
+    {
+      "name": "safe grok plan mode",
+      "kind": "args",
+      "host": "grok",
+      "opts": {
+        "key": "k",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "plan",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--permission-mode",
+        "default"
+      ]
+    },
+    {
+      "name": "skill grok delivery-flow:delivery-flow",
+      "kind": "skill",
+      "host": "grok",
+      "plugin": "delivery-flow",
+      "skill": "delivery-flow",
+      "text": "`/delivery-flow:delivery-flow`"
+    },
+    {
+      "name": "skill grok pr-babysit:babysit",
+      "kind": "skill",
+      "host": "grok",
+      "plugin": "pr-babysit",
+      "skill": "babysit",
+      "text": "`/pr-babysit:babysit`"
+    },
+    {
+      "name": "skill grok toolu:debug",
+      "kind": "skill",
+      "host": "grok",
+      "plugin": "toolu",
+      "skill": "debug",
+      "text": "`/toolu:debug`"
+    },
+    {
+      "name": "alias \"grok\"",
+      "kind": "alias",
+      "alias": "grok",
+      "host": "grok"
+    },
+    {
+      "name": "alias \" Grok \"",
+      "kind": "alias",
+      "alias": " Grok ",
+      "host": "grok"
+    },
+    {
+      "name": "limit \"You've hit the credit limit for your plan.\"",
+      "kind": "limit",
+      "text": "You've hit the credit limit for your plan.",
+      "matches": true
+    },
+    {
+      "name": "limit \"Error: subscription:free-usage-exhausted\"",
+      "kind": "limit",
+      "text": "Error: subscription:free-usage-exhausted",
+      "matches": true
+    },
+    {
+      "name": "limit \"You've hit the rate limit for your plan. Upgrade your account or try again later.\"",
+      "kind": "limit",
+      "text": "You've hit the rate limit for your plan. Upgrade your account or try again later.",
+      "matches": true
+    },
+    {
+      "name": "limit \"credit card form validated\"",
+      "kind": "limit",
+      "text": "credit card form validated",
+      "matches": false
     }
   ]
 }

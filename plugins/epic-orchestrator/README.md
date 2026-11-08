@@ -6,9 +6,9 @@ brainstorm through PR and babysit), merges green PRs, and cleans up until the
 epic is complete.
 
 Works on **Claude Code**, **Codex**, **Cursor Agent**, and **Muse Code**, both
-as the orchestrator and as workers. One run can mix hosts
-(`--hosts claude:2,codex:2,muse:1`): Jev scores each issue's complexity and a
-routing table picks the model and effort per host.
+as the orchestrator and as workers, and on **Grok Build** as a worker. One run
+can mix hosts (`--hosts claude:2,codex:2,muse:1,grok:1`): Jev scores each
+issue's complexity and a routing table picks the model and effort per host.
 
 ## Install
 
@@ -62,6 +62,23 @@ toolu upgrade. `--approve` approves them as part of the install. Without it,
 `toolu --host muse doctor` reports `warn plugins: <name> capabilities need
 approval; muse plugins approve <name>`, and the skill's preflight stops on
 that line.
+
+### Grok Build (workers)
+
+Grok Build has no toolu install of its own. It loads the plugins installed for
+Claude Code through its Claude compatibility layer, so install them there:
+
+```bash
+toolu plugins install delivery-flow --host claude
+```
+
+Grok 1.0.77 runs their `UserPromptSubmit`, `PreToolUse` and `PostToolUse`
+hooks but never their `SessionStart` hooks. Its start sources are `new` and
+`load`, while toolu's matchers name Claude's `startup|resume|clear|compact`.
+So on a Grok worker the session-start context is missing, and the rules that
+register at session start, such as git-better's commit checks, are off.
+Inside Grok, toolu acts for Claude Code, so a Grok worker's plan ledger is
+under `.claude/tmp/plan-ledger/`.
 
 ### Before a run
 
@@ -251,9 +268,12 @@ a `Repo: owner/name` description line, or `--repo` (default: current repo).
 | Codex | `--no-daemon --dangerously-bypass-approvals-and-sandbox` | `--model` / `-c model_reasoning_effort=` | `resume <captured-id>` |
 | Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | `--resume <captured-id>` |
 | Muse Code | `--yolo` | `--model` / `--reasoning-effort` | `resume <captured-id>` |
+| Grok Build | `--always-approve` | `--model` / `--reasoning-effort` | `--resume <captured-id>` |
 
 `--safe` keeps approval prompts on (Claude runs in its `auto` permission
-mode, Muse in `--approval-mode on-request --trust-workspace`); pass it as `toolu epic start <state-dir> --safe`, which the engine and
+mode, Muse in `--approval-mode on-request --trust-workspace`, Grok in
+`--permission-mode default`, which overrides an `always-approve` default in
+`~/.grok/config.toml`); pass it as `toolu epic start <state-dir> --safe`, which the engine and
 a manual `toolu epic launch` read from `<state-dir>/launch.json` until a start
 without it. With `--no-jev` the engine sends Jev nothing (workers' babysit
 routing keeps its own `prBabysit.jev` setting): pass it to
@@ -263,7 +283,8 @@ and coupling check heuristic. `--kind`, `--model` and `--effort` override the ro
 one manual `toolu epic launch`. Default tiers (`trivial`, `standard`,
 `complex`, `critical`) map to Claude `sonnet` low → `opus` xhigh, Codex
 `gpt-6-sol` low → xhigh, Cursor `composer-2.5` → `gpt-5.6-sol-xhigh`, Muse `muse-spark-1.3` low →
-`muse-wonder-1.0` medium and high → `muse-wonder-full-1.0` xhigh. Override per host and tier in `routing.json`
+`muse-wonder-1.0` medium and high → `muse-wonder-full-1.0` xhigh, Grok `grok-4.7-build-fast` low →
+`grok-4.7` medium, high and xhigh. Override per host and tier in `routing.json`
 under the state root, or point `EPIC_ROUTING_FILE` at one.
 
 Routes are preferences, not reservations. Cached routes count against each batch
@@ -328,7 +349,8 @@ never more than total memory. Non-Linux sampling uses load/memory
 without claiming to measure steal. Hypervisor starvation is distinct from guest work.
 
 Lifecycle operations verify host, pane and worktree. Shutdown distinguishes turn
-cancellation from background jobs: Codex uses `--no-daemon` and `/stop` before `/exit`. Worktree
+cancellation from background jobs: Codex uses `--no-daemon` and `/stop` before `/exit`, and Grok,
+which ignores `esc` during a turn, gets `ctrl+c` instead. Worktree
 process inventories and process birth identities guard final cleanup. Shutdown waits up to
 `EPIC_AGENT_EXIT_WAIT_S` (30) for herdr to stop listing the agent, then up to
 `EPIC_AGENT_EXIT_GRACE_S` (10) for its worktree processes to exit. A teardown
@@ -354,7 +376,11 @@ verified all six capabilities. Muse writes its session at start under
 `$XDG_DATA_HOME/muse/sessions/<yyyy>/<mm>/<dd>/<uuid>/` (default
 `~/.local/share/muse`), where launch captures it. Teardown follows `/exit` with
 `enter`, which confirms Muse's "Exit anyway" prompt when background work is
-still running.
+still running. The November 8 Grok probe (herdr 0.9.5, Grok Build 1.0.77)
+verified all six capabilities. Grok writes its session at start under
+`$GROK_HOME/sessions/<percent-encoded cwd>/<uuid>/` (default `~/.grok`), where
+launch captures the one top-level session and skips subagent sessions. Token
+metrics read the session's `usage.json`, whose totals include its subagents.
 
 ## Merging
 

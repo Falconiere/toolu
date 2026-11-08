@@ -5,7 +5,8 @@ survive):
 - DELIVERY, BABYSIT, DEBUG: the host's skill invocation, e.g. for delivery-flow
   `/delivery-flow:delivery-flow` (Claude Code), `$delivery-flow:delivery-flow`
   (Codex), "the `delivery-flow:delivery-flow` skill" (Cursor Agent), "the
-  `plugin:delivery-flow:delivery-flow` skill" (Muse Code).
+  `plugin:delivery-flow:delivery-flow` skill" (Muse Code), `/delivery-flow:delivery-flow`
+  (Grok Build).
 - ISSUE_READ: how to read the issue: `gh issue view URL --comments` (GitHub),
   `toolu epic jira issue get KEY` (Jira), the issue URL (Linear).
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),

@@ -33,6 +33,13 @@ fix.
    | `codex` | `codex` | `codex login status` prints `Logged in` | `codex login` |
    | `cursor` | `cursor-agent` | `cursor-agent status` prints `Logged in` | `cursor-agent login`; for `Your macOS login keychain is locked`, `security unlock-keychain` |
    | `muse` | `muse` | `META_API_KEY` is set, or its auth file exists: `MUSE_AUTH_PATH`, else `$XDG_CONFIG_HOME/muse/auth.json`, else `~/.config/muse/auth.json` | `muse login` |
+   | `grok` | `grok` | `XAI_API_KEY` is set, or `$GROK_HOME/auth.json` exists (else `~/.grok/auth.json`); `grok models` is no check, it can say `You are not authenticated.` while prompts work | `grok login` |
+
+   Grok Build has no toolu host of its own: it loads the plugins installed
+   for Claude Code. For `grok`, run steps 2 and 3 with `--host claude`, and
+   tell the user its `SessionStart` hooks do not run, so the rules that
+   register at session start (git-better's commit checks, for example) are
+   off on a Grok worker.
 
 2. `toolu plugins list --host <host>` succeeds, and none of `toolu`,
    `toolu-review`, `pr-babysit`, `brainstorm` or `delivery-flow` is on a

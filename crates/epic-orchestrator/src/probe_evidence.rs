@@ -9,7 +9,7 @@ use serde_json::{Map, Value};
 /// The committed evidence, the default of `toolu epic probe --check-evidence`.
 pub(crate) const COMMITTED: &str = include_str!("../../../docs/toolu/evidence/epic-hosts-v1.json");
 
-const HOSTS: [&str; 4] = ["claude", "codex", "cursor", "muse"];
+const HOSTS: [&str; 5] = ["claude", "codex", "cursor", "muse", "grok"];
 const CAPABILITIES: [&str; 6] = [
   "start",
   "tool_task",

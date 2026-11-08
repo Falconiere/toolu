@@ -164,7 +164,7 @@ fn start(tmux: &Tmux, kind: &str, pane_id: &str, args: &[String]) -> Result<Valu
 fn host_binary(kind: &str) -> &str {
   match parse_host_kind(kind) {
     Some(HostKind::Cursor) => "cursor-agent",
-    Some(HostKind::Claude | HostKind::Codex | HostKind::Muse) | None => kind,
+    Some(HostKind::Claude | HostKind::Codex | HostKind::Muse | HostKind::Grok) | None => kind,
   }
 }
 

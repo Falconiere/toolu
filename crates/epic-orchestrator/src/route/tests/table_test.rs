@@ -66,6 +66,26 @@ fn hosts_json(table: &RoutingTable) -> Value {
 }
 
 #[test]
+fn routing_json_overrides_grok_tiers_and_keeps_them_otherwise() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let file = tmp.path().join("routing.json");
+  std::fs::write(
+    &file,
+    r#"{"hosts": {"grok": [{"model": "grok-4.6", "effort": "low"}, {"model": "grok-4.6"}, {"model": "grok-4.7"}, {"model": "grok-4.7", "effort": "high"}]}}"#,
+  )
+  .expect("routing");
+  let env = Env::from_pairs([("EPIC_ROUTING_FILE", file.display().to_string())]);
+  let grok = &load_table(&env).hosts[&HostKind::Grok];
+  assert_eq!(grok[0].model.as_deref(), Some("grok-4.6"));
+  assert_eq!(grok[3].effort.as_deref(), Some("high"));
+  std::fs::write(&file, r#"{"hosts": {"codex": []}}"#).expect("routing");
+  let kept = &load_table(&env).hosts[&HostKind::Grok];
+  assert_eq!(kept, &default_table().hosts[&HostKind::Grok]);
+  assert_eq!(kept[0].model.as_deref(), Some("grok-4.7-build-fast"));
+  assert_eq!(kept[3].effort.as_deref(), Some("xhigh"));
+}
+
+#[test]
 fn routing_json_overrides_muse_tiers() {
   let tmp = tempfile::tempdir().expect("temp");
   let file = tmp.path().join("routing.json");

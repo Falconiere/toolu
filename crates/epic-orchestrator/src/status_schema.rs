@@ -172,7 +172,7 @@ Field rules:
 - Keys, epics, kinds and `submission_id` match `[A-Za-z0-9._-]{1,128}`.
 - `ack` takes exactly one of `key` or `kind`.
 - `answer` takes `key`, `text` and `submission_id`. The text is 1 to 4,000 characters, with no control characters other than newline and tab. A missing or invalid `submission_id` is `400 invalid_request`. The same `submission_id` and payload cannot deliver twice; reusing the id with a different payload is `409` `submission_id reuse with different payload`. A new id with the same text is a new intentional answer. Dedupe is rebuilt from journal `answer-admit` rows in `journal::tail` (today's and the previous UTC day's files); older retained day files are not consulted.
-- `host-pause` and `host-resume` take a `host`: `claude`, `codex`, `cursor` or `muse` (aliases `claude-code`, `cursor-agent` accepted); anything else is `400 invalid_request`.
+- `host-pause` and `host-resume` take a `host`: `claude`, `codex`, `cursor`, `muse` or `grok` (aliases `claude-code`, `cursor-agent` accepted); anything else is `400 invalid_request`.
 
 A `POST` without `Content-Length` is `400`, and a larger body is `413`.
 
@@ -204,7 +204,7 @@ Configured secrets are redacted in every field. `title`, the `hold` strings and 
 
 `plan` on `/api/v1/issues/{key}` (and in `toolu epic status --json <key>`, which builds the same document) is the worker's plan ledger, the todo list `toolu ledger` keeps. It holds `plan_doc`, `updated_at`, `next`, `summary` (`total`, `green`, `red`, `pending`, `running`, `stale`) and `steps[]` (`id`, `title`, `status`, `activity`, `last_run`). Nothing else from the ledger is exposed: no `check`, `evidence_tail`, `diff_sha`, `scope_sha`, `input` or `retries`. Every string is cut to 160 characters, `steps` lists at most the first 200 steps (`summary` still counts all of them), and configured secrets are redacted. A step's `status` is the one the ledger stores (`pending`, `running`, `green`, `red`); the engine does not recompute freshness, so `summary.stale` is the count from the worker's last ledger write.
 
-The engine reads the ledger on every request from the worker's worktree, for the host it was launched on (both from its launch record, else the engine's copy of it), and for the branch named by the worktree's `.git` and `HEAD` files. It reads those files directly and runs no git, so a branch switch shows the new branch's ledger at once. The ledger directory depends on the host: Claude Code `.claude/tmp/plan-ledger/`, Codex `.codex/tmp/plan-ledger/`, Cursor `.cursor/tmp/plan-ledger/`, and Muse `.toolu/tmp/muse/plan-ledger/`. `TOOLU_PROJECT_CONFIG_DIRNAME` in the engine's environment overrides the directory as it does for the worker. `plan` is `null` when there is no worktree, no known host, no `HEAD`, a reftable repository (whose `HEAD` names no branch without git) or no ledger yet, for example while the worker is still in its spec phase. A ledger that is empty, is not JSON or has a `version` other than 1 gives `{\"error\": \"unreadable\"}`, and the rest of the document is unaffected.
+The engine reads the ledger on every request from the worker's worktree, for the host it was launched on (both from its launch record, else the engine's copy of it), and for the branch named by the worktree's `.git` and `HEAD` files. It reads those files directly and runs no git, so a branch switch shows the new branch's ledger at once. The ledger directory depends on the host: Claude Code `.claude/tmp/plan-ledger/`, Codex `.codex/tmp/plan-ledger/`, Cursor `.cursor/tmp/plan-ledger/`, and Muse `.toolu/tmp/muse/plan-ledger/`. A Grok Build worker uses Claude Code's, because toolu runs there as Claude Code. `TOOLU_PROJECT_CONFIG_DIRNAME` in the engine's environment overrides the directory as it does for the worker. `plan` is `null` when there is no worktree, no known host, no `HEAD`, a reftable repository (whose `HEAD` names no branch without git) or no ledger yet, for example while the worker is still in its spec phase. A ledger that is empty, is not JSON or has a `version` other than 1 gives `{\"error\": \"unreadable\"}`, and the rest of the document is unaffected.
 
 Each issue on `/api/v1/epics/{id}` carries `plan_summary`: the same counts plus `next`, `null`, or `{\"error\": \"unreadable\"}`. It is cached by ledger path, modification time and inode, so a board refresh rereads only ledgers that changed.
 
@@ -216,14 +216,15 @@ Each issue keeps herdr's last `agent_status` (`idle`, `working`, `blocked`, `don
 
 ### Host probe
 
-Observed on 2026-10-27 with herdr 0.9.5 through `herdr agent list` during real sessions:
+Observed with herdr 0.9.5 through `herdr agent list` during real sessions, on 2026-10-27 (Grok Build on 2026-11-08):
 
 | Host | `agent_status` values seen through a turn | Terminal title |
 |---|---|---|
 | Claude Code 2.1.311 | `blocked` on the folder-trust dialog at startup; through a turn `idle` → `working` → `idle` (it never reports `done`) | `Claude Code` until the first prompt, then a live task summary (\"Notes.txt file listing\") that stays after the turn. A worker the engine starts gets `-n <key>`, and its title is then the key itself (\"falconiere-toolu-650\"), not a summary. |
 | Codex 0.164.0 | `blocked` on the folder-trust dialog at startup; `done` → `working` → `done` | The folder name (\"ws-codex\") until the first prompt, then `<task summary> \\| <folder>` (\"List files and save notes \\| ws-codex\"). |
 | Cursor Agent 2026.10.22 | `idle` → `working` → `done` | `Cursor Agent` until the first prompt, then a task summary (\"List Files And Write\"). |
-| Muse Code 1.4.13 | `idle` → `working` → `done` | The folder name (\"ws-muse\") throughout; no task summary. |\n";
+| Muse Code 1.4.13 | `idle` → `working` → `done` | The folder name (\"ws-muse\") throughout; no task summary. |
+| Grok Build 1.0.77 | `idle` → `working` → `done`; `blocked` on its approval menu in an attended (`--safe`) session | `grok` throughout; no task summary. |\n";
 
 /// The fleet section: peers, the proxy and the dashboard.
 const FLEET: &str = "\n## Fleet over a private network

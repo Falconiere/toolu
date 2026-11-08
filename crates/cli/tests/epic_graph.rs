@@ -69,38 +69,42 @@ fn route_prints_the_batch_routes_and_a_dry_run_writes_nothing() {
 }
 
 #[test]
-fn route_sends_work_to_muse_with_its_tier_model_and_effort() {
+fn route_sends_work_to_muse_and_grok_with_their_tier_model_and_effort() {
   let home = Home::new().unwrap();
   let graph = write_graph(&home, |_| {}).unwrap();
-  let json = home
-    .run(&[
-      "--json",
-      "epic",
-      "route",
-      "--graph",
-      &graph,
-      "--no-jev",
-      "--dry-run",
-      "--hosts",
-      "muse:1",
-      "--issue",
-      "comemory-255",
-    ])
-    .unwrap();
-  assert_eq!(json.status.code(), Some(0), "{}", err(&json));
-  let routes = doc(&json).unwrap();
-  let first = &routes["routes"][0];
-  assert_eq!(first["host"], "muse", "{routes}");
-  assert!(
-    first["model"]
-      .as_str()
-      .is_some_and(|model| model.starts_with("muse-")),
-    "{routes}"
-  );
+  for host in ["muse", "grok"] {
+    let cap = format!("{host}:1");
+    let json = home
+      .run(&[
+        "--json",
+        "epic",
+        "route",
+        "--graph",
+        &graph,
+        "--no-jev",
+        "--dry-run",
+        "--hosts",
+        &cap,
+        "--issue",
+        "comemory-255",
+      ])
+      .unwrap();
+    assert_eq!(json.status.code(), Some(0), "{}", err(&json));
+    let routes = doc(&json).unwrap();
+    let first = &routes["routes"][0];
+    assert_eq!(first["host"], host, "{routes}");
+    assert!(
+      first["model"]
+        .as_str()
+        .is_some_and(|model| model.starts_with(&format!("{host}-"))),
+      "{routes}"
+    );
+    assert!(first["effort"].is_string(), "{routes}");
+  }
   let unknown = route(&home, &graph, &["--hosts", "nope:1"]).unwrap();
   assert_eq!(unknown.status.code(), Some(64));
   assert!(
-    err(&unknown).contains("use one of claude, codex, cursor, muse"),
+    err(&unknown).contains("use one of claude, codex, cursor, muse, grok"),
     "{}",
     err(&unknown)
   );

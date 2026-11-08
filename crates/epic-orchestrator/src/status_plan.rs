@@ -9,10 +9,10 @@ use std::time::SystemTime;
 
 use serde_json::{Map, Value, json};
 use toolu_engine::ledger::io::ledger_path_for;
-use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 
+use crate::hosts::ledger_host;
 use crate::model::Issue;
 
 const COUNTS: [&str; 6] = ["total", "green", "red", "pending", "running", "stale"];
@@ -101,7 +101,7 @@ pub(crate) fn head_branch(worktree: &Path) -> Option<String> {
 
 fn ledger_file(worktree: Option<&str>, host: Option<&str>) -> Option<PathBuf> {
   let worktree = Path::new(worktree.filter(|tree| !tree.is_empty())?);
-  let roots = Roots::new(state_env().clone(), Some(Host::parse(host?)?));
+  let roots = Roots::new(state_env().clone(), Some(ledger_host(host?)?));
   Some(ledger_path_for(worktree, &head_branch(worktree)?, &roots))
 }
 

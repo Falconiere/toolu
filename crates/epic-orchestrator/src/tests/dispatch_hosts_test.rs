@@ -60,7 +60,7 @@ fn host_pause_and_resume_apply_journal_and_reject_unknown_hosts() {
   let (_, value) = round(&mut engine, &json!({"op": "host-pause", "host": "nope"}));
   assert_eq!(
     value["error"],
-    "unknown host nope; use one of claude, codex, cursor, muse"
+    "unknown host nope; use one of claude, codex, cursor, muse, grok"
   );
 }
 
