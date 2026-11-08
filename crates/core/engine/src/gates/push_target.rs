@@ -75,11 +75,14 @@ pub(crate) fn ref_exists(root: &Path, reference: &str, env: &Env) -> bool {
   git_at(root, &["rev-parse", "--verify", "--quiet", reference], env).is_some()
 }
 
-/// Changed paths as Git prints them, or empty if Git could not compute them.
+/// Changed paths in the quoted `core.quotepath=true` spelling the state writer
+/// records, or empty if Git could not compute them.
 pub(crate) fn changed_names(root: &Path, base: &str, env: &Env) -> String {
   git_at(
     root,
     &[
+      "-c",
+      "core.quotepath=true",
       "diff",
       "--no-color",
       &format!("{base}...HEAD"),

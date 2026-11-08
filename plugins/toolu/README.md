@@ -17,7 +17,7 @@ codex plugin marketplace add Falconiere/toolu
 codex plugin add toolu@toolu
 ```
 
-`toolu` has no required plugin dependencies. The `push-review` gate is reviewer-agnostic and uses the built-in `/code-review` (or `toolu-review:review`). See the root [README](../../README.md) for the full install sequence.
+`toolu` has no required plugin dependencies. The `push-review` gate is reviewer-agnostic; the `code-review` plugin's native `code-review:review` is the primary reviewer, with `toolu-review:review` as its fallback. See the root [README](../../README.md) for the full install sequence.
 
 ## What it provides
 
@@ -27,7 +27,7 @@ codex plugin add toolu@toolu
 
 - **Supporting skills** — `orchestrator`, `debug`, `deep-research`, `herdr-app`, and `test-writer` (few spec-derived tests, cheap runs; `/toolu:test-writer`). The end-to-end workflow lives in the separate `delivery-flow` plugin, which depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`.
 - **Quality gate engine** — the `PreToolUse` / `PostToolUse` / `SessionStart` hook dispatcher and runtime **registry** that domain plugins contribute checks to (fail-closed; a module runs only while its owning plugin is installed).
-- **\`push-review\` gate** — gates \`git push\` on a feature branch until the diff has been run through an accepted reviewer (the built-in \`/code-review\` skill or \`toolu-review:review\`), with a round cap that escalates instead of looping (5 rewrites against an unchanged diff; a changed diff restarts the count). Gated per target repo — `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file. **Delivery is configurable** (`gates.pushReview.mode`): the shipped default advises rather than blocking; `ask` is opt-in and a yes is remembered for that diff. See [hooks/docs/gates.md](hooks/docs/gates.md).
+- **\`push-review\` gate** — gates \`git push\` on a feature branch until the diff has been run through an accepted reviewer (native \`code-review:review\`, or its \`toolu-review:review\` fallback), with a round cap that escalates instead of looping (5 rewrites against an unchanged diff; a changed diff restarts the count). Gated per target repo — `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file. **Delivery is configurable** (`gates.pushReview.mode`): the shipped default advises rather than blocking; `ask` is opt-in and a yes is remembered for that diff. See [hooks/docs/gates.md](hooks/docs/gates.md).
 - **Runtime diagnostic** — on session start and resume, a one-line message names the native binary and version. If it is missing, enforcing hooks fail closed and the launcher says how to install the binary; see [docs/runtime.md](../../docs/runtime.md#hook-launcher).
 - **docs-sync backstop** — checks documentation on push using the configured `docsSync` mode. With `documentation-gate` active it requires a current committed-diff worker review; otherwise it uses the legacy documentation-surface check.
 - **Commit workflows** — Claude `/commit` and `/review-and-commit`, with Codex equivalents `$toolu:commit` and `$toolu:review-and-commit`, all reading shared workflow bodies.

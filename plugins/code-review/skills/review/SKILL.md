@@ -28,8 +28,9 @@ maximizer. Keep a finding only when every gate holds: meaningful
 production impact; discrete and actionable; introduced by this change;
 demonstrated from code/tests/conventions; and something the author would
 likely fix. Style, pre-existing debt, speculation, and lint CI already owns
-are noise. Unanchored or contradicted model claims must not survive verify
-(validate / Jev judge / recheck). Prefer fewer precise findings over catch rate.
+are noise. Validation drops findings whose quote is not in the changed lines; a
+Jev-contradicted finding is dropped only when the recheck dismisses it with
+verbatim evidence. Prefer fewer precise findings over catch rate.
 
 The command includes committed branch changes plus staged, unstaged and non-ignored
 untracked files, compared with the chosen merge-base. Patches, scanners and source
