@@ -441,7 +441,7 @@
           ],
           "evidence": [
             "agent_started returned argv [grok --always-approve --model grok-4.7-build-fast --reasoning-effort low], agent=grok, agent_status=idle, interactive_ready=true, agent_session.value=01a1bd42-396e-7cb3-9e06-4c45a5eda666.",
-            "~/.grok/sessions/%2Fprivate%2Ftmp%2Fgrok-probe-846/01a1bd42-396e-7cb3-9e06-4c45a5eda666/summary.json held info.id 01a1bd42-396e-7cb3-9e06-4c45a5eda666, info.cwd /private/tmp/grok-probe-846 and session_kind null before the first prompt; the footer read 'always-approve'.",
+            "Before the first prompt, Grok had written summary.json in its session directory, named for the session, under ~/.grok/sessions/ in the group named for the percent-encoded cwd; it held info.id equal to the session id above, info.cwd /private/tmp/grok-probe-846 and session_kind null. The footer read 'always-approve'.",
             "An attended start with --permission-mode default (session 01a1bd45-5cfe-7592-be63-e8ccca2c0baf) dropped always-approve from the footer although ~/.grok/config.toml sets permission_mode = \"always-approve\"; a prompted write then left herdr at agent_status=blocked on Grok's approval menu and wrote nothing."
           ],
           "nativeError": null
