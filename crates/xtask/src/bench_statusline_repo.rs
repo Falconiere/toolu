@@ -87,6 +87,20 @@ impl Fixture {
     Ok(fixture)
   }
 
+  /// A freshly written copy of `bin`, named `toolu`, in the sandbox.
+  ///
+  /// Max RSS counts the binary's mapped file pages, and Linux maps more of them
+  /// per fault when the page cache holds the file in large folios. Copying first
+  /// gives every run the same page-cache state, whatever read the original before.
+  pub(crate) fn install(&self, bin: &Path) -> Result<PathBuf, String> {
+    let dir = self.root.join("bin");
+    let copy = dir.join("toolu");
+    std::fs::create_dir(&dir)
+      .and_then(|()| std::fs::copy(bin, &copy))
+      .map_err(|err| format!("bench-statusline: cannot copy {}: {err}", bin.display()))?;
+    Ok(copy)
+  }
+
   /// The environment of a render: this process's minus host-session keys, the
   /// private home, `cfg` as the config directory, and `bin`'s directory on `PATH`.
   pub(crate) fn env(&self, bin: &Path, cfg: &Path) -> Vec<(OsString, OsString)> {

@@ -1,10 +1,11 @@
 //! `cargo xtask bench-statusline [--bin <toolu>] [--runs N] [--out FILE] [--assert]`
 //! (#431, ported from `statusline.ts` by #440): `toolu statusline render` fed the
-//! payload of `fixtures/statusline/performance.json` in a linked worktree, three
-//! warm-up renders then `--runs` (30) measured ones, each in a fresh `xtask measure`
-//! after a cache refresh, then one cold first render. `--out` writes the
-//! `toolu.statusline-benchmark/v1` result. `--assert` fails when the warm p50 is over
-//! 4000 us wall or 6 MiB max RSS. Exit 0 ok, 1 over budget, 2 usage or setup error.
+//! payload of `fixtures/statusline/performance.json` in a linked worktree, run from a
+//! fresh copy of the binary: three warm-up renders then `--runs` (30) measured ones,
+//! each in a fresh `xtask measure` after a cache refresh, then one cold first render.
+//! `--out` writes the `toolu.statusline-benchmark/v1` result. `--assert` fails when
+//! the warm p50 is over 4000 us wall or 6 MiB max RSS. Exit 0 ok, 1 over budget,
+//! 2 usage or setup error.
 
 use std::path::Path;
 use std::process::Command;
@@ -30,6 +31,7 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let exe = measurer(&options.root, std::env::var_os(MEASURER_VAR))
     .map_err(|err| format!("bench-statusline: {err}"))?;
   let fixture = Fixture::new()?;
+  let bin = fixture.install(&bin)?;
   let stdin = payload(&fixture_json, &fixture.worktree)?;
   let measured = measure(&exe, &bin, &fixture, &stdin, runs)?;
   output::say(&format!(

@@ -26,6 +26,8 @@ Linux CI is the gating platform. macOS is never gated: the hook bench measures a
 
 The release profile uses `opt-level = "s"`. The Linux `rust` job still enforces the unchanged statusline limits on the shipped static MUSL binary with `cargo xtask bench-statusline --assert`.
 
+The statusline bench renders from a fresh copy of the binary in its sandbox. Max RSS includes the executable's mapped file pages, and the Linux 7.0 runner kernel maps more of them per fault when the file sits in the page cache in large folios. On hosted runners in November 2026, the same binary measured 4,530,176 bytes freshly written, about 4.0 MiB after `drop_caches`, and 7,413,760 bytes after a full sequential read. The copy fixes the page-cache state, so the measurement no longer depends on which earlier CI step last read the binary.
+
 The status-server check is `cargo test -p toolu-epic-orchestrator --test status_budget` after a release build of `toolu`. It keeps eight SSE connections open while 50 clients each send 40 sequential keep-alive requests to `/api/v1/overview`; the test reads the server process's `/proc/<pid>/status` `VmHWM` and calculates nearest-rank client p90. A Rust 1.99 aarch64 Linux container run on 2026-10-11 measured 0.199 ms p90 across 2,000 requests and 5,984 KiB high-water RSS. CI runners can produce different values, so the test enforces the published limits there too.
 
 ## Where the numbers come from

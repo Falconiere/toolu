@@ -20,6 +20,24 @@ fn the_fixture_is_a_linked_worktree_with_an_untracked_file_and_is_removed_on_dro
 }
 
 #[test]
+fn install_copies_the_binary_as_an_executable_toolu_inside_the_sandbox() {
+  use std::os::unix::fs::PermissionsExt as _;
+  let fixture = Fixture::new().unwrap();
+  let source = fixture.scratch().join("built");
+  std::fs::write(&source, b"#!/bin/sh\n").unwrap();
+  std::fs::set_permissions(&source, std::fs::Permissions::from_mode(0o755)).unwrap();
+  let copy = fixture.install(&source).unwrap();
+  assert_eq!(copy, fixture.scratch().join("bin/toolu"));
+  assert_eq!(std::fs::read(&copy).unwrap(), b"#!/bin/sh\n");
+  assert_eq!(
+    std::fs::metadata(&copy).unwrap().permissions().mode() & 0o777,
+    0o755
+  );
+  let err = fixture.install(&source).unwrap_err();
+  assert!(err.contains("cannot copy"), "{err}");
+}
+
+#[test]
 fn the_env_drops_host_keys_and_points_home_config_and_path_at_the_sandbox() {
   let fixture = Fixture::new().unwrap();
   let env = fixture.env(Path::new("/opt/toolu/bin/toolu"), &fixture.cold_cfg);
