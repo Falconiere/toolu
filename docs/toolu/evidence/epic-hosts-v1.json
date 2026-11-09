@@ -409,6 +409,145 @@
           "nativeError": null
         }
       }
+    },
+    "grok": {
+      "binary": "grok",
+      "version": "grok 1.0.77 (50ca579fa996) [stable]",
+      "versionCommand": [
+        "grok",
+        "--version"
+      ],
+      "profileIsolation": "Owned herdr 0.9.5 workspace on a temporary Git project (/private/tmp/grok-probe-846); the user's own Grok home (~/.grok), as an epic worker uses it (2026-11-08, #846). The first pane start ran 1.0.25, which updated itself to 1.0.77 on launch; every later run was 1.0.77.",
+      "capabilities": {
+        "start": {
+          "outcome": "verified",
+          "summary": "herdr started Grok interactively in the owned pane, ready and idle in the project, and Grok wrote its session directory at start.",
+          "observedAt": "2026-11-08T22:23:16Z",
+          "command": [
+            "herdr",
+            "agent",
+            "start",
+            "probegrok",
+            "--kind",
+            "grok",
+            "--pane",
+            "wJ8:p1",
+            "--",
+            "--always-approve",
+            "--model",
+            "grok-4.7-build-fast",
+            "--reasoning-effort",
+            "low"
+          ],
+          "evidence": [
+            "agent_started returned argv [grok --always-approve --model grok-4.7-build-fast --reasoning-effort low], agent=grok, agent_status=idle, interactive_ready=true, agent_session.value=01a1bd42-396e-7cb3-9e06-4c45a5eda666.",
+            "Before the first prompt, Grok had written summary.json in its session directory, named for the session, under ~/.grok/sessions/ in the group named for the percent-encoded cwd; it held info.id equal to the session id above, info.cwd /private/tmp/grok-probe-846 and session_kind null. The footer read 'always-approve'.",
+            "An attended start with --permission-mode default (session 01a1bd45-5cfe-7592-be63-e8ccca2c0baf) dropped always-approve from the footer although ~/.grok/config.toml sets permission_mode = \"always-approve\"; a prompted write then left herdr at agent_status=blocked on Grok's approval menu and wrote nothing."
+          ],
+          "nativeError": null
+        },
+        "tool_task": {
+          "outcome": "verified",
+          "summary": "A prompted shell task ran and its artifact was verified on disk.",
+          "observedAt": "2026-11-08T22:23:33Z",
+          "command": [
+            "herdr",
+            "agent",
+            "prompt",
+            "probegrok",
+            "Run the shell command: printf 'grok-ok' > grok-artifact.txt && cat grok-artifact.txt. Then stop.",
+            "--wait"
+          ],
+          "evidence": [
+            "agent_prompted ended agent_status=done; grok-artifact.txt contained grok-ok.",
+            "The session's usage.json then held per-session token totals (inputTokens, outputTokens, cachedReadTokens, cacheCreationTokens, reasoningTokens, totalTokens)."
+          ],
+          "nativeError": null
+        },
+        "resume": {
+          "outcome": "verified",
+          "summary": "The exact captured session id restored the prior conversation in the same pane.",
+          "observedAt": "2026-11-08T22:25:01Z",
+          "command": [
+            "herdr",
+            "agent",
+            "start",
+            "probegrok",
+            "--kind",
+            "grok",
+            "--pane",
+            "wJ8:p1",
+            "--",
+            "--resume",
+            "01a1bd42-396e-7cb3-9e06-4c45a5eda666",
+            "--always-approve",
+            "--model",
+            "grok-4.7-build-fast",
+            "--reasoning-effort",
+            "low"
+          ],
+          "evidence": [
+            "agent_started returned argv [grok --resume 01a1bd42-396e-7cb3-9e06-4c45a5eda666 --always-approve ...] and no new session directory appeared.",
+            "Asked without tools what grok-artifact.txt contained, the resumed agent answered grok-ok.",
+            "Right after the self-update, the first prompt sent with a plain --wait was not submitted; two later resumes took 'agent prompt ... --wait --until working --until blocked' at once (pong1, pong2)."
+          ],
+          "nativeError": null
+        },
+        "background_work": {
+          "outcome": "verified",
+          "summary": "A background shell task kept running after the turn ended and after a foreground cancel.",
+          "observedAt": "2026-11-08T22:25:54Z",
+          "command": [
+            "herdr",
+            "agent",
+            "prompt",
+            "probegrok",
+            "Start the shell command 'sleep 901' as a background task (do not wait for it), tell me its task id, and end your turn while it keeps running.",
+            "--wait"
+          ],
+          "evidence": [
+            "pgrep showed sleep 901 after the turn ended (task 888e77f4-8f5c-4240-a41e-44d052f577a3 listed under Tasks).",
+            "sleep 901 survived the ctrl+c that cancelled a later foreground turn."
+          ],
+          "nativeError": null
+        },
+        "cancel_replace": {
+          "outcome": "verified",
+          "summary": "ctrl+c cancelled a running foreground tool (esc did not); after exit a fresh agent replaced the old one in the same pane with a new session.",
+          "observedAt": "2026-11-08T22:26:42Z",
+          "command": [
+            "herdr",
+            "agent",
+            "send-keys",
+            "probegrok",
+            "ctrl+c"
+          ],
+          "evidence": [
+            "During 'sleep 120' in the foreground, esc left the agent working and sleep 120 running; the footer offered 'Ctrl+c:cancel'.",
+            "ctrl+c then printed 'Turn cancelled by user', sleep 120 was gone, the agent reached done and sleep 901 kept running; ctrl+c on the idle agent changed nothing.",
+            "herdr agent start probegrok2 --kind grok in the same pane started a new session 01a1bd45-5cfe-7592-be63-e8ccca2c0baf."
+          ],
+          "nativeError": null
+        },
+        "teardown": {
+          "outcome": "verified",
+          "summary": "/exit leaves at once, even with live background work, which it ends; no grok process or leader remains.",
+          "observedAt": "2026-11-08T22:26:59Z",
+          "command": [
+            "herdr",
+            "agent",
+            "prompt",
+            "probegrok",
+            "/exit"
+          ],
+          "evidence": [
+            "After ctrl+c then /exit, herdr agent get returned agent_not_found and pgrep showed no sleep 901.",
+            "Grok printed 'Resume this session with: grok --resume 01a1bd42-396e-7cb3-9e06-4c45a5eda666'; the pane returned to fish.",
+            "The attended agent left the same way after ctrl+c dismissed its approval menu; 'grok leader list' then reported no background service processes."
+          ],
+          "nativeError": null
+        }
+      }
     }
   }
 }

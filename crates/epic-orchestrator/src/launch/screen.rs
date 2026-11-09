@@ -22,7 +22,7 @@ const CODEX_HOOK_REVIEW: &str = r"\b\d+ hooks? (?:is|are) new or changed\.|\b\d+
 fn screens(kind: HostKind) -> Option<&'static str> {
   match kind {
     HostKind::Codex => Some(CODEX_HOOK_REVIEW),
-    HostKind::Claude | HostKind::Cursor | HostKind::Muse => None,
+    HostKind::Claude | HostKind::Cursor | HostKind::Muse | HostKind::Grok => None,
   }
 }
 

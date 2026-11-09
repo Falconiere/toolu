@@ -37,6 +37,7 @@ const HOSTS: &[&str] = &[
   "cursor",
   "cursor-agent",
   "muse",
+  "grok",
 ];
 
 /// A failed report whose note starts with `rate-limited`.

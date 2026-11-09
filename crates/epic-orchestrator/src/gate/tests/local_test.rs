@@ -120,6 +120,33 @@ fn a_fresh_green_ledger_at_the_pull_request_head_merges_and_anything_less_waits_
   );
 }
 
+/// toolu inside Grok Build acts for Claude Code, so a Grok worker's ledger is
+/// under `.claude/`; an unknown host is still no host.
+#[test]
+fn a_grok_worker_merges_on_its_ledger_under_claude_code() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let head = repo(tmp.path());
+  let cur = diff_sha(&env(), tmp.path(), "main").expect("diff sha");
+  ledger(tmp.path(), &cur);
+  let grok = LocalGate {
+    worktree: Some(tmp.path().to_path_buf()),
+    host: Some("grok".to_owned()),
+  };
+  let mut result = assessed("wait", &head);
+  apply(&mut result, &grok, &env());
+  assert_eq!(verdict(&result).0, "merge");
+  let unknown = LocalGate {
+    host: Some("gemini".to_owned()),
+    ..grok
+  };
+  let mut result = assessed("wait", &head);
+  apply(&mut result, &unknown, &env());
+  assert_eq!(
+    verdict(&result),
+    ("wait".to_owned(), "local gate: no host recorded".to_owned())
+  );
+}
+
 #[test]
 fn the_local_gate_leaves_fix_rebase_and_unknown_mergeability_alone() {
   let local = LocalGate {

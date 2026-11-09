@@ -1,0 +1,18 @@
+{
+  "info": {
+    "id": "01a1bd47-c3a6-7f12-8ea9-93ee7d8e2e1f",
+    "cwd": "/private/tmp/grok-subagent-846"
+  },
+  "created_at": "2026-11-08T22:29:19.407790Z",
+  "updated_at": "2026-11-08T22:29:33.882905Z",
+  "last_active_at": "2026-11-08T22:29:33.882905Z",
+  "num_messages": 19,
+  "num_chat_messages": 11,
+  "current_model_id": "grok-4.7-build-fast",
+  "reasoning_effort": "low",
+  "session_kind": "headless",
+  "parent_session_id": null,
+  "agent_name": "grok-build-plan",
+  "chat_format_version": 1,
+  "sandbox_profile": "off"
+}

@@ -65,7 +65,7 @@ fn every_worker_host_has_a_capacity_row_with_its_policy_cap() {
   let paths = Paths::at(temp.path());
   write_value(
     &paths.root.join("policy.json"),
-    &json!({"maxAgents": 3, "hosts": {"muse": 1}}),
+    &json!({"maxAgents": 3, "hosts": {"muse": 1, "grok": 2}}),
   )
   .expect("policy");
   let now = epoch_millis(parse_iso("2026-10-23T12:00:00Z").expect("time"));
@@ -78,7 +78,13 @@ fn every_worker_host_has_a_capacity_row_with_its_policy_cap() {
     .collect();
   assert_eq!(
     rows,
-    [("claude", 3), ("codex", 3), ("cursor", 3), ("muse", 1)]
+    [
+      ("claude", 3),
+      ("codex", 3),
+      ("cursor", 3),
+      ("muse", 1),
+      ("grok", 2)
+    ]
   );
 }
 

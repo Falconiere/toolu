@@ -31,7 +31,7 @@ fn host_command(name: &'static str, about: &'static str) -> Command {
     Arg::new("host")
       .value_name("HOST")
       .required(true)
-      .help("The host: claude, codex, cursor or muse"),
+      .help("The host: claude, codex, cursor, muse or grok"),
   )
 }
 

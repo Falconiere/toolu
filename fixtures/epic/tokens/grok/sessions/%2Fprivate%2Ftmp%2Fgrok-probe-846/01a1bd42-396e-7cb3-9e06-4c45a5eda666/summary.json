@@ -1,0 +1,18 @@
+{
+  "info": {
+    "id": "01a1bd42-396e-7cb3-9e06-4c45a5eda666",
+    "cwd": "/private/tmp/grok-probe-846"
+  },
+  "created_at": "2026-11-08T22:23:16.348377Z",
+  "updated_at": "2026-11-08T22:33:27.536855Z",
+  "last_active_at": "2026-11-08T22:33:27.536855Z",
+  "num_messages": 74,
+  "num_chat_messages": 42,
+  "current_model_id": "grok-4.7-build-fast",
+  "reasoning_effort": "low",
+  "session_kind": null,
+  "parent_session_id": null,
+  "agent_name": "grok-build-plan",
+  "chat_format_version": 1,
+  "sandbox_profile": "off"
+}

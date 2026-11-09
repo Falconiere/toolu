@@ -9,13 +9,14 @@ use std::path::{Path, PathBuf};
 use serde_json::{Map, Value, json};
 use toolu_engine::verdict::gates::GateContext;
 use toolu_engine::verdict::plan::plan_gate;
-use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_runtime::process::{Spec, run};
 use toolu_state::diff_sha::diff_sha;
 use toolu_state::git::{base_branch, current_branch};
+
+use crate::hosts::ledger_host;
 
 /// Where the worker's local gate evidence lives.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -95,7 +96,7 @@ fn evidence(local: &LocalGate, head: &str, env: &Env) -> (&'static str, String) 
   let Some(worktree) = local.worktree.as_deref() else {
     return ("wait", "local gate: no worktree recorded".to_owned());
   };
-  let Some(host) = local.host.as_deref().and_then(Host::parse) else {
+  let Some(host) = local.host.as_deref().and_then(ledger_host) else {
     return ("wait", "local gate: no host recorded".to_owned());
   };
   let Some(at) = git_head(env, worktree) else {

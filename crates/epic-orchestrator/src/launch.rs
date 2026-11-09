@@ -21,6 +21,7 @@ mod deliver;
 /// Stable host session identifiers.
 pub(crate) mod digest;
 mod failure;
+pub(crate) mod grok_session;
 mod hc;
 mod hc_prepare;
 mod hc_remote;

@@ -5303,7 +5303,7 @@
               "aliases": [],
               "args": [
                 {
-                  "help": "The host: claude, codex, cursor or muse",
+                  "help": "The host: claude, codex, cursor, muse or grok",
                   "multiple": false,
                   "name": "HOST",
                   "required": true
@@ -5327,7 +5327,7 @@
               "aliases": [],
               "args": [
                 {
-                  "help": "The host: claude, codex, cursor or muse",
+                  "help": "The host: claude, codex, cursor, muse or grok",
                   "multiple": false,
                   "name": "HOST",
                   "required": true
@@ -5587,7 +5587,7 @@
             },
             {
               "global": false,
-              "help": "The host: claude, codex, cursor or muse; default the route's",
+              "help": "The host: claude, codex, cursor, muse or grok; default the route's",
               "hidden": false,
               "long": "kind",
               "possibleValues": [],

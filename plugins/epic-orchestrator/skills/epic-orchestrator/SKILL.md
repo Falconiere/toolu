@@ -21,7 +21,7 @@ authorize a new run. Planning questions use dry-run and stop after the plan.
 `repo:owner/name` label or a `Repo: owner/name` line, else `--repo`.
 
 Options: `--max N` live workers (default 3); `--hosts claude:2,codex:2` (hosts
-`claude`, `codex`, `cursor`, `muse`); `--safe` keeps each host's approval
+`claude`, `codex`, `cursor`, `muse`, `grok`); `--safe` keeps each host's approval
 prompts on; `--no-jev` routes by heuristics; `--no-babysit` merges on the
 worker's green local gate (no CI); `--relay` sends implementation to relay
 workers; `--dry-run` plans and launches nothing ("show me the plan" and "don't

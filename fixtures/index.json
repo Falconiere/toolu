@@ -1915,7 +1915,23 @@
         "limit \"model limit reached, try again later\"",
         "limit \"You've used your weekly quota (resets at 5pm)\"",
         "limit \"At this pace your weekly quota runs out in about 2 hours (resets at 5pm)\"",
-        "default routing table"
+        "default routing table",
+        "args grok bypass=true model=null effort=null",
+        "args grok bypass=true model=grok-4.7-build-fast effort=low",
+        "args grok bypass=false model=grok-4.7 effort=medium",
+        "args grok bypass=false model=null effort=null",
+        "args grok resume session=01a1bd42-396e-7cb3-9e06-4c45a5eda666",
+        "args grok resume session=null",
+        "safe grok plan mode",
+        "skill grok delivery-flow:delivery-flow",
+        "skill grok pr-babysit:babysit",
+        "skill grok toolu:debug",
+        "alias \"grok\"",
+        "alias \" Grok \"",
+        "limit \"You've hit the credit limit for your plan.\"",
+        "limit \"Error: subscription:free-usage-exhausted\"",
+        "limit \"You've hit the rate limit for your plan. Upgrade your account or try again later.\"",
+        "limit \"credit card form validated\""
       ]
     }
   ]

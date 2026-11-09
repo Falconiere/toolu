@@ -28,6 +28,13 @@ const CLAUDE_AGENT: &str = r#"slug=$(printf %s "$PWD" | tr -c 'A-Za-z0-9' '-'); 
 /// The session [`CLAUDE_AGENT`] records.
 pub(crate) const CLAUDE_SESSION: &str = "0199a272-0b4e-7cc3-8c4f-071c81275655";
 
+/// The Grok Build summary an agent writes for its worktree in Grok's layout
+/// (`{grok}` is its home, the cwd percent-encoded): its session and cwd.
+const GROK_AGENT: &str = r#"dir="{grok}/sessions/$(printf %s "$PWD" | sed 's|/|%2F|g')/{id}"; mkdir -p "$dir"; printf '{"info":{"id":"{id}","cwd":"%s"},"session_kind":null}\n' "$PWD" > "$dir/summary.json"; exec sleep 600"#;
+
+/// The session [`GROK_AGENT`] records: the probe's interactive session.
+pub(crate) const GROK_SESSION: &str = "01a1bd42-396e-7cb3-9e06-4c45a5eda666";
+
 impl Rig {
   /// A rig whose graph state lives in a temp directory.
   pub(crate) fn new() -> Self {
@@ -50,6 +57,7 @@ impl Rig {
         "CODEX_HOME",
         &tmp.path().join("codex").display().to_string(),
       )
+      .with("GROK_HOME", &tmp.path().join("grok").display().to_string())
       // A leftover process is reported after 2 s, not the live 10 s.
       .with("EPIC_AGENT_EXIT_GRACE_S", "2");
     let paths = Paths::at(tmp.path().join("engine"));
@@ -81,6 +89,14 @@ impl Rig {
   pub(crate) fn claude_agents(&self) {
     let claude = self.tmp.path().join("claude").display().to_string();
     self.herdr.state().agent_script = CLAUDE_AGENT.replace("{claude}", &claude);
+  }
+
+  /// Agents started from now on record a Grok Build session as they start.
+  pub(crate) fn grok_agents(&self) {
+    let grok = self.tmp.path().join("grok").display().to_string();
+    self.herdr.state().agent_script = GROK_AGENT
+      .replace("{grok}", &grok)
+      .replace("{id}", GROK_SESSION);
   }
 
   /// The chat Cursor Agent keeps for `worktree`, created at `created_at_ms`,

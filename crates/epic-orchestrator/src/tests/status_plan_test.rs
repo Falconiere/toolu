@@ -46,6 +46,18 @@ fn plan_matches_the_status_ledger_for_every_host() {
   }
 }
 
+/// A Grok Build worker's `toolu` acts for Claude Code, so its plan is the
+/// ledger under `.claude/`.
+#[test]
+fn a_grok_worker_plan_is_its_claude_code_ledger() {
+  let tree = Tree::new();
+  let ledger = tree.ledger(Host::Claude, STEPS);
+  let shown = plan(Some(tree.path()), Some("grok"));
+  assert_eq!(shown["plan_doc"], ledger["plan_doc"]);
+  assert_eq!(shown["next"], "s2");
+  assert_eq!(plan_summary(Some(tree.path()), Some("grok"))["red"], 1);
+}
+
 #[test]
 fn no_worktree_host_or_ledger_is_null() {
   let tree = Tree::new();

@@ -79,6 +79,15 @@ pub(crate) fn default_table() -> RoutingTable {
         choice(Some("muse-wonder-full-1.0"), Some("xhigh")),
       ],
     ),
+    (
+      HostKind::Grok,
+      vec![
+        choice(Some("grok-4.7-build-fast"), Some("low")),
+        choice(Some("grok-4.7"), Some("medium")),
+        choice(Some("grok-4.7"), Some("high")),
+        choice(Some("grok-4.7"), Some("xhigh")),
+      ],
+    ),
   ];
   RoutingTable {
     hosts: hosts.into_iter().collect(),
