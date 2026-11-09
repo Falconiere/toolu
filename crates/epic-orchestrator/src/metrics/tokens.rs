@@ -153,8 +153,9 @@ fn grok(agent: &Agent, session: &str, env: &Env) -> Result<(&'static str, Value)
     .join("usage.json");
   let text = std::fs::read_to_string(path).map_err(|_err| "no usage record for the session")?;
   let usage = serde_json::from_str::<Value>(&text)
-    .ok()
-    .and_then(|usage| usage.get("session").cloned())
+    .map_err(|_err| "the usage record cannot be read")?
+    .get("session")
+    .cloned()
     .filter(Value::is_object)
     .ok_or("the usage record cannot be read")?;
   let totals = BTreeMap::from([(session.to_owned(), usage)]);

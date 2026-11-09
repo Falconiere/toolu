@@ -82,6 +82,11 @@ fn a_missing_or_unreadable_grok_usage_record_is_unavailable() {
     row(grok, &home)["reason"],
     "the usage record cannot be read"
   );
+  std::fs::write(session.join("usage.json"), "{").unwrap();
+  assert_eq!(
+    row(grok, &home)["reason"],
+    "the usage record cannot be read"
+  );
 }
 
 #[test]
