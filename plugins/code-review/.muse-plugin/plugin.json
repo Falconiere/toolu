@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "code-review",
   "displayName": "code-review",
-  "version": "8.12.0",
+  "version": "8.13.0",
   "description": "Native code review of branch and uncommitted changes with host CLIs and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
   "compat": {
     "source": "native",
