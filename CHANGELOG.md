@@ -6,6 +6,26 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.13.0](https://github.com/Falconiere/toolu/compare/v8.12.0...v8.13.0) (2026-11-09)
+
+
+### Features
+
+* **code-review:** tighten native review bar and precision eval ([#841](https://github.com/Falconiere/toolu/issues/841)) ([9e6fedf](https://github.com/Falconiere/toolu/commit/9e6fedfad6e611f8981bf68c6feca97a9820a626))
+* **epic:** run workers on Grok Build ([#847](https://github.com/Falconiere/toolu/issues/847)) ([d1bfe8b](https://github.com/Falconiere/toolu/commit/d1bfe8b0ee03aea41ded6f8348a5304a8987696d))
+
+
+### Bug Fixes
+
+* **babysit:** preserve durable relay routing across ticks ([#840](https://github.com/Falconiere/toolu/issues/840)) ([251e419](https://github.com/Falconiere/toolu/commit/251e4198904639f4c2d43572e63367e5c2dd42c7))
+* **engine:** quote push gate changed paths like review state ([#842](https://github.com/Falconiere/toolu/issues/842)) ([70084e6](https://github.com/Falconiere/toolu/commit/70084e6c53cf6f1531453b0fe2d39cca3dda8345))
+* **xtask:** bench statusline RSS on a freshly written binary copy ([#844](https://github.com/Falconiere/toolu/issues/844)) ([a22b67b](https://github.com/Falconiere/toolu/commit/a22b67b29d2d140b42e996a9248f81f667679d4f))
+
+
+### Performance Improvements
+
+* **skills:** run the gate once as a ledger step and stamp after commit ([#848](https://github.com/Falconiere/toolu/issues/848)) ([1b3d360](https://github.com/Falconiere/toolu/commit/1b3d36036a1ee96f9966b938b8b9177185114f0e))
+
 ## [8.12.0](https://github.com/Falconiere/toolu/compare/v8.11.0...v8.12.0) (2026-11-03)
 
 
