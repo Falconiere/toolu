@@ -207,8 +207,9 @@ fn execution_only_delivers_with_authorization_and_all_delivery_prerequisites() -
 #[test]
 fn execution_runs_the_full_gate_once_as_the_final_step_and_stamps_after_committing() -> Res {
   let list = &[
-    "(?i)make that run the plan's final ledger step",
-    "(?i)stamp a step with `toolu ledger run` only after committing its changes",
+    "(?i)make that single run the plan's final ledger step",
+    "(?i)do not wrap that check in `toolu epic job`",
+    "(?i)do the loop below for it, commit its changes, then record it with `toolu ledger run",
     "(?i)run the authorized delivery preflight checks below before the first such commit",
     "(?i)plan's final step runs the full quality gate",
   ];
