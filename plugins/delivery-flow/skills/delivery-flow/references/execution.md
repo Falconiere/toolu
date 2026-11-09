@@ -19,7 +19,7 @@ The required brainstorm phase has already run; preserve its decisions and eviden
 Use the mandatory [Jev workflow](semantic-judgments.md) to triage
 evidence, including local review. Correctness requires the checks below.
 
-Before the first step run `toolu ledger preflight` — it refuses to start unless the plan is `Approved` and its declared spec is `Approved`. Then read progress with `toolu ledger status` to find the next non-fresh-green step, do the loop below for it, then record it with `toolu ledger run <plan_doc> --step <id>` — the engine requires the plan-doc positional arg, and stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Re-run any stale step (a `green` step whose diff has since changed) before calling the plan done. `status` also prints an AC-coverage report (report-only): read it to confirm every spec `AC-<n>` is covered by a fresh-green step — an uncovered AC is surfaced, not yet a push blocker, but it means the goal isn't proven done.
+Before the first step run `toolu ledger preflight` — it refuses to start unless the plan is `Approved` and its declared spec is `Approved`. Then read progress with `toolu ledger status` to find the next non-fresh-green step, do the loop below for it, commit its changes, then record it with `toolu ledger run <plan_doc> --step <id>` — the engine requires the plan-doc positional arg, and stamps green from mechanical truth, you cannot claim it. Stamps are keyed to the committed branch diff, so a stamp taken before the commit goes stale and the audit runs that step again. Run the authorized delivery preflight checks below before the first such commit. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Re-run any stale step (a `green` step whose diff has since changed) before calling the plan done. `status` also prints an AC-coverage report (report-only): read it to confirm every spec `AC-<n>` is covered by a fresh-green step — an uncovered AC is surfaced, not yet a push blocker, but it means the goal isn't proven done.
 
 1. **Take one step** from the plan — the smallest shippable unit.
 2. **Produce per-step real-data evidence** (use `test`) — map the relevant AC or risk to a representative real input/fixture, observable result, applicable boundary/failure case, and runner command. For a bugfix, reproduce first; record the passing output before the ledger step is stamped green.
@@ -31,7 +31,7 @@ Before the first step run `toolu ledger preflight` — it refuses to start unles
 ## Rules
 
 - **Global gate** — do NOT move to the next step while any error/warning/test failure stands, even in unrelated files.
-- **Gate cadence** — per step, run the step's own `check` and crate- or package-scoped tests; run the full quality gate once before the release-readiness audit and once after each fix round, never per step. In an epic worktree run it as one blocking `toolu epic job -- <command> <args...>` call, which waits for admission and prints a failed command's last log lines; never sleep and retry around it or tail its log file.
+- **Gate cadence** — per step, run the step's own `check` and crate- or package-scoped tests; run the full quality gate once before the release-readiness audit and once after each fix round, never per step. Make that single run the plan's final ledger step, so the audit's branch-wide verification counts it instead of running the gate again; `toolu ledger run` already holds the job lease for a step's `check`, so do not wrap that check in `toolu epic job`. In an epic worktree, run any other full gate or test job as one blocking `toolu epic job -- <command> <args...>` call, which waits for admission and prints a failed command's last log lines; never sleep and retry around it or tail its log file.
 - **Delegate to stay compact** — push exploration, large reads, and parallelizable work to subagents; keep the main context lean.
 - **Delegate at the step's tier** — `status` prints `model=<alias>` for the next step when the plan declared one; hand that step to a subagent on that model (`toolu:quick-task` / `toolu:implementer` / `toolu:architect`, or an explicit `model:`). No declared tier, or a step that turns out harder than planned? Fall back to [model-routing.md](model-routing.md) and escalate one tier rather than retrying the same tier.
 - **No scope creep** — do only what the plan calls for. New needs go back to `plan` (and `plan-review`), not into this step.
@@ -53,7 +53,7 @@ prerequisite if any applies:
 - the required `pr-babysit` plugin is not installed or its `pr-babysit:babysit` skill is unavailable.
 
 When the per-step direct checks, documentation work, and prerequisites pass,
-commit the scoped changes using the repository's conventions. Do not include
+commit the scoped changes that remain uncommitted, using the repository's conventions. Do not include
 unrelated work.
 
 ## Local release-readiness audit
@@ -62,7 +62,7 @@ After that scoped commit and before pushing, establish all of the following
 against the committed branch diff with command output, not assertion:
 
 1. Re-run each affected step's real-data runner and ensure its AC/risk evidence is current. Read `toolu ledger status` and resolve every missing or stale AC coverage entry.
-2. Run `toolu ledger run <plan_doc> --verify`. This is the supported branch-wide verification command: it validates every step against the final diff and stamps the ledger only when all steps are fresh-green.
+2. Run `toolu ledger run <plan_doc> --verify`. This is the supported branch-wide verification command: it validates every step against the final diff and stamps the ledger only when all steps are fresh-green. The plan's final step runs the full quality gate; if the plan lacks that step, add it, note it under `## Deviations`, and run it before this verification.
 3. Confirm user-facing documentation is synchronized for every changed behavior, interface, CLI, command, or configuration surface. Treat a missing applicable doc update as a blocker. When `documentation-gate` is selected, invoke `documentation-gate:sync` and complete its routed editing worker and final committed-diff review before the ledger verdict. If documentation edits change the commit, rerun affected verification against the new diff.
 4. Run the active host's `code-review:review` against the committed diff (see [host-mapping.md](host-mapping.md)); it owns installed Ponytail priority and fallback. If unavailable, invoke `toolu-review:review` directly with the same scope and findings. Require v2 (`version: 2`) push-review state covering every changed file. Failed review, unresolved findings and stale/incomplete coverage end without approval and block delivery.
 5. Run `toolu ledger verdict status`. Advance only when it reports `overall: ready`; quality, plan, review, and docs must each pass or be legitimately skipped.
