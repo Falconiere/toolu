@@ -32,9 +32,10 @@ pub fn receive(root: &Path, env: &Env, input: &str) -> Result<Value, String> {
     "config" | "enroll" | "retire" | "chunk" | "submit" | "cancel" | "tick" | "peers"
   ) {
     super::durable::ensure_dir(root)?;
+    // Every mutating RPC queues here; 15 s rides out contention well inside the clients' 130 s deadline.
     let options = LockOptions {
+      timeout: Duration::from_secs(15),
       stale: Duration::MAX,
-      ..LockOptions::default()
     };
     return with_lock_strict(&root.join("rpc"), options, || {
       if op == "peers" {

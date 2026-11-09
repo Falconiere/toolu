@@ -255,3 +255,29 @@ fn concurrent_sends_are_durable_and_paginated_without_loss() {
     .collect();
   assert_eq!(keys.len(), 40);
 }
+
+#[test]
+fn a_send_waits_for_a_relay_lock_held_past_five_seconds() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path();
+  setup(root);
+  join(root, "alice", "team");
+  join(root, "bob", "team");
+  let (held, ready) = std::sync::mpsc::channel();
+  std::thread::scope(|scope| {
+    scope.spawn(move || {
+      let options = toolu_state::lock::LockOptions {
+        stale: std::time::Duration::MAX,
+        ..Default::default()
+      };
+      toolu_state::lock::with_lock_strict(&root.join("rpc"), options, || {
+        held.send(()).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(5_500));
+      })
+      .unwrap();
+    });
+    ready.recv().unwrap();
+    let result = send(root, "alice", envelope("alice", "bob", "team", "late", "x"));
+    assert_eq!(result["result"]["key"], "alice/late");
+  });
+}
