@@ -5,7 +5,6 @@
 //! sits in the same directory with `session_kind` `subagent`.
 
 use std::collections::BTreeSet;
-use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use serde_json::Value;
@@ -26,14 +25,16 @@ pub(crate) fn group(env: &Env, worktree: &str) -> PathBuf {
   // shortcut: Grok names a group whose encoded name exceeds 255 bytes by a
   // slug and hash (with a `.cwd` file), which this misses; read `.cwd` files
   // if a worktree path ever gets that long.
-  let mut name = String::with_capacity(worktree.len());
-  for byte in worktree.bytes() {
-    if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
-      name.push(char::from(byte));
-    } else {
-      let _written = write!(name, "%{byte:02X}");
-    }
-  }
+  let name: String = worktree
+    .bytes()
+    .map(|byte| {
+      if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
+        char::from(byte).to_string()
+      } else {
+        format!("%{byte:02X}")
+      }
+    })
+    .collect();
   grok_home(env).join("sessions").join(name)
 }
 
