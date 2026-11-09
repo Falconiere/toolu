@@ -205,6 +205,17 @@ fn execution_only_delivers_with_authorization_and_all_delivery_prerequisites() -
 }
 
 #[test]
+fn execution_runs_the_full_gate_once_as_the_final_step_and_stamps_after_committing() -> Res {
+  let list = &[
+    "(?i)make that run the plan's final ledger step",
+    "(?i)stamp a step with `toolu ledger run` only after committing its changes",
+    "(?i)run the authorized delivery preflight checks below before the first such commit",
+    "(?i)plan's final step runs the full quality gate",
+  ];
+  re("execution", list)
+}
+
+#[test]
 fn execution_follows_the_required_brainstorm_phase() -> Res {
   re("execution", &["(?i)brainstorm.*already run"])
 }
