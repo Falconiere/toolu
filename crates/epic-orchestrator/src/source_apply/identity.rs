@@ -92,3 +92,7 @@ pub(super) fn field<'a>(line: &'a Value, key: &str) -> Option<&'a str> {
     .and_then(Value::as_str)
     .or_else(|| line.get(key).and_then(Value::as_str))
 }
+
+#[cfg(test)]
+#[path = "tests/identity_test.rs"]
+mod tests;

@@ -6,6 +6,7 @@ use crate::launch::record::{Record, text};
 use serde_json::json;
 use std::path::Path;
 
+/// Validate a local teardown and describe its actions without changing state.
 pub(super) fn plan(
   state_dir: &Path,
   key: &str,
@@ -61,3 +62,7 @@ fn plan_actions(record: &Record, key: &str, abandon: bool) -> Vec<String> {
   }
   actions
 }
+
+#[cfg(test)]
+#[path = "tests/plan_test.rs"]
+mod tests;
