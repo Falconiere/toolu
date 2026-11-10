@@ -124,17 +124,3 @@ fn a_missing_state_fails_without_creating_a_file() {
   assert!(failure.message.contains("run toolu babysit tick first"));
   assert!(!path.exists());
 }
-
-#[test]
-fn a_recorded_round_preserves_remote_fixer_identity_for_the_next_attempt() {
-  let dir = TempDir::new().unwrap();
-  let fixer = json!({"status":"failed", "groups":[{"status":"failed", "hcName":"old"}]});
-  let path = state(&dir, |value| {
-    value["fixer"] = fixer.clone();
-    value["herdrWorktree"] = json!({"remote":{"run":"old"}});
-  });
-  record_empty_round(&path);
-  let after = read(&path);
-  assert_eq!(after["fixer"], Value::Null);
-  assert_eq!(after["herdrWorktree"]["remote"]["lastFixer"], fixer);
-}

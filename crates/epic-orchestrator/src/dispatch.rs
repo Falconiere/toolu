@@ -44,6 +44,7 @@ fn operate(
     let _sent = reply.send(json!({"error": "protocol"}));
     return Ok(false);
   }
+  crate::launch::record::require_local_registry(&engine.paths)?;
   match op {
     "stop" | "replace" => finish(engine, &reply, op == "replace"),
     "status" => reply_status(engine, request, &reply),
@@ -231,6 +232,7 @@ pub(crate) fn discard_spool(engine: &Engine, request: &Value) {
 
 /// Ingest reports spooled while the engine was unavailable.
 pub(crate) fn ingest(engine: &mut Engine) -> Result<(), String> {
+  crate::launch::record::require_local_registry(&engine.paths)?;
   let mut files = spool_files(&engine.paths.spool())?;
   files.sort();
   for path in files {

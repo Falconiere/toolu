@@ -79,6 +79,13 @@ impl<'a> Dispatcher<'a> {
   /// # Errors
   /// The state file's load failures.
   pub(crate) fn new(options: &Options<'a>) -> Result<Dispatcher<'a>> {
+    let roots = toolu_runtime::host::roots::Roots::new(options.env.clone(), None);
+    let config = toolu_runtime::config::load::load(&roots, options.state_file.parent());
+    let invalid = |message| Failure::new("configuration_invalid", message);
+    toolu_runtime::config::multiplexer::Multiplexer::parse(&config).map_err(invalid)?;
+    if options.env.get("TOOLU_EPIC_MULTIPLEXER").is_some() {
+      toolu_mux::backend::configured(options.env).map_err(invalid)?;
+    }
     Ok(Dispatcher {
       file: options.state_file,
       env: options.env,
@@ -89,6 +96,7 @@ impl<'a> Dispatcher<'a> {
     })
   }
 
+  /// Record a command for the dry-run document.
   pub(super) fn record(&mut self, argv: &[String]) {
     self.commands.push(argv.to_vec());
   }
@@ -128,14 +136,17 @@ impl<'a> Dispatcher<'a> {
     Ok(())
   }
 
+  /// The current fixer round, when recorded.
   pub(super) fn fixer(&self) -> Option<&Value> {
     self.state.get("fixer").filter(|fixer| fixer.is_object())
   }
 
+  /// A field of the recorded fixer round.
   pub(super) fn fixer_field(&self, key: &str) -> Option<&Value> {
     self.fixer().and_then(|fixer| fixer.get(key))
   }
 
+  /// A string field of the recorded local worktree.
   pub(super) fn worktree_field(&self, key: &str) -> Option<&str> {
     self.state.get("herdrWorktree")?.get(key)?.as_str()
   }
@@ -157,6 +168,7 @@ impl<'a> Dispatcher<'a> {
     })
   }
 
+  /// Persist a patch to one fixer group under the slot lock.
   pub(super) fn patch_group(&mut self, seq: u64, patch: &Value) -> Result<()> {
     self.save(|state| {
       if let Some(group) = group_mut(state, seq) {
@@ -165,6 +177,7 @@ impl<'a> Dispatcher<'a> {
     })
   }
 
+  /// Persist a patch to the current fixer round under the slot lock.
   pub(super) fn patch_fixer(&mut self, patch: &Value) -> Result<()> {
     self.save(|state| {
       if let Some(Value::Object(fixer)) = state.get_mut("fixer") {
@@ -172,7 +185,9 @@ impl<'a> Dispatcher<'a> {
       }
     })
   }
+}
 
+impl Dispatcher<'_> {
   /// Settles group `seq`: done with its head, or failed with the reason (and,
   /// for a provider limit, an hour's cooldown on its host).
   pub(super) fn settle(&mut self, seq: u64, outcome: &str, head: &str, error: &str) -> Result<()> {

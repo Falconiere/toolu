@@ -232,14 +232,6 @@ fn a_same_host_replacement_at_the_agent_cap_keeps_its_own_slot() {
 
 #[test]
 fn reclaim_only_treats_matching_backend_panes_as_absent() {
-  assert!(super::pane_matches_backend(
-    Some("hc:t1"),
-    toolu_mux::Backend::HerdrApp
-  ));
-  assert!(!super::pane_matches_backend(
-    Some("%1"),
-    toolu_mux::Backend::HerdrApp
-  ));
   assert!(!super::pane_matches_backend(
     Some("hc:t1"),
     toolu_mux::Backend::Herdr

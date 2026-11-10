@@ -135,6 +135,7 @@ pub(crate) fn read_issue_record(path: &Path, key: &str) -> Result<Record, String
       path.display()
     ));
   };
+  crate::launch::record::require_local_record(&record, path)?;
   let invalid = |detail: &str| format!("invalid issue record {}: {detail}", path.display());
   let started = !never_started(&record);
   let required = if started {
@@ -197,11 +198,6 @@ pub(crate) fn never_started(record: &Record) -> bool {
 
 /// Whether a terminal record proves its cleanup finished.
 pub(crate) fn terminal_cleanup_complete(record: &Record) -> bool {
-  if text(record, "machine").is_some()
-    && record.get("remote_worktree_removed") != Some(&Value::Bool(true))
-  {
-    return false;
-  }
   let removed = record.get("worktree_removed") == Some(&Value::Bool(true))
     && !text(record, "worktree").is_some_and(|path| Path::new(path).exists());
   removed

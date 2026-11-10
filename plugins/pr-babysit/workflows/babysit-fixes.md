@@ -36,7 +36,7 @@ lower a tier. `dispatch: "herdr"` → **Multi-host dispatch**; `dispatch:
 "inline"` (the config says so, or every pool host is cooling or has no CLI on
 `PATH`) → **Inline delegation**, using each group's `class`. Legacy herdr is
 probed by `toolu babysit dispatch-fix start`: `herdr_unavailable` also means inline.
-For `herdr-app` and remote dispatch, see [Herdr App fixer dispatch](../../../docs/pr-babysit/README.md#herdr-app-fixer-dispatch).
+Fixer dispatch is local; see [local fixer dispatch](../../../docs/pr-babysit/README.md#local-fixer-dispatch).
 
 ### Multi-host dispatch
 

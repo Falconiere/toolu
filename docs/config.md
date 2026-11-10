@@ -50,7 +50,7 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
 ```json
 {
   "version": 1,
-  "multiplexer": "auto|herdr|herdr-app|tmux",
+  "multiplexer": "auto|herdr|tmux",
   "skills":  { "<name>": true | false },
   "agents":  { "<name>": true | false },
   "hooks":   { "<name>": true | false },
@@ -154,21 +154,20 @@ The loader validates each file's envelope, and bash never did:
 
 ## Pane manager (`multiplexer`)
 
-The top-level `multiplexer` key selects the worker backend: `"auto"` (the
-default), `"herdr"`, `"herdr-app"`, or `"tmux"`. With `auto`, a nonempty
-`HC_TERMINAL_ID` selects herdr-core (`hc`); otherwise toolu selects reachable
-herdr or falls back to tmux. A selected backend is not silently replaced if it
-is unavailable. `herdr-app` uses hc for persistent terminals; the desktop app
-is needed only for explicitly showing or arranging them.
+The top-level `multiplexer` key selects the local worker backend: `"auto"`
+(the default), `"herdr"`, or `"tmux"`. Auto prefers reachable Herdr and falls
+back to tmux. HC environment variables do not affect selection. A pinned
+backend is not silently replaced when unavailable.
 
-The epic engine reads the key when `toolu epic start` or `ensure` launches the
-resident process. An already-running engine keeps its choice until `--replace`
-or restart. `TOOLU_EPIC_MULTIPLEXER` overrides the config on launch. PR
-babysit's own `dispatch` setting still controls whether fixing runs inline.
+The epic engine reads the key when it starts. Restart the resident engine to
+apply a changed default; existing local launch records retain their backend.
+`TOOLU_EPIC_MULTIPLEXER` overrides config on launch. PR babysit's `dispatch`
+setting still controls whether fixing runs inline or through its existing local
+Herdr dispatcher.
 
-When asked to show a worker in the running desktop app, use
-`toolu herdr-app show <terminal-address>` with the hc address, including its
-machine prefix for a remote terminal. The command does not launch the app.
+The retired `herdr-app` value is rejected. Set one of the supported choices for
+new local work, and use the previous binary to settle existing retired runs;
+see [remote worker removal](delegation.md).
 
 ## Epic engine settings and secrets
 
@@ -560,7 +559,7 @@ fixer agent in the slot's worktree. Every key is optional:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `dispatch` | `"herdr"` | `herdr` runs fixers through `toolu babysit dispatch-fix` using `hc` when `herdr-app` is selected and herdr otherwise; `inline` keeps fixes in the controller session. If legacy herdr is unavailable, run the round inline. See [Herdr App fixer dispatch](pr-babysit/README.md#herdr-app-fixer-dispatch). |
+| `dispatch` | `"herdr"` | `herdr` runs local fixers through `toolu babysit dispatch-fix`; `inline` keeps fixes in the controller session. If Herdr is unavailable, run the round inline. See [local fixer dispatch](pr-babysit/README.md#local-fixer-dispatch). |
 | `hosts` | `[<controller host>]` | The fixer pool, in preference order: `claude` (`claude-code`), `codex`, `cursor` (`cursor-agent`), `muse`. A host whose CLI is not on `PATH` is skipped. An unknown name is an error. |
 | `prefer` | `{}` | Per-tier host order, e.g. `{"critical": ["claude"]}`. Only hosts also in `hosts` count. |
 | `routing` | epic-orchestrator's table | Per host, four `{model, effort}` entries (trivial → critical) replacing that host's row. Defaults: claude `sonnet/low`, `sonnet/medium`, `opus/high`, `opus/xhigh`; codex `gpt-6-sol` low → xhigh; cursor `composer-2.5`, `gpt-5.6-sol-high`, `claude-opus-5-thinking-high`, `gpt-5.6-sol-xhigh` (effort lives in the model id); muse `muse-spark-1.3/low`, `muse-wonder-1.0/medium`, `muse-wonder-1.0/high`, `muse-wonder-full-1.0/xhigh`. Values must be shell-safe. |

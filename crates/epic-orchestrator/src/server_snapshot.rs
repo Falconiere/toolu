@@ -6,6 +6,14 @@ use crate::disk::write_value;
 use crate::server::Engine;
 
 impl Engine {
+  /// Write `watch.json`, including the herdr backoff.
+  ///
+  /// # Errors
+  /// The watch file cannot be replaced.
+  pub(crate) fn save_watch(&self) -> Result<(), String> {
+    self.persist_watch()
+  }
+
   /// Replace `watch.json` with the current fixed deadlines and budgets.
   ///
   /// # Errors

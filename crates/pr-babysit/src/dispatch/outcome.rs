@@ -36,11 +36,6 @@ pub(crate) fn fixer_outcome(report: &Path, output: &str) -> &'static str {
   }
 }
 
-/// Whether a relay failure note identifies a provider limit.
-pub(crate) fn host_limited(output: &str) -> bool {
-  is(&HOST_LIMIT, output)
-}
-
 fn names(line: &str, path: &str) -> bool {
   let line = line.trim_end();
   line == path || line.strip_prefix(' ') == Some(path)

@@ -42,7 +42,6 @@ regex.workspace = true
 serde.workspace = true
 tempfile.workspace = true
 toolu-state = { path = "../core/state" }
-toolu-mux = { path = "../core/mux" }
 
 [lints]
 workspace = true

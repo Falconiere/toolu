@@ -177,31 +177,6 @@ pub(crate) struct LaunchSettings {
   /// Never run pr-babysit; merge on the worker's green local gate instead of
   /// CI checks (`--no-babysit`, for repositories without CI).
   pub no_babysit: bool,
-  /// Where implementation workers run (`--relay`).
-  pub workers: Workers,
-}
-
-/// Where an epic's implementation workers run.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub(crate) enum Workers {
-  /// Every worker runs on this machine.
-  #[default]
-  Local,
-  /// Implementation goes through the configured delegation relay.
-  Relay,
-}
-
-impl Workers {
-  pub(crate) fn chosen(relay: bool) -> Self {
-    if relay { Self::Relay } else { Self::Local }
-  }
-}
-
-impl LaunchSettings {
-  /// Whether implementation is dispatched through the relay.
-  pub(crate) fn relay(self) -> bool {
-    self.workers == Workers::Relay
-  }
 }
 
 fn settings_path(state_dir: &Path) -> std::path::PathBuf {
@@ -220,7 +195,6 @@ pub(crate) fn write_launch_settings(
     "safe": settings.safe,
     "no_jev": settings.no_jev,
     "no_babysit": settings.no_babysit,
-    "relay": settings.relay(),
   });
   crate::disk::write_value(&settings_path(state_dir), &doc)
 }
@@ -228,9 +202,9 @@ pub(crate) fn write_launch_settings(
 /// The epic's launch settings. Without a file all are off; a file that
 /// cannot be read or is blank, or a setting that is not `true` or `false`,
 /// turns `safe` and `no_jev` on, so a damaged file never drops prompts or
-/// sends text to Jev. `no_babysit` and `relay` need an explicit `true`: a
+/// sends text to Jev. `no_babysit` needs an explicit `true`: a
 /// damaged file keeps CI and babysit, never merges on local evidence alone,
-/// and never moves work off this machine by accident.
+/// without changing the local backend.
 pub(crate) fn launch_settings(state_dir: &Path) -> LaunchSettings {
   let path = settings_path(state_dir);
   // Only a file that is certainly absent means the defaults; a state dir that
@@ -248,7 +222,6 @@ pub(crate) fn launch_settings(state_dir: &Path) -> LaunchSettings {
     safe: flag("safe"),
     no_jev: flag("no_jev"),
     no_babysit: doc.get("no_babysit") == Some(&Value::Bool(true)),
-    workers: Workers::chosen(doc.get("relay") == Some(&Value::Bool(true))),
   }
 }
 

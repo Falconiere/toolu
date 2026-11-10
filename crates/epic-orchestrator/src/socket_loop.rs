@@ -37,11 +37,6 @@ pub(crate) enum Msg {
   },
   /// A herdr fact from the subscription.
   Herdr(Fact),
-  /// A remote result worker finished.
-  HcResult {
-    key: String,
-    result: Result<Option<Value>, String>,
-  },
   /// The effect thread finished a call.
   Effect { call: Call, outcome: String },
 }
@@ -49,7 +44,6 @@ pub(crate) enum Msg {
 /// Shared snapshots, wake signals and integrations for the state thread.
 pub(crate) struct StateContext<'a> {
   pub(crate) protocol: u64,
-  pub(crate) sender: &'a Sender<Msg>,
   pub(crate) shared: &'a Mutex<World>,
   pub(crate) changed: &'a Condvar,
   pub(crate) resub: &'a AtomicBool,
@@ -67,15 +61,9 @@ pub(crate) fn state_loop(
   let mut waiters = Vec::new();
   let mut next_tick = Instant::now() + TICK;
   let mut stopping = false;
-  let mut hc_running = std::collections::BTreeSet::new();
-  let mut next_relay_poll = Instant::now();
   loop {
-    if !stopping && Instant::now() >= next_relay_poll {
-      poll_relay_results(engine, &mut hc_running, context.sender);
-      next_relay_poll = Instant::now() + TICK;
-    }
     publish(context.shared, context.changed, engine)?;
-    if stopping && engine.running.is_none() && hc_running.is_empty() {
+    if stopping && engine.running.is_none() {
       return Ok(());
     }
     let wake = wake_after(&engine.world, &waiters, next_tick);
@@ -89,14 +77,9 @@ pub(crate) fn state_loop(
       Ok(Msg::Effect { call, outcome }) => {
         effect_done(engine, &call, &outcome, &mut waiters)?;
       }
-      Ok(Msg::HcResult { key, result }) => {
-        engine.dirty = true;
-        hc_running.remove(&key);
-        crate::hc_results::complete(engine, &key, result)?;
-      }
       Ok(Msg::Herdr(fact)) => {
         engine.dirty = true;
-        handle_fact(engine, fact, context, (&mut hc_running, stopping))?;
+        handle_fact(engine, fact, context)?;
       }
       Err(RecvTimeoutError::Timeout) => {
         engine.dirty = true;
@@ -123,44 +106,9 @@ fn effect_done(
   Ok(())
 }
 
-fn poll_relay_results(
-  engine: &Engine,
-  running: &mut std::collections::BTreeSet<String>,
-  sender: &Sender<Msg>,
-) {
-  for issue in engine
-    .world
-    .issues
-    .values()
-    .filter(|issue| issue.stage == "running")
-  {
-    let path = crate::snapshot::issue_path(&issue.state_dir, &issue.key);
-    let relay = crate::launch::record::load_launch_record(&path).is_ok_and(|record| {
-      record.get("relay_enabled") == Some(&Value::Bool(true))
-        && record.get("remote_report_seen").is_none()
-    });
-    if relay && running.insert(issue.key.clone()) {
-      spawn_hc_result(engine, &issue.key, sender);
-    }
-  }
-}
-
-fn handle_fact(
-  engine: &mut Engine,
-  fact: Fact,
-  context: &StateContext<'_>,
-  status: (&mut std::collections::BTreeSet<String>, bool),
-) -> Result<(), String> {
-  let (running, stopping) = status;
+fn handle_fact(engine: &mut Engine, fact: Fact, context: &StateContext<'_>) -> Result<(), String> {
   engine.refresh_clock();
-  let target = hc_event_target(engine, &fact);
   source::apply(engine, &Env::process(), fact)?;
-  if !stopping
-    && let Some(key) = target
-    && running.insert(key.clone())
-  {
-    spawn_hc_result(engine, &key, context.sender);
-  }
   if engine.resubscribe {
     engine.resubscribe = false;
     // Publish first: the herdr thread copies the world it resubscribes with.
@@ -169,50 +117,6 @@ fn handle_fact(
     context.interrupt.trigger();
   }
   Ok(())
-}
-
-fn hc_event_target(engine: &Engine, fact: &Fact) -> Option<String> {
-  let Fact::Event(line) = fact else {
-    return None;
-  };
-  if line.get("event").and_then(Value::as_str) != Some("pane.agent_status_changed") {
-    return None;
-  }
-  let pane = line.pointer("/data/pane_id").and_then(Value::as_str)?;
-  let status = line.pointer("/data/agent_status").and_then(Value::as_str)?;
-  if !pane.starts_with("hc:") || !matches!(status, "idle" | "blocked" | "done") {
-    return None;
-  }
-  let issue = engine
-    .world
-    .issues
-    .values()
-    .find(|issue| issue.agent == pane && issue.stage == "running")?;
-  let path = crate::snapshot::issue_path(&issue.state_dir, &issue.key);
-  let record = crate::launch::record::load_launch_record(&path).ok()?;
-  if crate::launch::record::text(&record, "machine").is_none()
-    || crate::launch::record::text(&record, "remote_report").is_none()
-    || (record.get("controller_review") == Some(&Value::Bool(true))
-      && crate::launch::record::text(&record, "review_prompt_state") == Some("acknowledged"))
-  {
-    return None;
-  }
-  Some(issue.key.clone())
-}
-
-fn spawn_hc_result(engine: &Engine, key: &str, sender: &Sender<Msg>) {
-  let Some(issue) = engine.world.issues.get(key) else {
-    return;
-  };
-  let state = std::path::PathBuf::from(&issue.state_dir);
-  let key = key.to_owned();
-  let sender = sender.clone();
-  let env = engine.env.clone();
-  std::thread::spawn(move || {
-    let result = std::panic::catch_unwind(|| crate::hc_results::execute(&state, &key, &env))
-      .unwrap_or_else(|_| Err("remote result worker panicked".into()));
-    let _sent = sender.send(Msg::HcResult { key, result });
-  });
 }
 
 fn request_line(

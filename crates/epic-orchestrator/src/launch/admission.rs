@@ -2,8 +2,6 @@
 //! (`admission.ts`): the agent lease, its replacement on another host, the
 //! per-issue launch lock, and each attempt's persisted stage.
 
-mod hc;
-
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
@@ -155,6 +153,13 @@ pub(crate) fn launch_reservation(
   record: &mut Record,
   herdr: &mut Herdr<'_>,
 ) -> Result<Owner, Failure> {
+  super::record::require_local_record(
+    record,
+    &input
+      .state
+      .join("issues")
+      .join(format!("{}.json", input.key)),
+  )?;
   let root = text(record, "resource_root").map_or_else(|| resource_home(input.env), PathBuf::from);
   let selected = selected_cap(input)?;
   reclaim_dead_agents(&root, herdr);
@@ -219,9 +224,8 @@ fn pane_matches_backend(pane: Option<&str>, backend: toolu_mux::Backend) -> bool
     return false;
   };
   match backend {
-    toolu_mux::Backend::HerdrApp => pane.starts_with("hc:"),
     toolu_mux::Backend::Tmux => pane.starts_with('%'),
-    toolu_mux::Backend::Herdr => !pane.starts_with("hc:") && !pane.starts_with('%'),
+    toolu_mux::Backend::Herdr => !super::record::retired_target(pane) && !pane.starts_with('%'),
   }
 }
 
@@ -288,11 +292,7 @@ fn migrate(
     pane: &source.pane,
     cwd: &source.worktree,
   };
-  let stopped = if text(record, "backend") == Some("herdr-app") {
-    hc::stop(record, herdr)?
-  } else {
-    shutdown_agent(herdr, input.key, &expected)?
-  };
+  let stopped = shutdown_agent(herdr, input.key, &expected)?;
   reconcile_resource_jobs(&owner.root).map_err(Failure::unknown)?;
   let busy = active_jobs(&owner.root, &source.worktree).map_err(Failure::unknown)?;
   if stopped != Outcome::Exited || busy {

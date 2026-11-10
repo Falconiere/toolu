@@ -4,11 +4,9 @@ use crate::model::World;
 use crate::server::Engine;
 use serde_json::Value;
 
+/// Match a local worker by its name, worktree or pane.
 pub(super) fn same_agent(issue: &crate::model::Issue, row: &Value) -> bool {
   let name = row.get("name").and_then(Value::as_str);
-  if issue.agent.starts_with("hc:") {
-    return name == Some(issue.agent.as_str());
-  }
   if name.is_some_and(|name| name == issue.agent) {
     return true;
   }
@@ -22,6 +20,7 @@ pub(super) fn same_agent(issue: &crate::model::Issue, row: &Value) -> bool {
   pane.is_some() && pane == issue.pane.as_deref()
 }
 
+/// Subscribe to lifecycle events and the panes of known local workers.
 pub(crate) fn filters(world: &World, body: &Value) -> Vec<Value> {
   let mut types = vec![
     serde_json::json!({"type": "pane.closed"}),
@@ -42,6 +41,7 @@ pub(crate) fn filters(world: &World, body: &Value) -> Vec<Value> {
   types
 }
 
+/// Extract the snapshot from the supported Herdr reply envelopes.
 pub(crate) fn snapshot_body(reply: &Value) -> Value {
   reply
     .pointer("/result/snapshot")
@@ -50,6 +50,7 @@ pub(crate) fn snapshot_body(reply: &Value) -> Value {
     .unwrap_or_else(|| reply.clone())
 }
 
+/// Normalize a Herdr event name for the engine reducer.
 pub(super) fn event_kind(line: &Value) -> String {
   let raw = line
     .get("event")
@@ -63,6 +64,7 @@ fn event_type(line: &Value) -> Option<&str> {
   line.pointer("/data/type").and_then(Value::as_str)
 }
 
+/// Find the issue named by an event's worktree or pane.
 pub(super) fn event_key(engine: &Engine, line: &Value, kind: &str) -> Option<String> {
   if kind == "worktree_removed" {
     let path = line
@@ -83,6 +85,7 @@ pub(super) fn event_key(engine: &Engine, line: &Value, kind: &str) -> Option<Str
     .map(|(key, _)| key.clone())
 }
 
+/// Read a field from a pushed event or its data envelope.
 pub(super) fn field<'a>(line: &'a Value, key: &str) -> Option<&'a str> {
   line
     .pointer(&format!("/data/{key}"))

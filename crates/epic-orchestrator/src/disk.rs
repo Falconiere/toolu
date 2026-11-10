@@ -58,7 +58,9 @@ pub(crate) fn write_status(
   now: std::time::SystemTime,
 ) -> Result<(), String> {
   // A corrupt or non-object previous status starts over, as `report.ts` did.
-  let mut map = object(read_value(path).unwrap_or(Value::Null));
+  let previous = read_value(path).unwrap_or(Value::Null);
+  crate::launch::record::require_local(&previous, path)?;
+  let mut map = object(previous);
   let note = bounded_note(note);
   let stamp = iso_seconds(now);
   let duplicate = recorded(&map, phase, pr, &note);
@@ -132,6 +134,7 @@ pub(crate) fn write_pretty<T: serde::Serialize>(path: &Path, value: &T) -> Resul
 /// The record cannot be read or written.
 pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), String> {
   let mut map = object(read_value(path)?);
+  crate::launch::record::require_local_record(&map, path)?;
   let settled = matches!(
     map.get("stage").and_then(Value::as_str),
     Some("merged" | "abandoned")
@@ -202,6 +205,7 @@ pub(crate) fn write_tracker_seen(
   now: std::time::SystemTime,
 ) -> Result<(), String> {
   let mut map = object(read_value(path)?);
+  crate::launch::record::require_local_record(&map, path)?;
   let changed = match seen {
     crate::model::Seen::Open => false,
     crate::model::Seen::Closed => !map.contains_key("tracker_closed_at"),

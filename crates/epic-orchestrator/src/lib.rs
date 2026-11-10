@@ -58,11 +58,6 @@ mod github_budget;
 mod github_engine;
 mod github_probe;
 mod graph;
-mod hc_backend;
-mod hc_report;
-mod hc_results;
-mod hc_source;
-mod hc_target;
 mod herdr;
 #[cfg(test)]
 #[path = "tests/herdr_agents_test.rs"]
@@ -194,7 +189,9 @@ mod watch;
 mod workload;
 
 /// Control-socket greeting. A client on another number spools and sends `replace`.
-pub(crate) const PROTOCOL: u64 = 2;
+// Protocol 3 fences resident engines that could still select retired workers.
+// Clients validate local state before an explicitly requested replacement.
+pub(crate) const PROTOCOL: u64 = 3;
 
 /// Idle wake. Waiters sleep until this or their own deadline.
 pub(crate) const TICK: std::time::Duration = std::time::Duration::from_secs(30);

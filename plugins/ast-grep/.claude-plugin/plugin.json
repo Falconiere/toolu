@@ -1,7 +1,7 @@
 {
   "name": "ast-grep",
   "version": "8.13.1",
-  "hookProtocol": 2,
+  "hookProtocol": 3,
   "description": "Structural code search and rewrite: skill, native toolu ast-grep commands, and compiled search and byte-savings rules.",
   "author": {
     "name": "Falconiere Barbosa",

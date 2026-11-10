@@ -189,19 +189,24 @@ fn a_served_engine_journals_its_usage_and_a_timed_out_wait() {
 }
 
 #[test]
-fn protocol_replace() {
+fn explicit_protocol_replace_preserves_local_reporting() {
   let tmp = tempfile::tempdir().expect("temp");
   let epic = epic_dir(tmp.path());
   let paths = Paths::at(tmp.path());
   let old = start(&paths, PROTOCOL - 1);
-  let reply = exchange_retry(&paths, PROTOCOL, &report(&epic, "t9", "running")).expect("replace");
+  let reply = exchange_retry(&paths, PROTOCOL, &json!({"op": "replace"})).expect("replace");
   assert_eq!(reply["ok"], true);
   old.join().expect("old engine");
   let spool = paths.spool().join("t9.json");
-  assert!(spool.is_file(), "spool survives replace");
+  assert!(
+    !spool.exists(),
+    "an explicit replacement queues no worker report"
+  );
   assert!(!epic.join("status").join("a.json").is_file());
   let second = paths.clone();
   let newer = thread::spawn(move || serve_until_stopped(second, PROTOCOL));
+  let reply = exchange_retry(&paths, PROTOCOL, &report(&epic, "t9", "running")).expect("report");
+  assert_eq!(reply["ok"], true);
   let status = epic.join("status").join("a.json");
   settle(|| status.is_file() && !spool.is_file() && phase_count(&paths) > 0);
   let text = std::fs::read_to_string(&status).expect("status");

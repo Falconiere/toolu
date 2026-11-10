@@ -64,10 +64,17 @@ fn availability_tracks_the_backend() {
 }
 
 #[test]
-fn hc_context_selects_app_even_when_unavailable() {
-  let env = env("/nonexistent").with("HC_TERMINAL_ID", "t7");
-  assert_eq!(resolve(Multiplexer::Auto, &env), Backend::HerdrApp);
-  assert_eq!(resolve(Multiplexer::HerdrApp, &env), Backend::HerdrApp);
-  assert!(!available(Backend::HerdrApp, &env));
-  assert_eq!(Backend::HerdrApp.name(), "herdr-app");
+fn local_only_auto_ignores_hc_context_for_both_local_backends() {
+  let dir = tempfile::tempdir().unwrap();
+  let sock = dir.path().join("herdr.sock");
+  let env = Env::from_pairs([
+    ("PATH", "/nonexistent"),
+    ("HOME", "/nonexistent-home"),
+    ("HERDR_SOCKET_PATH", sock.to_str().unwrap()),
+    ("HC_TERMINAL_ID", "worker/t7"),
+    ("HC_SESSION", "retired-session"),
+  ]);
+  assert_eq!(resolve(Multiplexer::Auto, &env), Backend::Tmux);
+  std::fs::write(&sock, "").unwrap();
+  assert_eq!(resolve(Multiplexer::Auto, &env), Backend::Herdr);
 }

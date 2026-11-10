@@ -23,11 +23,6 @@ over, so two agents cannot edit the same files. Report incomplete work honestly.
 An `ESCALATE` response needs a narrower question, more evidence or a higher tier,
 not an identical retry.
 
-For committed work assigned to a registered remote machine, `toolu delegate
-submit` uses the durable relay. Persist a unique task key before submitting and
-use the same key to recover an uncertain result. Inspect `toolu delegate --help`
-for submission and result commands.
-
 ## Route by work
 
 Use SessionStart's configured class/model/effort values when present; read

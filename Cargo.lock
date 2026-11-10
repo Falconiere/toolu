@@ -1412,7 +1412,6 @@ dependencies = [
  "toolu-epic-orchestrator",
  "toolu-hub",
  "toolu-jev",
- "toolu-mux",
  "toolu-plugins",
  "toolu-pr-babysit",
  "toolu-protocol",
@@ -1562,7 +1561,6 @@ version = "8.13.1"
 dependencies = [
  "clap",
  "regex",
- "serde",
  "serde_json",
  "tempfile",
  "toml",
@@ -1607,7 +1605,6 @@ dependencies = [
 name = "toolu-mux"
 version = "8.13.1"
 dependencies = [
- "serde",
  "serde_json",
  "tempfile",
  "toolu-runtime",

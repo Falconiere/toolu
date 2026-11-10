@@ -36,4 +36,4 @@ pub const LAYER: &str = "protocol";
 /// The integer hook-interface version compiled into the binary (#411). Each
 /// `plugin.json` declares the one it was written for as `hookProtocol`; it is
 /// bumped only when the `toolu hook` contract or a documented verb breaks.
-pub const HOOK_PROTOCOL: u32 = 2;
+pub const HOOK_PROTOCOL: u32 = 3;

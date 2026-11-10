@@ -29,6 +29,11 @@ use crate::verbs::{failed, text};
 
 /// Run, ensure or replace the resident engine.
 pub(crate) fn engine(matches: &ArgMatches, env: &Env, tick: &dyn BabysitTick) -> Outcome {
+  if let Err(err) = crate::launch::record::require_local_registry(&Paths::from_env(env))
+    .and_then(|()| toolu_mux::backend::configured(env).map(|_| ()))
+  {
+    return failed("toolu epic engine", &err);
+  }
   if matches.get_flag("replace") && !replace_engine(&Paths::from_env(env), REPLACE_WAIT) {
     return Outcome::data(DRAINING.to_owned());
   }
@@ -48,6 +53,9 @@ pub(crate) fn serve(matches: &ArgMatches, env: &Env, tick: &dyn BabysitTick) -> 
 
 fn foreground_with_http(env: &Env, matches: &ArgMatches, tick: &dyn BabysitTick) -> Outcome {
   let paths = Paths::from_env(env);
+  if let Err(err) = toolu_mux::backend::configured(env) {
+    return failed("toolu epic engine", &err);
+  }
   let scripts = env.get("TOOLU_EPIC_SCRIPTS").map(PathBuf::from);
   let (http, attention) = match http_config(env, matches)
     .and_then(|http| attention_options(env, http.as_ref()).map(|attention| (http, attention)))
@@ -133,6 +141,11 @@ pub(crate) fn fault_of(env: &Env) -> Fault {
 /// malformed `registry.json` is an error, not an empty registry.
 pub(crate) fn ensure(env: &Env) -> Result<(), String> {
   let paths = Paths::from_env(env);
+  crate::launch::record::require_local_registry(&paths)?;
+  toolu_mux::backend::configured(env)?;
+  if live(&paths.lock()) && paths.socket().exists() {
+    crate::client::require_protocol(&paths, PROTOCOL)?;
+  }
   let registry = read_value(&paths.registry())?;
   let registered = registry
     .get("epics")
@@ -182,6 +195,9 @@ pub(crate) const DRAINING: &str = "engine draining; the new engine starts when i
 /// Ask a live engine to drain and wait up to `wait` for its lock to free;
 /// `false` while it still runs an effect (the next `ensure` starts the new one).
 pub(crate) fn replace_engine(paths: &Paths, wait: Duration) -> bool {
+  if crate::launch::record::require_local_registry(paths).is_err() {
+    return false;
+  }
   if paths.socket().exists() {
     let _replaced = exchange_retry(paths, PROTOCOL, &json!({"op": "replace"}));
   }
@@ -211,9 +227,18 @@ pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
     safe: matches.get_flag("safe"),
     no_jev: matches.get_flag("no-jev"),
     no_babysit: matches.get_flag("no-babysit"),
-    workers: crate::epics::Workers::chosen(matches.get_flag("relay")),
   };
-  if let Err(err) = crate::hc_target::configure(matches, Path::new(dir), env) {
+  if let Err(err) = crate::launch::record::require_local_state(Path::new(dir))
+    .and_then(|()| crate::launch::record::require_local_registry(&paths))
+    .and_then(|()| toolu_mux::backend::configured(env).map(|_| ()))
+    .and_then(|()| {
+      if live(&paths.lock()) && paths.socket().exists() {
+        crate::client::require_protocol(&paths, PROTOCOL)
+      } else {
+        Ok(())
+      }
+    })
+  {
     return failed("toolu epic start", &err);
   }
   // The settings first: a registered epic never runs without them.
@@ -233,6 +258,8 @@ pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
 
 /// Add an epic directory to the registry once.
 pub(crate) fn register(paths: &Paths, state_dir: &str) -> Result<(), String> {
+  crate::launch::record::require_local_state(Path::new(state_dir))?;
+  crate::launch::record::require_local_registry(paths)?;
   crate::registry::update(paths, || register_locked(paths, state_dir))
 }
 

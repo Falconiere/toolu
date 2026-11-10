@@ -160,6 +160,7 @@ fn previous(request: &Request<'_>) -> Result<Option<Value>> {
       ),
     );
   }
+  crate::state::require_local(path, &value)?;
   Ok(Some(value))
 }
 
@@ -262,6 +263,7 @@ fn token_suspect(failure: &Failure) -> bool {
     || (class == Some("permanent") && matches!(status, Some(403 | 404)))
 }
 
+/// Validate the snapshot envelope before a tick or explicit reduction.
 pub(crate) fn valid(snapshot: &Value) -> Result<()> {
   let ok = snapshot.get("version").and_then(Value::as_u64) == Some(1)
     && snapshot.get("repo").is_some_and(Value::is_string)

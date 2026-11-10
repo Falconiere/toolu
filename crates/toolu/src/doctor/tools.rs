@@ -59,9 +59,9 @@ const ROWS: &[Row] = &[
   Row {
     plugin: "pr-babysit",
     tool: "herdr",
-    alternatives: &["tmux", "hc"],
+    alternatives: &["tmux"],
     required: false,
-    hint: "install herdr, hc or tmux",
+    hint: "install herdr or tmux",
   },
   Row {
     plugin: "epic-orchestrator",
@@ -80,9 +80,9 @@ const ROWS: &[Row] = &[
   Row {
     plugin: "epic-orchestrator",
     tool: "herdr",
-    alternatives: &["tmux", "hc"],
+    alternatives: &["tmux"],
     required: true,
-    hint: "install herdr, hc or tmux",
+    hint: "install herdr or tmux",
   },
   Row {
     plugin: "toolu-review",

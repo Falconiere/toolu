@@ -100,7 +100,7 @@ fn route_fix_collects_every_raise() {
 }
 
 #[test]
-fn remote_target_and_report_identity_are_paired() {
+fn remote_target_and_report_identity_flags_are_rejected() {
   let start = [
     "dispatch-fix",
     "start",
@@ -117,8 +117,12 @@ fn remote_target_and_report_identity_are_paired() {
     "--base",
     "main",
   ];
-  assert!(parse(&[&start[..], &["--machine", "vm"]].concat()).is_ok());
-  assert!(parse(&[&start[..], &["--remote-repo", "/r"]].concat()).is_err());
-  assert!(parse(&[&start[..], &["--machine", "vm", "--remote-repo", "/r"]].concat()).is_ok());
-  assert!(parse(&["fixer-report", "r", "done", "--run-id", "run"]).is_err());
+  for flag in ["--machine", "--remote-repo"] {
+    let error = parse(&[&start[..], &[flag, "vm"]].concat()).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::UnknownArgument);
+  }
+  for flag in ["--run-id", "--expected-base", "--commit"] {
+    let error = parse(&["fixer-report", "r", "done", flag, "run"]).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::UnknownArgument);
+  }
 }

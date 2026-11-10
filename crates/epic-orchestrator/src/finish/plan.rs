@@ -1,11 +1,12 @@
 //! Dry-run teardown plans.
 
-use super::{FinishReport, hc, never_started, read_issue_record, require_merged};
+use super::{FinishReport, never_started, read_issue_record, require_merged};
 use crate::launch::Ctx;
 use crate::launch::record::{Record, text};
 use serde_json::json;
 use std::path::Path;
 
+/// Validate a local teardown and describe its actions without changing state.
 pub(super) fn plan(
   state_dir: &Path,
   key: &str,
@@ -38,34 +39,14 @@ pub(super) fn plan(
 fn plan_actions(record: &Record, key: &str, abandon: bool) -> Vec<String> {
   let word = |field: &str| text(record, field).unwrap_or("").to_owned();
   let mut actions = Vec::new();
-  let hc = word("backend") == "herdr-app";
-  if hc {
-    actions.push(format!(
-      "verify ownership and stop hc terminal {}",
-      word("terminal_address")
-    ));
-  }
-  if !hc && !word("agent").is_empty() {
+  if !word("agent").is_empty() {
     actions.push(format!("herdr agent prompt {} /exit", word("agent")));
-  }
-  if hc && hc::remote(record) {
-    actions.push(format!(
-      "verify clean remote worktree {} on {} and remove it",
-      word("remote_worktree"),
-      word("machine")
-    ));
   }
   actions.push(format!(
     "snapshot {} at refs/epic-wip/{key}",
     word("worktree")
   ));
-  if hc {
-    actions.push(format!(
-      "git -C {} worktree remove {}",
-      word("checkout"),
-      word("worktree")
-    ));
-  } else if !word("workspace_id").is_empty() {
+  if !word("workspace_id").is_empty() {
     let force = if abandon { "" } else { " --force" };
     actions.push(format!(
       "herdr worktree remove --workspace {}{force}",

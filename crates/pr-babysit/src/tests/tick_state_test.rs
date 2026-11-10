@@ -71,3 +71,31 @@ fn an_unreadable_state_or_snapshot_file_stamps_nothing() {
     "TypeScript stamps only collection"
   );
 }
+
+#[test]
+fn local_only_tick_refuses_retired_state_before_reduction() {
+  let dir = TempDir::new().unwrap();
+  let path = dir.path().join("retired.json");
+  let mut body: Value = serde_json::from_slice(
+    &std::fs::read(crate::fixture::path("states/toolu-165-initial.json")).unwrap(),
+  )
+  .unwrap();
+  body["relayEnabled"] = json!(true);
+  let bytes = serde_json::to_vec_pretty(&body).unwrap();
+  std::fs::write(&path, &bytes).unwrap();
+  let result = tick(
+    &request(&path, NOW, 165),
+    Source::File(&recorded_165()),
+    &Env::default(),
+  );
+  assert_eq!(std::fs::read(&path).unwrap(), bytes);
+  let error = result
+    .err()
+    .expect("retired state must fail before reduction");
+  assert!(error.message.contains("unsupported"), "{error}");
+  assert!(
+    error.message.contains(&path.display().to_string()),
+    "{error}"
+  );
+  assert!(error.message.contains("pre-removal"), "{error}");
+}

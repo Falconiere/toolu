@@ -23,18 +23,6 @@ const PHASES: [&str; 12] = [
 /// `toolu epic report <phase>`: record a worker phase.
 pub(crate) fn report_command() -> Command {
   Command::new("report")
-    .arg(
-      Arg::new("run")
-        .long("run")
-        .requires("expected-base")
-        .help("Remote worker run identity; write a transfer report only"),
-    )
-    .arg(
-      Arg::new("expected-base")
-        .long("expected-base")
-        .requires("run")
-        .help("Remote worker's committed input revision"),
-    )
     .about("Record a worker phase")
     .arg(
       Arg::new("phase")

@@ -1,7 +1,7 @@
 {
   "name": "toolu-review",
   "version": "8.13.1",
-  "hookProtocol": 2,
+  "hookProtocol": 3,
   "description": "Evidence-backed review of committed changes for actionable defects, with complete-coverage push-review state. Standalone native-review fallback.",
   "author": {
     "name": "Falconiere Barbosa",

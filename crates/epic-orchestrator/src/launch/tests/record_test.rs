@@ -220,21 +220,42 @@ fn an_adopted_running_record_may_lack_its_session_until_acknowledged() {
 }
 
 #[test]
-fn managed_hc_records_require_bound_terminal_identity() {
-  let tmp = tempfile::tempdir().unwrap();
-  let valid = json!({"stage":"running", "backend":"herdr-app", "lease_token":"lease-1",
-    "terminal_owner":"toolu.owner=lease-1", "terminal_name":"toolu-123", "terminal_address":"t1",
-    "hc_session":"default", "agent":"hc:t1", "pane_id":"hc:t1", "worktree":"/w", "prompt_state":"acknowledged"});
-  assert!(load_launch_record(&put(tmp.path(), "hc.json", &valid.to_string())).is_ok());
-  for (key, value) in [
-    ("terminal_owner", json!("toolu.owner=other")),
-    ("terminal_address", json!("")),
-    ("terminal_name", json!("Bad Name")),
-    ("hc_session", json!("")),
-    ("pane_id", json!("hc:t2")),
+fn local_only_retired_worker_records_are_refused_without_rewriting() {
+  let dir = tempfile::tempdir().unwrap();
+  for body in [
+    json!({"stage":"uncertain", "backend":"herdr-app"}),
+    json!({"stage":"uncertain", "agent":"hc:worker/t1"}),
+    json!({"stage":"uncertain", "pane_id":"hc:t1"}),
+    json!({"stage":"uncertain", "agent":"relay:attempt-1"}),
+    json!({"stage":"uncertain", "relay_request":{"key":"attempt-1"}}),
+    json!({"stage":"cleanup-incomplete", "remote_worktree":"/worker/task"}),
+    json!({"stage":"uncertain", "terminal_address":"worker/t1"}),
   ] {
-    let mut bad = valid.clone();
-    bad[key] = value;
-    assert!(refused(tmp.path(), &bad).contains("hc"), "{key}");
+    let bytes = serde_json::to_vec_pretty(&body).unwrap();
+    let path = dir.path().join("retired.json");
+    std::fs::write(&path, &bytes).unwrap();
+    let result = load_launch_record(&path);
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    let error = result.expect_err("retired worker must not become a local worker");
+    assert!(error.contains("unsupported"), "{error}");
+    assert!(error.contains(&path.display().to_string()), "{error}");
+    assert!(error.contains("pre-removal"), "{error}");
   }
+}
+
+#[test]
+fn saved_backend_wins_and_legacy_records_keep_their_interpretation() {
+  use toolu_mux::Backend;
+  use toolu_runtime::env::Env;
+  let env = Env::from_pairs([("TOOLU_EPIC_MULTIPLEXER", "tmux")]);
+  let mut record = super::Record::new();
+  assert_eq!(super::backend(&record, &env).unwrap(), Backend::Tmux);
+  record.insert("kind".into(), json!("claude"));
+  assert_eq!(super::backend(&record, &env).unwrap(), Backend::Herdr);
+  record.insert("pane_id".into(), json!("%7"));
+  assert_eq!(super::backend(&record, &env).unwrap(), Backend::Tmux);
+  record.insert("backend".into(), json!("herdr"));
+  assert_eq!(super::backend(&record, &env).unwrap(), Backend::Herdr);
+  record.insert("backend".into(), json!("garbage"));
+  assert!(super::backend(&record, &env).is_err());
 }

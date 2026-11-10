@@ -1,7 +1,7 @@
 {
   "name": "python-quality",
   "version": "8.13.1",
-  "hookProtocol": 2,
+  "hookProtocol": 3,
   "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
   "hooks": "./hooks/hooks.json"
 }

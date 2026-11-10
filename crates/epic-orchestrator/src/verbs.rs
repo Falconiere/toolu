@@ -121,7 +121,6 @@ fn http_arg() -> Arg {
 
 fn start_command() -> Command {
   Command::new("start")
-    .args(crate::hc_target::args())
     .about("Register an epic state directory and start the engine")
     .arg(
       Arg::new("state-dir")
@@ -140,10 +139,6 @@ fn start_command() -> Command {
     .arg(flag(
       "no-babysit",
       "No CI: never run pr-babysit and merge on the worker's green local gate, until a start without it",
-    ))
-    .arg(flag(
-      "relay",
-      "Dispatch workers through the configured delegation relay, until a start without it",
     ))
 }
 

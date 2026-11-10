@@ -2,7 +2,6 @@
 //! the result.
 
 use serde_json::{Value, json};
-use toolu_mux::relay::store::Submission;
 
 use super::Tick;
 use super::inputs::Bot;
@@ -54,7 +53,7 @@ pub(super) fn state(tick: &Tick<'_>) -> Value {
   let pr = snapshot.get("pr").unwrap_or(&Value::Null);
   let repo = text(snapshot, "repo");
   let number = field(snapshot, "number");
-  let mut next = json!({
+  json!({
     "version": 2,
     "slot": crate::state::slot(repo, number.as_u64().unwrap_or(0)),
     "repo": repo,
@@ -92,33 +91,7 @@ pub(super) fn state(tick: &Tick<'_>) -> Value {
     },
     "actions": tick.memory.actions,
     "lastGoodSnapshot": tick.paths.snapshot,
-  });
-  carry_dispatch(&mut next, tick.previous);
-  next
-}
-
-fn carry_dispatch(next: &mut Value, previous: Option<&Value>) {
-  for key in ["remoteHistory", "relayEnabled", "relayMachine"] {
-    if let Some(value) = previous.and_then(|state| state.get(key)) {
-      next[key] = value.clone();
-    }
-  }
-  if previous.is_some_and(|state| state.get("relayEnabled").is_some()) {
-    return;
-  }
-  let groups = previous
-    .and_then(|state| state.pointer("/fixer/groups"))
-    .and_then(Value::as_array);
-  let request = groups.into_iter().flatten().find_map(|group| {
-    serde_json::from_value::<Submission>(group.get("relayRequest")?.clone()).ok()
-  });
-  // Older ticks lost the mode while retaining the immutable relay submission.
-  if let Some(request) = request {
-    next["relayEnabled"] = json!(true);
-    if next.get("relayMachine").is_none() {
-      next["relayMachine"] = json!(request.machine);
-    }
-  }
+  })
 }
 
 fn pr_doc(tick: &Tick<'_>) -> Value {

@@ -22,13 +22,9 @@ mod deliver;
 pub(crate) mod digest;
 mod failure;
 pub(crate) mod grok_session;
-mod hc;
-mod hc_prepare;
-mod hc_remote;
 pub(crate) mod lifecycle;
 pub(crate) mod muse_session;
 pub(crate) mod record;
-mod relay;
 pub(crate) mod screen;
 mod session;
 mod worktree;
@@ -228,11 +224,9 @@ fn require_recoverable_stage(record: &record::Record, opts: &LaunchOpts) -> Resu
     Some("replacing") if !opts.replace() => Err(Failure::refusal(
       "replacement is incomplete; retry explicitly with --replace",
     )),
-    Some("starting" | "uncertain") if !opts.reprompt() && !record.contains_key("relay_request") => {
-      Err(Failure::refusal(
-        "previous launch/prompt outcome is uncertain; inspect the recorded pane/session before explicit --reprompt or --replace",
-      ))
-    }
+    Some("starting" | "uncertain") if !opts.reprompt() => Err(Failure::refusal(
+      "previous launch/prompt outcome is uncertain; inspect the recorded pane/session before explicit --reprompt or --replace",
+    )),
     _ => Ok(()),
   }
 }
@@ -277,8 +271,8 @@ fn launch(
   let state = Path::new(&graph.state_dir);
   let mut record =
     record::load_launch_record(&state.join("issues").join(format!("{}.json", issue.key)))?;
-  relay::configure(&mut record, opts, state, ctx.env)?;
-  hc::pin(&mut record, ctx, state)?;
+  record::require_local_state(state).map_err(Failure::refusal)?;
+  record::pin(&mut record, &mut ctx.herdr.client, ctx.env)?;
   let route = load_launch_route(&state.join("routes").join(format!("{}.json", issue.key)))?;
   let host = resolve_host(opts, route.as_ref())?;
   refuse_paused_host(opts, ctx, host.kind)?;

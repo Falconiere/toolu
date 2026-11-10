@@ -13,8 +13,6 @@ use std::time::SystemTime;
 use serde_json::{Value, json};
 
 mod branch;
-mod hc;
-mod hc_remote;
 mod ownership;
 mod plan;
 mod prepare;
@@ -93,6 +91,7 @@ pub(crate) fn finish_issue(
   flags: (bool, bool),
   ctx: &mut Ctx<'_>,
 ) -> Result<FinishReport, String> {
+  crate::launch::record::require_local_state(state_dir)?;
   let (abandon, dry_run) = flags;
   if dry_run {
     return plan::plan(state_dir, key, abandon, ctx);
@@ -103,6 +102,13 @@ pub(crate) fn finish_issue(
   .map_err(|err| err.message)
 }
 
+fn local_record(path: &Path, key: &str, ctx: &mut Ctx<'_>) -> Result<Record, String> {
+  let record = read_issue_record(path, key)?;
+  let backend = crate::launch::record::backend(&record, ctx.env).map_err(|err| err.message)?;
+  ctx.herdr.client.pin(backend);
+  Ok(record)
+}
+
 fn finish(
   state_dir: &Path,
   key: &str,
@@ -111,7 +117,7 @@ fn finish(
 ) -> Result<FinishReport, String> {
   let path = state_dir.join("issues").join(format!("{key}.json"));
   let dir = state_dir.display().to_string();
-  let mut record = read_issue_record(&path, key)?;
+  let mut record = local_record(&path, key, ctx)?;
   let stage = text(&record, "stage").unwrap_or("").to_owned();
   let terminal = matches!(stage.as_str(), "merged" | "abandoned");
   let complete = cleanup_complete(&record);
@@ -155,12 +161,7 @@ fn finish(
 }
 
 fn cleanup_complete(record: &Record) -> bool {
-  if text(record, "backend") == Some("herdr-app") && hc::remote(record) {
-    record.get("remote_worktree_removed") == Some(&Value::Bool(true))
-      && terminal_cleanup_complete(record)
-  } else {
-    terminal_cleanup_complete(record)
-  }
+  terminal_cleanup_complete(record)
 }
 
 /// Abandon an attempt that made nothing to remove: settle it and release its
@@ -233,9 +234,6 @@ fn tear_down(
   key: &str,
   record: &mut Record,
 ) -> Result<Removal, String> {
-  if text(record, "backend") == Some("herdr-app") {
-    return hc::tear_down(ctx, teardown, state, key, record);
-  }
   let ownership = fence_cleanup_ownership(teardown.path, state, key, record)?;
   let absent = !text(record, "worktree").is_some_and(|path| Path::new(path).exists());
   let intent = removal_intent(record)?;

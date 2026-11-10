@@ -59,6 +59,9 @@ pub(super) fn finish(matches: &ArgMatches, env: &Env) -> Outcome {
   let state = PathBuf::from(text(matches, "state-dir").unwrap_or(""));
   let key = text(matches, "key").unwrap_or("");
   let paths = Paths::from_env(env);
+  if let Err(err) = crate::launch::record::require_local_state(&state) {
+    return failure("toolu epic finish", &err);
+  }
   let flags = (matches.get_flag("abandon"), matches.get_flag("dry-run"));
   let engine = !flags.1 && crate::lock::live(&paths.lock()) && paths.socket().exists();
   let begun = if engine {
@@ -181,6 +184,9 @@ pub(super) fn release(matches: &ArgMatches, env: &Env) -> Outcome {
     let message = format!("invalid issue record {}", path.display());
     return failure("toolu epic release", &message);
   };
+  if let Err(err) = crate::launch::record::require_local_record(&record, &path) {
+    return failure("toolu epic release", &err);
+  }
   let Some(hold) = record.get("hold").cloned().filter(|hold| !hold.is_null()) else {
     return failure("toolu epic release", &format!("{key} is not held"));
   };

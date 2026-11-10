@@ -6,7 +6,6 @@ use std::path::Path;
 use toolu_runtime::env::Env;
 
 mod close_intent;
-mod description;
 mod detect;
 mod gh;
 /// GitHub tracker adapter.
@@ -24,7 +23,6 @@ mod linear_parse;
 pub(crate) mod rest;
 mod types;
 
-pub(crate) use description::issue_description;
 pub(crate) use detect::{TrackerKind, detect_tracker, parse_jira_ref};
 pub(crate) use gh::Gh;
 pub(crate) use types::{EpicInfo, PrNode, TrackedIssue};

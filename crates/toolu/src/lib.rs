@@ -16,14 +16,10 @@ pub mod agent_tier;
 pub mod config;
 /// `toolu debug`.
 pub mod debug;
-/// Global worker registry and durable relay delegation.
-pub mod delegation;
 /// `toolu doctor`.
 pub mod doctor;
 /// `toolu gc`.
 pub mod gc;
-/// Explicit Herdr App desktop control.
-pub mod herdr_app;
 /// `toolu ledger`.
 pub mod ledger;
 /// Session-start, user-prompt-submit, and pre-compact.
@@ -32,8 +28,6 @@ pub mod lifecycle;
 pub mod mcp_hook;
 /// `toolu opencode`: the `OpenCode` plugin shim's bridge and catalog.
 pub mod opencode;
-/// Peer session messaging.
-pub mod peers;
 /// `toolu setup`.
 pub mod setup;
 /// `toolu status`.

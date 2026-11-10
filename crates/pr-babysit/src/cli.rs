@@ -162,8 +162,6 @@ fn dispatch_fix() -> Command {
         ))
         .arg(required("branch", "The PR branch"))
         .arg(required("base", "The PR's base branch"))
-        .arg(value("machine", "Configured hc machine"))
-        .arg(value("remote-repo", "Absolute remote checkout path").requires("machine"))
         .arg(dry()),
     )
     .subcommand(
@@ -192,9 +190,6 @@ fn fixer_report() -> Command {
         .help("done or failed"),
     )
     .arg(value("note", "A one-line summary or the reason"))
-    .arg(value("run-id", "Remote fixer run identity").requires_all(["expected-base", "commit"]))
-    .arg(value("expected-base", "Remote fixer base commit").requires_all(["run-id", "commit"]))
-    .arg(value("commit", "Remote fixer result commit").requires_all(["run-id", "expected-base"]))
 }
 
 /// The namespace and its verbs.

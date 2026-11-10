@@ -149,8 +149,8 @@ plugins/toolu/
 
 OpenCode's installer generates a `server.js` shim in each installed plugin;
 it forwards events to the native bridge. Core commands also provide
-[multi-machine delegation](../delegation.md), [peer conversations](../peers.md)
-and [garbage collection](../cli/gc.md).
+[garbage collection](../cli/gc.md). See the [remote worker removal guide](../delegation.md)
+for upgrade and recovery guidance.
 
 ## Configuration
 

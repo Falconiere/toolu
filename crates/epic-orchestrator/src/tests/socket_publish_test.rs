@@ -3,7 +3,7 @@ use std::sync::mpsc;
 use std::sync::{Condvar, Mutex};
 use std::time::{Duration, Instant};
 
-use super::{Msg, StateContext, handle_fact, on_timeout, publish, request_line};
+use super::{StateContext, handle_fact, on_timeout, publish, request_line};
 use crate::model::World;
 use crate::paths::Paths;
 use crate::server::{Engine, Fault};
@@ -173,8 +173,7 @@ fn resubscribe_publishes_the_pane_before_the_wake_flag() {
     "cwd": tree,
     "pane_id": "pane-9",
   }));
-  let mut running = std::collections::BTreeSet::new();
-  handle_fact(&mut engine, fact, &rig.context(), (&mut running, false)).expect("fact");
+  handle_fact(&mut engine, fact, &rig.context()).expect("fact");
   assert!(rig.resub.load(Ordering::Relaxed));
   assert_eq!(
     rig.shared.lock().expect("lock").issues["i"].pane.as_deref(),
@@ -273,7 +272,6 @@ struct Rig {
   changed: Condvar,
   resub: AtomicBool,
   interrupt: crate::herdr_interrupt::Interrupt,
-  sender: mpsc::Sender<Msg>,
 }
 
 impl Rig {
@@ -283,14 +281,12 @@ impl Rig {
       changed: Condvar::new(),
       resub: AtomicBool::new(false),
       interrupt: crate::herdr_interrupt::Interrupt::default(),
-      sender: mpsc::channel().0,
     }
   }
 
   fn context(&self) -> StateContext<'_> {
     StateContext {
       protocol: 1,
-      sender: &self.sender,
       shared: &self.shared,
       changed: &self.changed,
       resub: &self.resub,
