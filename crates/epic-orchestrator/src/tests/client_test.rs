@@ -53,8 +53,14 @@ fn cleanup_protocol_mismatch_neither_spools_nor_replaces_the_engine() {
     &serde_json::json!({"op": "cleanup"}),
   )
   .unwrap_err();
-  assert!(error.contains("protocol"), "{error}");
-  assert!(error.contains("engine --replace"), "{error}");
+  assert_eq!(
+    error,
+    format!(
+      "engine protocol {} differs from {}; settle retired workers with the pre-removal binary, then restart with `toolu epic engine --replace`",
+      crate::PROTOCOL - 1,
+      crate::PROTOCOL
+    )
+  );
   assert_eq!(peer.join().unwrap(), "");
   assert!(!paths.spool().exists());
 }
