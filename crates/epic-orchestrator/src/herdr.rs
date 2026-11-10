@@ -116,13 +116,12 @@ impl Client {
     call: &Call,
   ) -> Result<String, String> {
     self.last_exit = None;
-    let backend = match self.backend {
-      Some(backend) => backend,
-      None => {
-        let backend = toolu_mux::backend::configured(env)?;
-        self.backend = Some(backend);
-        backend
-      }
+    let backend = if let Some(backend) = self.backend {
+      backend
+    } else {
+      let backend = toolu_mux::backend::configured(env)?;
+      self.backend = Some(backend);
+      backend
     };
     let params = call.params();
     for field in ["target", "pane_id", "workspace_id", "name"] {

@@ -1,5 +1,5 @@
 //! Shared host/plugin hook contracts, payloads, native launchers and CLI exits.
-//! This protocol layer depends only on serde and serde_json.
+//! This protocol layer depends only on `serde` and `serde_json`.
 
 /// Gate decisions and precedence.
 pub mod decision;
