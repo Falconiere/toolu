@@ -67,14 +67,14 @@ fn availability_tracks_the_backend() {
 fn local_only_auto_ignores_hc_context_for_both_local_backends() {
   let dir = tempfile::tempdir().unwrap();
   let sock = dir.path().join("herdr.sock");
-  let missing = Env::from_pairs([
+  let env = Env::from_pairs([
     ("PATH", "/nonexistent"),
     ("HOME", "/nonexistent-home"),
     ("HERDR_SOCKET_PATH", sock.to_str().unwrap()),
     ("HC_TERMINAL_ID", "worker/t7"),
     ("HC_SESSION", "retired-session"),
   ]);
-  assert_eq!(resolve(Multiplexer::Auto, &missing), Backend::Tmux);
+  assert_eq!(resolve(Multiplexer::Auto, &env), Backend::Tmux);
   std::fs::write(&sock, "").unwrap();
-  assert_eq!(resolve(Multiplexer::Auto, &missing), Backend::Herdr);
+  assert_eq!(resolve(Multiplexer::Auto, &env), Backend::Herdr);
 }

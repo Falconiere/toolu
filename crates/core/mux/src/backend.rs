@@ -66,7 +66,7 @@ pub fn configured(env: &Env) -> Result<Backend, String> {
     Some("auto") => Multiplexer::Auto,
     Some("herdr") => Multiplexer::Herdr,
     Some("herdr-app") => {
-      return Err("TOOLU_EPIC_MULTIPLEXER herdr-app is unsupported; choose auto, herdr or tmux; recover retired runs with a pre-removal Toolu binary".into());
+      return Err("TOOLU_EPIC_MULTIPLEXER herdr-app is unsupported; choose auto, herdr or tmux; recover retired runs with a pre-removal toolu binary".into());
     }
     Some("tmux") => Multiplexer::Tmux,
     Some(_) => return Err("TOOLU_EPIC_MULTIPLEXER must be auto, herdr or tmux".into()),
