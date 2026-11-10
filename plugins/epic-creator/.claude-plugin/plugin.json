@@ -1,6 +1,6 @@
 {
   "name": "epic-creator",
-  "version": "8.13.0",
+  "version": "8.13.1",
   "hookProtocol": 2,
   "description": "Create and refresh GitHub epics with cited decisions, coherent sub-issues, observable acceptance criteria and test plans. Includes epic-creator and epic-updater, with graph verification before worker handoff.",
   "author": {
