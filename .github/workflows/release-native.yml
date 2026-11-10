@@ -81,7 +81,22 @@ jobs:
           fi
       # No npm check here: the native release never waits for npm.
       # npm-publish.yml verifies the registry in its own job.
+      # The Linux budget tests (idle_budget, status_budget) measure the shipped
+      # static musl binary, as tests.yml does. Without TOOLU_RELEASE_BIN they
+      # build and measure a glibc binary, which exceeds the 10 MB idle budget.
+      - name: Build the release binary
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          sudo python3 .github/scripts/configure_musl_apt_mirror.py x86_64-unknown-linux-musl
+          sudo apt-get update -y
+          sudo apt-get install -y musl-tools
+          CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release -p toolu-cli --locked --target x86_64-unknown-linux-musl
+          mkdir -p target/release
+          cp target/x86_64-unknown-linux-musl/release/toolu target/release/toolu
+          test -x target/release/toolu && test -s target/release/toolu || { echo "::error::Release binary must be nonempty and executable: target/release/toolu" >&2; exit 1; }
       - name: Gate released source
+        env:
+          TOOLU_RELEASE_BIN: ${{ github.workspace }}/target/release/toolu
         run: cargo xtask gate
 
   build:
@@ -90,7 +105,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-14
+          - runner: macos-15
             os: darwin
             arch: arm64
             target: aarch64-apple-darwin
