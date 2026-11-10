@@ -219,8 +219,6 @@ fn an_adopted_running_record_may_lack_its_session_until_acknowledged() {
   assert!(refused(tmp.path(), &managed).ends_with("a managed running launch requires session_id"));
 }
 
-
-
 #[test]
 fn local_only_retired_worker_records_are_refused_without_rewriting() {
   let dir = tempfile::tempdir().unwrap();
