@@ -1,35 +1,33 @@
-//! Shared host/plugin hook contracts, payloads, native launchers and CLI exits.
-//! This protocol layer depends only on `serde` and `serde_json`.
+//! toolu core, `protocol` layer: the contract shared by every host and plugin,
+//! and every type that crosses a hook's process boundary. Its only dependencies
+//! are `serde` and `serde_json`.
+//!
+//! It holds the hook-interface version (`HOOK_PROTOCOL`, #411), which host events
+//! enforce, the install commands, the generated `hooks.json` launcher (#412), and
+//! the exit codes and host names of the `toolu` CLI (#442). For #413:
+//!
+//! - `payload`: each host's open stdin payload;
+//! - `normalize`: maps a payload to its `normalized` event;
+//! - `decision`: a gate's verdict and the TypeScript merge precedence;
+//! - `encode`: writes a decision as each host's output, degrading `ask`;
+//! - `native`: each host's event names;
+//! - `opencode`: `OpenCode`'s hook calls as Claude payloads, and the bridge's answer;
+//! - `hook`: `run_hook`, the hook main, which catches a panic and never exits 101.
 
-/// Gate decisions and precedence.
 pub mod decision;
-/// Host-specific hook output encoding.
 pub mod encode;
-/// Shared hook event names.
 pub mod event;
-/// Native CLI exit codes.
 pub mod exit;
-/// Hook entrypoint and panic boundary.
 pub mod hook;
-/// Supported coding hosts.
 pub mod host;
-/// Native binary installation guidance.
 pub mod install;
-/// Generated native host launchers.
 pub mod launcher;
-/// Host-native event mappings.
 pub mod native;
-/// Open payload normalization.
 pub mod normalize;
-/// Normalized hook event contract.
 pub mod normalized;
-/// OpenCode payload bridge.
 pub mod opencode;
-/// Host input payloads.
 pub mod payload;
-/// Bounded hook stdin reading.
 pub mod stdin;
-/// Shared protocol text helpers.
 pub mod text;
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
