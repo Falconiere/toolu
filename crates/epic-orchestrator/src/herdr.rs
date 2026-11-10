@@ -116,9 +116,26 @@ impl Client {
     call: &Call,
   ) -> Result<String, String> {
     self.last_exit = None;
-    let backend = *self.backend.get_or_insert_with(|| resolve_backend(env));
-    if let Some(reply) = crate::hc_backend::execute(paths, env, backend, call) {
-      return reply;
+    let backend = match self.backend {
+      Some(backend) => backend,
+      None => {
+        let backend = toolu_mux::backend::configured(env)?;
+        self.backend = Some(backend);
+        backend
+      }
+    };
+    let params = call.params();
+    for field in ["target", "pane_id", "workspace_id", "name"] {
+      if params
+        .get(field)
+        .and_then(Value::as_str)
+        .is_some_and(crate::launch::record::retired_target)
+      {
+        return Err(
+          "unsupported retired worker target; settle it with the pre-removal toolu binary"
+            .to_owned(),
+        );
+      }
     }
     if backend == toolu_mux::Backend::Tmux {
       return Ok(crate::tmux_backend::execute(call, env));
@@ -207,18 +224,6 @@ pub(crate) fn socket_path(env: &Env) -> PathBuf {
 /// The herdr session name from the env.
 pub(crate) fn session_name(env: &Env) -> Option<&str> {
   toolu_mux::detect::session_name(env)
-}
-
-/// The configured pane manager, from `TOOLU_EPIC_MULTIPLEXER` ("auto" when
-/// unset or unrecognized), resolved against `env`'s herdr reachability.
-fn resolve_backend(env: &Env) -> toolu_mux::Backend {
-  let configured = match env.get("TOOLU_EPIC_MULTIPLEXER") {
-    Some("herdr") => toolu_mux::Multiplexer::Herdr,
-    Some("herdr-app") => toolu_mux::Multiplexer::HerdrApp,
-    Some("tmux") => toolu_mux::Multiplexer::Tmux,
-    Some(_) | None => toolu_mux::Multiplexer::Auto,
-  };
-  toolu_mux::resolve(configured, env)
 }
 
 fn ping(stream: &mut UnixStream, id: &str) -> Result<u64, String> {

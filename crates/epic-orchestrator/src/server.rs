@@ -107,19 +107,12 @@ impl Engine {
     })
   }
 
-  /// Write `watch.json`, including the herdr backoff.
-  ///
-  /// # Errors
-  /// The watch file cannot be replaced.
-  pub(crate) fn save_watch(&self) -> Result<(), String> {
-    self.persist_watch()
-  }
-
   /// Run until idle or a fault.
   ///
   /// # Errors
   /// A step cannot be written, or the machine does not settle.
   pub(crate) fn pump(&mut self) -> Result<Stop, String> {
+    crate::launch::record::require_local_registry(&self.paths)?;
     for _ in 0..512 {
       // A draining engine starts no parked call; it exits when the running
       // effect returns.
@@ -143,6 +136,8 @@ impl Engine {
   /// # Errors
   /// A snapshot or the journal cannot be written.
   pub(crate) fn report(&mut self, report: &Report) -> Result<(), String> {
+    crate::launch::record::require_local_state(std::path::Path::new(&report.state_dir))?;
+    crate::launch::record::require_local_registry(&self.paths)?;
     for step in apply_report(&mut self.world, report) {
       let _applied = self.apply(step)?;
     }
@@ -181,6 +176,7 @@ impl Engine {
   /// # Errors
   /// The pause file cannot be written.
   pub(crate) fn resume(&mut self, epic: Option<&str>) -> Result<(), String> {
+    crate::launch::record::require_local_registry(&self.paths)?;
     set_pause(&mut self.world, epic, false);
     arm_ready(&mut self.world);
     self.persist_pause()

@@ -58,6 +58,7 @@ fn previous(file: Option<&Path>, snapshot: &Value) -> Result<Option<Value>> {
         .with("snapshot", owner(snapshot)),
     );
   }
+  crate::state::require_local(file, &state)?;
   Ok(Some(state))
 }
 
@@ -195,8 +196,6 @@ pub(super) fn dispatch_fix(matches: &ArgMatches, world: &World<'_>) -> Result<Va
         repo_root: text(sub, "repo-root").unwrap_or_default(),
         branch: text(sub, "branch").unwrap_or_default(),
         base: text(sub, "base").unwrap_or_default(),
-        machine: text(sub, "machine"),
-        remote_repo: text(sub, "remote-repo"),
       };
       run_dispatch(&Verb::Start(start), &options)
     }
@@ -211,15 +210,6 @@ pub(super) fn fixer_report(matches: &ArgMatches) -> Result<Value> {
   let status = text(matches, "status").unwrap_or_default();
   let note = text(matches, "note");
   let at = now();
-  if let Some(run) = text(matches, "run-id") {
-    if !matches!(status, "done" | "failed") {
-      return Err(Failure::usage("invalid report status"));
-    }
-    let result = json!({"version": 1, "status": status, "note": note, "at": at,
-      "runId": run, "expectedBase": text(matches, "expected-base"), "commit": text(matches, "commit")});
-    write_json(file, &result, "report")?;
-    return Ok(result);
-  }
   report(file, status, note, &at)
 }
 

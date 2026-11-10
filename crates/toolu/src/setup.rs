@@ -9,13 +9,7 @@ mod agents;
 /// Preview, install or remove toolu's agent profiles.
 pub fn command() -> Command {
   Command::new("setup")
-    .about("Configure agent profiles, workers and the delegation relay")
-    .subcommand(crate::delegation::machines_command())
-    .subcommand(
-      Command::new("relay")
-        .about("Select and prepare the always-on relay")
-        .arg(Arg::new("machine").long("machine").required(true)),
-    )
+    .about("Configure agent profiles")
     .subcommand(
       Command::new("agents")
         .about("Preview, install or remove Codex agent profiles")
@@ -32,12 +26,6 @@ pub fn command() -> Command {
 
 /// Run `agents`. Any other verb is the script's usage exit.
 pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
-  if matches
-    .subcommand_name()
-    .is_some_and(|name| name != "agents")
-  {
-    return crate::delegation::setup(matches, ctx);
-  }
   let Some((_, sub)) = matches.subcommand() else {
     return agents::usage();
   };

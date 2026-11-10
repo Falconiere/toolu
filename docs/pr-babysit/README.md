@@ -45,33 +45,14 @@ and `wait` still build a new client for each check. Contract:
 The agent never writes a controller of its own and never re-fetches what the
 result reports; it triages, fixes, writes the replies, and decides escalations.
 
-## Herdr App fixer dispatch
+## Local fixer dispatch
 
-The top-level `multiplexer: "herdr-app"` selects `hc` for fixer agents; `auto`
-also selects it inside an `HC_TERMINAL_ID` context. Each slot records its
-backend and session so configuration changes cannot redirect an active fixer.
-Background dispatch leaves the desktop unchanged. Use
-`toolu herdr-app show <terminal-address>` only when you want to see a worker.
-
-`toolu babysit dispatch-fix start` accepts paired `--machine <name>` and
-`--remote-repo <absolute-path>` options with the `herdr-app` backend. Supply
-the command's usual plan, items and local repository options as well. The
-remote checkout must already exist on a configured Herdr machine with Git,
-compatible Toolu and the selected host CLI. Remote dry runs are refused.
-
-Committed input and results use verified Git bundles and private transfer refs;
-briefs and reports are transferred explicitly. Result reports must match the
-saved run, input revision and actual clean committed remote HEAD before the
-local fixer worktree advances. The initiating babysitter retains review and
-merge ownership. Transfers use 4 MiB chunks, up to 512 MiB total.
-
-Retry setup with the same saved target to recover an interrupted transfer;
-changed targets or revisions are refused. A lost launch reply is reconciled
-using the saved name and ownership before any worker is launched again.
-Uncertain sends and dirty or untransferred remote work remain available for
-inspection. Cleanup stops only owned terminals and preserves incomplete work.
-Keep the recorded `HC_SESSION` for recovery; an address from another core is
-not an interchangeable target.
+Fixers use the existing local Herdr dispatcher, or run inline when configured.
+Remote targets, hc terminals and relay execution are unsupported. Old saved
+remote/hc/relay slot state is refused before dispatch, reduction or cleanup;
+the error identifies the state file and directs recovery through the previous
+binary. Harmless legacy false/null relay defaults remain valid local state.
+See [upgrade guidance](../delegation.md) before upgrading an active remote run.
 
 Reply creation persists a target-scoped intent before sending. Each posted
 comment includes a hidden marker so a lost response or failed local receipt

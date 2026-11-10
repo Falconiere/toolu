@@ -1,7 +1,7 @@
 {
   "name": "ts-quality",
   "version": "8.13.1",
-  "hookProtocol": 2,
+  "hookProtocol": 3,
   "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
   "author": {
     "name": "Falconiere Barbosa",

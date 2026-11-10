@@ -60,26 +60,6 @@ fn a_working_agent_or_a_herdr_outage_is_never_rebased_under() {
 }
 
 #[test]
-fn hc_worker_uses_its_own_status_when_legacy_herdr_is_down() {
-  let tmp = tempfile::tempdir().expect("temp");
-  let fixture = Fixture::start().expect("fixture");
-  behind(&fixture);
-  let mut engine = engine(&tmp, &fixture);
-  let issue = engine.world.issues.get_mut("k").expect("k");
-  issue.agent = "hc:t1".into();
-  issue.agent_status = "idle".into();
-  engine.world.herdr_failures = 1;
-  assert_eq!(run(&engine, Action::Merge)["note"], "no worktree recorded");
-  crate::source::apply(
-    &mut engine,
-    &toolu_runtime::env::Env::default(),
-    crate::source::Fact::HcOutage,
-  )
-  .expect("hc outage");
-  assert_eq!(run(&engine, Action::Merge)["note"], "worker active");
-}
-
-#[test]
 fn an_issue_out_of_the_queue_only_disarms_and_a_recovered_step_asks_github() {
   let tmp = tempfile::tempdir().expect("temp");
   let fixture = Fixture::start().expect("fixture");

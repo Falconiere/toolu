@@ -17,16 +17,11 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`hook`](hook.md) | `plugins/toolu` | available | Run a hook entry; hooks.json calls it (internal) |
 | [`ledger`](ledger.md) | `plugins/toolu` | available | The plan ledger, verdicts and push waivers |
 | [`debug`](debug.md) | `plugins/toolu` | available | Count or summarize logs, stacks and failing tests |
-| [`setup`](setup.md) | `plugins/toolu` | available | Configure agent profiles, workers and the delegation relay |
+| [`setup`](setup.md) | `plugins/toolu` | available | Configure agent profiles |
 | [`doctor`](doctor.md) | `plugins/toolu` | available | Report binary, config, plugin and tool health |
-| [`machines`](machines.md) | `plugins/toolu` | available | Inspect readiness and drain workers |
-| [`relay`](relay.md) | `plugins/toolu` | available | Inspect and recover the delegation relay |
-| [`delegate`](delegate.md) | `plugins/toolu` | available | Submit committed work to registered machines |
-| [`peers`](peers.md) | `plugins/toolu` | available | Communicate with peer agent sessions |
 | [`gc`](gc.md) | `plugins/toolu` | available | Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply |
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
-| [`herdr-app`](herdr-app.md) | `plugins/toolu` | available | Show a worker in an already running Herdr App |
 | [`opencode`](opencode.md) | `plugins/toolu` | available | Run toolu plugins under OpenCode; their generated server.js calls these |
 | [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | available | TypeScript quality rules that run after each edit |
 | [`python-quality`](python-quality.md) | `plugins/python-quality` | available | Python quality rules that run after each edit |
@@ -63,16 +58,11 @@ Commands:
   hook            Run a hook entry; hooks.json calls it (internal)
   ledger          The plan ledger, verdicts and push waivers
   debug           Count or summarize logs, stacks and failing tests
-  setup           Configure agent profiles, workers and the delegation relay
+  setup           Configure agent profiles
   doctor          Report binary, config, plugin and tool health
-  machines        Inspect readiness and drain workers
-  relay           Inspect and recover the delegation relay
-  delegate        Submit committed work to registered machines
-  peers           Communicate with peer agent sessions
   gc              Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and push-review status
-  herdr-app       Show a worker in an already running Herdr App
   opencode        Run toolu plugins under OpenCode; their generated server.js calls these
   ts-quality      TypeScript quality rules that run after each edit
   python-quality  Python quality rules that run after each edit

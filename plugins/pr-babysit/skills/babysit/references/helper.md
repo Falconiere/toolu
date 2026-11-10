@@ -225,9 +225,8 @@ toolu babysit stop --state-file <path>
 
 ## Fixer dispatch
 
-The descriptions below cover local dispatch unless specified. For `herdr-app`
-and remote target requirements, transfer, and recovery, see [Herdr App fixer
-dispatch](../../../../../docs/pr-babysit/README.md#herdr-app-fixer-dispatch).
+The descriptions below cover local dispatch. Retired remote state requires
+recovery through the previous binary; see [local fixer dispatch](../../../../../docs/pr-babysit/README.md#local-fixer-dispatch).
 
 ```
 toolu babysit route-fix --items <file> --host claude|codex|cursor|muse [--state-file <path>] [--raise <itemId>]... [--no-jev]
@@ -287,9 +286,7 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
 - **Legacy herdr startup trust prompt.** A Claude fixer in a new worktree starts blocked (`agent_not_ready`) at
   Claude Code's first-run workspace-trust prompt. The dispatcher accepts that prompt only when it is
   the standard one naming exactly this worktree (epic-orchestrator's recovery rule); any other
-  blocked screen fails the group with `agent_start_failed` and is never answered. With
-  `herdr-app`, blocked prompts are surfaced and never answered automatically. See
-  [Herdr App fixer dispatch](../../../../../docs/pr-babysit/README.md#herdr-app-fixer-dispatch).
+  blocked screen fails the group with `agent_start_failed` and is never answered.
 - **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/`, `.cursor/` or
   `.toolu/tmp/` (a fixer's own SessionStart hooks write `.claude/settings.local.json` and
   `.claude/tmp/`; toolu's hooks under Muse write `.toolu/tmp/muse/`) do not make the worktree

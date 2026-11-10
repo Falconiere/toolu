@@ -14,8 +14,6 @@ pub enum Multiplexer {
   Auto,
   /// herdr only.
   Herdr,
-  /// herdr-core terminals, controlled by `hc`.
-  HerdrApp,
   /// tmux only.
   Tmux,
 }
@@ -32,9 +30,11 @@ impl Multiplexer {
     match value.as_str() {
       Some("auto") => Ok(Multiplexer::Auto),
       Some("herdr") => Ok(Multiplexer::Herdr),
-      Some("herdr-app") => Ok(Multiplexer::HerdrApp),
+      Some("herdr-app") => Err(
+        "multiplexer herdr-app is unsupported; choose auto, herdr or tmux; recover retired runs with a pre-removal Toolu binary".to_owned(),
+      ),
       Some("tmux") => Ok(Multiplexer::Tmux),
-      _ => Err("multiplexer must be auto, herdr, herdr-app or tmux".to_owned()),
+      _ => Err("multiplexer must be auto, herdr or tmux".to_owned()),
     }
   }
 
@@ -44,7 +44,6 @@ impl Multiplexer {
     match self {
       Multiplexer::Auto => "auto",
       Multiplexer::Herdr => "herdr",
-      Multiplexer::HerdrApp => "herdr-app",
       Multiplexer::Tmux => "tmux",
     }
   }

@@ -100,10 +100,7 @@ fn render(
     config,
     plugin_root: input.plugin_root,
   };
-  let (mut parts, warnings) = context_parts(&built);
-  if let Some(notice) = crate::peers::notice::notice(input.env, host, input.payload, event) {
-    parts.push(notice);
-  }
+  let (parts, warnings) = context_parts(&built);
   let message = full_message(event, input);
   (
     Some(hook_json(host, Some(&parts.join("\n\n")), &message)),

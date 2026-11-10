@@ -28,28 +28,9 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
   } else {
     Mode::Disarm
   };
-  let record = crate::disk::read_value(&crate::snapshot::issue_path(&issue.state_dir, key))
-    .unwrap_or(Value::Null);
-  let fallback = crate::gate::local::LocalGate {
-    worktree: issue.worktree.clone().map(PathBuf::from),
-    host: (!issue.kind.is_empty()).then(|| issue.kind.clone()),
-  };
-  let input = StepJob {
-    repo: issue.repo.clone(),
-    pr,
-    key: key.to_owned(),
-    mode,
-    worktree: record
-      .get("worktree")
-      .and_then(Value::as_str)
-      .map(str::to_owned)
-      .or_else(|| issue.worktree.clone())
-      .map(PathBuf::from),
-    lease: lease(&record),
-    local: crate::gate::local::policy(Path::new(&issue.state_dir), &record, &fallback),
-    env: engine.env.clone(),
-    reach: engine.reach.clone(),
-    trace: engine.git_trace.clone(),
+  let input = match input(engine, issue, key, pr, mode) {
+    Ok(input) => input,
+    Err(err) => return Box::new(move || format!("failed: {err}")),
   };
   if action == Action::Reconcile {
     return Box::new(move || {
@@ -66,14 +47,43 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
   crate::queue_step::job(input)
 }
 
+fn input(
+  engine: &Engine,
+  issue: &Issue,
+  key: &str,
+  pr: u64,
+  mode: Mode,
+) -> Result<StepJob, String> {
+  let record = crate::disk::read_value(&crate::snapshot::issue_path(&issue.state_dir, key))
+    .unwrap_or(Value::Null);
+  let path = crate::snapshot::issue_path(&issue.state_dir, key);
+  crate::launch::record::require_local(&record, &path)?;
+  let fallback = crate::gate::local::LocalGate {
+    worktree: issue.worktree.clone().map(PathBuf::from),
+    host: (!issue.kind.is_empty()).then(|| issue.kind.clone()),
+  };
+  Ok(StepJob {
+    repo: issue.repo.clone(),
+    pr,
+    key: key.to_owned(),
+    mode,
+    worktree: record
+      .get("worktree")
+      .and_then(Value::as_str)
+      .map(str::to_owned)
+      .or_else(|| issue.worktree.clone())
+      .map(PathBuf::from),
+    lease: lease(&record),
+    local: crate::gate::local::policy(Path::new(&issue.state_dir), &record, &fallback),
+    env: engine.env.clone(),
+    reach: engine.reach.clone(),
+    trace: engine.git_trace.clone(),
+  })
+}
+
 /// The worker may be rebased under only when its own backend is reachable.
 fn parked(engine: &Engine, issue: &Issue) -> bool {
-  issue.phase == "ready"
-    && if issue.agent.starts_with("hc:") {
-      matches!(issue.agent_status.as_str(), "idle" | "done")
-    } else {
-      issue.agent_status != "working" && engine.world.herdr_failures == 0
-    }
+  issue.phase == "ready" && issue.agent_status != "working" && engine.world.herdr_failures == 0
 }
 
 /// The agent lease the launch recorded.

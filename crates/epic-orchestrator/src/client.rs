@@ -19,17 +19,15 @@ const LINE_CAP: usize = 16 * 1024 * 1024;
 /// # Errors
 /// The socket cannot be reached or the reply is not JSON.
 pub(crate) fn exchange(paths: &Paths, protocol: u64, request: &Value) -> Result<Value, String> {
+  crate::launch::record::require_local_registry(paths)?;
   let mut stream = UnixStream::connect(paths.socket()).map_err(|err| format!("connect: {err}"))?;
   let hello = read_json(&mut stream)?;
   let server = hello.get("protocol").and_then(Value::as_u64).unwrap_or(0);
+  if server != protocol && request.get("op").and_then(Value::as_str) != Some("replace") {
+    return Err(protocol_mismatch(server, protocol));
+  }
   if server != protocol {
-    if request.get("op").and_then(Value::as_str) == Some("cleanup") {
-      return Err(
-        "cleanup requires a matching engine protocol; replace the engine first".to_owned(),
-      );
-    }
-    spool(paths, request)?;
-    write_json(&mut stream, &json!({"op": "replace", "protocol": server}))?;
+    write_json(&mut stream, &with_protocol(request, server))?;
     return read_json(&mut stream);
   }
   if matches!(
@@ -40,6 +38,39 @@ pub(crate) fn exchange(paths: &Paths, protocol: u64, request: &Value) -> Result<
   }
   write_json(&mut stream, &with_protocol(request, protocol))?;
   read_json(&mut stream)
+}
+
+fn protocol_mismatch(server: u64, client: u64) -> String {
+  format!(
+    "engine protocol {server} differs from {client}; settle retired workers with the pre-removal binary, then restart with `toolu epic engine --replace`"
+  )
+}
+
+/// Check the greeting before writing launch settings or accepting new work.
+pub(crate) fn require_protocol(paths: &Paths, protocol: u64) -> Result<(), String> {
+  let mut stream = UnixStream::connect(paths.socket()).map_err(|err| format!("connect: {err}"))?;
+  stream
+    .set_read_timeout(Some(Duration::from_secs(5)))
+    .map_err(|err| err.to_string())?;
+  let hello = read_json(&mut stream)?;
+  let server = hello.get("protocol").and_then(Value::as_u64).unwrap_or(0);
+  if server == protocol {
+    Ok(())
+  } else {
+    Err(protocol_mismatch(server, protocol))
+  }
+}
+
+/// A unique safe token for local report and notify spool files.
+pub(crate) fn report_token(key: &str) -> String {
+  static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+  let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+  let millis = toolu_state::time::epoch_millis(std::time::SystemTime::now());
+  let safe: String = key
+    .chars()
+    .filter(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'))
+    .collect();
+  format!("r{millis:013}-{}-{n:04}-{safe}", std::process::id())
 }
 
 /// Retry `exchange` while the engine is binding its socket.
@@ -172,7 +203,7 @@ fn read_capped(stream: &mut UnixStream, block: usize, cap: usize) -> Result<Stri
   String::from_utf8(buf).map_err(|err| err.to_string())
 }
 
-/// The spool path a client writes before `replace`. Exposed for tests.
+/// The durable spool path for a local worker report. Exposed for tests.
 pub(crate) fn spool_path(root: &Path, token: &str) -> Result<std::path::PathBuf, String> {
   let safe = !token.is_empty()
     && token

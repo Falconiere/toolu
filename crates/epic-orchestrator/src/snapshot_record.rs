@@ -5,7 +5,7 @@ use serde_json::Value;
 /// The engine's fields of an issue record: its hold, release, waiting
 /// relaunch, tracker sighting, worktree and host.
 pub(crate) fn overlay_record(issue: &mut crate::model::Issue, record: &Value) {
-  crate::hc_backend::overlay_target(issue, record);
+  overlay_target(issue, record);
   issue.hold = record.get("hold").filter(|hold| !hold.is_null()).cloned();
   issue.coupling_released = record.get("coupling_released") == Some(&Value::Bool(true));
   issue.relaunch = record
@@ -23,6 +23,19 @@ pub(crate) fn overlay_record(issue: &mut crate::model::Issue, record: &Value) {
   }
   if let Some(kind) = record.get("kind").and_then(Value::as_str) {
     kind.clone_into(&mut issue.kind);
+  }
+}
+
+/// Project local launch identity into the engine snapshot.
+pub(crate) fn overlay_target(issue: &mut crate::model::Issue, record: &Value) {
+  if let Some(agent) = record.get("agent").and_then(Value::as_str) {
+    agent.clone_into(&mut issue.agent);
+  }
+  if let Some(pane) = record.get("pane_id").and_then(Value::as_str) {
+    issue.pane = Some(pane.to_owned());
+  }
+  if let Some(worktree) = record.get("worktree").and_then(Value::as_str) {
+    issue.worktree = Some(worktree.to_owned());
   }
 }
 

@@ -27,51 +27,6 @@ fn a_dropped_connection_is_not_retried() {
   assert!(started.elapsed() < Duration::from_millis(400), "{err}");
 }
 
-/// A client newer than the resident engine spools `request` under `token`, then has the engine
-/// replaced; the stand-in engine must see only the `replace` op.
-fn spools_and_replaces_an_older_engine(request: &serde_json::Value, token: &str) {
-  use std::io::{BufRead, BufReader, Write};
-  let tmp = tempfile::tempdir().expect("temp");
-  let paths = Paths::at(tmp.path());
-  let listener = UnixListener::bind(paths.socket()).expect("bind");
-  let stand_in = std::thread::spawn(move || {
-    let (mut stream, _) = listener.accept().expect("accept");
-    writeln!(
-      stream,
-      "{}",
-      serde_json::json!({"op": "hello", "protocol": 1})
-    )
-    .expect("hello");
-    let mut line = String::new();
-    BufReader::new(stream.try_clone().expect("clone"))
-      .read_line(&mut line)
-      .expect("request");
-    writeln!(stream, "{}", serde_json::json!({"ok": true})).expect("ack");
-    serde_json::from_str::<serde_json::Value>(&line).expect("json")
-  });
-  let reply = exchange_retry(&paths, crate::PROTOCOL, request).expect("exchange");
-  assert_eq!(reply["ok"], true);
-  let sent = stand_in.join().expect("stand-in");
-  assert_eq!(sent, serde_json::json!({"op": "replace", "protocol": 1}));
-  let spooled: serde_json::Value = serde_json::from_str(
-    &std::fs::read_to_string(spool_path(tmp.path(), token).expect("path")).expect("spool"),
-  )
-  .expect("json");
-  assert_eq!(&spooled, request);
-}
-
-#[test]
-fn a_newer_client_spools_its_report_and_replaces_an_older_engine() {
-  let report = serde_json::json!({"op": "report", "token": "t-36", "key": "a", "phase": "spec"});
-  spools_and_replaces_an_older_engine(&report, "t-36");
-}
-
-#[test]
-fn a_newer_client_spools_its_notify_like_a_report() {
-  let notice = serde_json::json!({"op": "notify", "token": "n-7", "key": "a", "kind": "stuck"});
-  spools_and_replaces_an_older_engine(&notice, "n-7");
-}
-
 #[test]
 fn cleanup_protocol_mismatch_neither_spools_nor_replaces_the_engine() {
   use std::io::{BufRead as _, BufReader};
@@ -98,12 +53,55 @@ fn cleanup_protocol_mismatch_neither_spools_nor_replaces_the_engine() {
     &serde_json::json!({"op": "cleanup"}),
   )
   .unwrap_err();
-  assert_eq!(
-    error,
-    "cleanup requires a matching engine protocol; replace the engine first"
-  );
+  assert!(error.contains("protocol"), "{error}");
+  assert!(error.contains("engine --replace"), "{error}");
   assert_eq!(peer.join().unwrap(), "");
   assert!(!paths.spool().exists());
+}
+
+#[test]
+fn local_only_old_engine_protocol_fails_before_spool_or_replace() {
+  use std::io::{BufRead as _, BufReader};
+  for request in [
+    serde_json::json!({"op":"report", "token":"r-old", "key":"a", "phase":"spec"}),
+    serde_json::json!({"op":"notify", "token":"n-old", "key":"a", "kind":"stuck"}),
+  ] {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = Paths::at(dir.path());
+    let listener = UnixListener::bind(paths.socket()).unwrap();
+    let peer = std::thread::spawn(move || {
+      let (mut stream, _) = listener.accept().unwrap();
+      stream
+        .set_read_timeout(Some(Duration::from_secs(1)))
+        .unwrap();
+      super::write_json(
+        &mut stream,
+        &serde_json::json!({"op":"hello", "protocol":2}),
+      )
+      .unwrap();
+      let mut sent = String::new();
+      BufReader::new(stream.try_clone().unwrap())
+        .read_line(&mut sent)
+        .unwrap();
+      if !sent.is_empty() {
+        super::write_json(&mut stream, &serde_json::json!({"ok":true})).unwrap();
+      }
+      sent
+    });
+    let outcome = super::exchange(&paths, 3, &request);
+    assert_eq!(
+      peer.join().unwrap(),
+      "",
+      "old engine must receive no mutation"
+    );
+    assert!(
+      !paths.spool().exists(),
+      "unsupported protocol must not spool"
+    );
+    let error = outcome.unwrap_err();
+    assert!(error.contains("protocol"), "{error}");
+    assert!(error.contains("engine --replace"), "{error}");
+  }
 }
 
 #[test]

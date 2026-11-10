@@ -22,9 +22,6 @@ use crate::tracker::{TrackerKind, detect_tracker};
 
 pub(super) fn graph_command() -> Command {
   Command::new("graph")
-    .args(crate::hc_target::args())
-    .mut_arg("machine", |arg| arg.requires("save"))
-    .mut_arg("remote-repo", |arg| arg.requires("save"))
     .about("Build an epic's dependency graph and the next launch batch")
     .arg(
       clap::Arg::new("epic")
@@ -123,7 +120,7 @@ fn graph_with(matches: &ArgMatches, ctx: &Ctx, env: &Env, reach: &Reach) -> Outc
     herdr_roots: herdr_roots(&Paths::from_env(env), env),
     repo_roots: repo_roots(env),
   };
-  match build(&input).and_then(|built| save(matches, &built, env).map(|()| built)) {
+  match build(&input).and_then(|built| save(matches, &built).map(|()| built)) {
     Ok(built) if ctx.json => document(&json!(built)),
     Ok(built) => Outcome::data(render_table(&built)),
     Err(err) => failure("toolu epic graph", &err),
@@ -132,7 +129,7 @@ fn graph_with(matches: &ArgMatches, ctx: &Ctx, env: &Env, reach: &Reach) -> Outc
 
 /// Write `built` to `--out` and, with `--save`, the state directory; a dry
 /// run writes nothing.
-fn save(matches: &ArgMatches, built: &Graph, env: &Env) -> Result<(), String> {
+fn save(matches: &ArgMatches, built: &Graph) -> Result<(), String> {
   if matches.get_flag("dry-run") {
     return Ok(());
   }
@@ -141,7 +138,7 @@ fn save(matches: &ArgMatches, built: &Graph, env: &Env) -> Result<(), String> {
     .into_iter()
     .collect();
   if matches.get_flag("save") {
-    crate::hc_target::configure(matches, Path::new(&built.state_dir), env)?;
+    crate::launch::record::require_local_state(Path::new(&built.state_dir))?;
     targets.push(Path::new(&built.state_dir).join("graph.json"));
   }
   targets

@@ -77,41 +77,8 @@ fn check_identity(record: &Record, invalid: &dyn Fn(&str) -> String) -> Result<(
     && !awaiting_capture(record)
     && (text(record, "stage") == Some("running")
       || text(record, "prompt_state") == Some("acknowledged"));
-  if managed && text(record, "backend") == Some("herdr-app") {
-    check_hc(record, invalid)?;
-  } else if managed && text(record, "session_id").is_none() {
+  if managed && text(record, "session_id").is_none() {
     return Err(invalid("a managed running launch requires session_id"));
-  }
-  Ok(())
-}
-
-fn check_hc(record: &Record, invalid: &dyn Fn(&str) -> String) -> Result<(), String> {
-  let name = text(record, "terminal_name").unwrap_or("");
-  let owner = text(record, "terminal_owner").unwrap_or("");
-  let address = text(record, "terminal_address").unwrap_or("");
-  let session = text(record, "hc_session").unwrap_or("");
-  let valid_name = !name.is_empty()
-    && name.len() <= 32
-    && name
-      .bytes()
-      .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'-' | b'_'));
-  let valid_address =
-    !address.is_empty() && !address.starts_with('-') && !address.chars().any(char::is_control);
-  if !valid_name
-    || !valid_address
-    || session.is_empty()
-    || session.chars().any(char::is_control)
-    || owner.strip_prefix("toolu.owner=") != text(record, "lease_token")
-  {
-    return Err(invalid(
-      "a managed hc launch requires matching terminal identity and session",
-    ));
-  }
-  let target = format!("hc:{address}");
-  if text(record, "agent") != Some(target.as_str())
-    || text(record, "pane_id") != Some(target.as_str())
-  {
-    return Err(invalid("hc target differs from terminal address"));
   }
   Ok(())
 }
@@ -150,6 +117,7 @@ pub(crate) fn load_launch_record(path: &Path) -> Result<Record, String> {
   };
   let invalid = |detail: &str| format!("invalid launch record {}: {detail}", path.display());
   let value: Value = serde_json::from_str(&source).map_err(|_err| invalid("malformed JSON"))?;
+  require_local(&value, path)?;
   let Value::Object(record) = value else {
     return Err(invalid("expected a JSON object"));
   };
@@ -163,12 +131,137 @@ pub(crate) fn load_launch_record(path: &Path) -> Result<Record, String> {
   Ok(record)
 }
 
+/// Preserve recorded local backend choices across configuration changes.
+pub(crate) fn backend(
+  record: &Record,
+  env: &toolu_runtime::env::Env,
+) -> Result<toolu_mux::Backend, super::Failure> {
+  match text(record, "backend") {
+    Some("herdr") => Ok(toolu_mux::Backend::Herdr),
+    Some("tmux") => Ok(toolu_mux::Backend::Tmux),
+    Some(_) => Err(super::Failure::refusal("unknown recorded worker backend")),
+    None if !record.is_empty() => Ok(
+      if text(record, "pane_id").is_some_and(|pane| pane.starts_with('%')) {
+        toolu_mux::Backend::Tmux
+      } else {
+        toolu_mux::Backend::Herdr
+      },
+    ),
+    None => toolu_mux::backend::configured(env).map_err(super::Failure::refusal),
+  }
+}
+
+/// Pin a launch to its persisted local manager before any reservation.
+pub(crate) fn pin(
+  record: &mut Record,
+  client: &mut crate::herdr::Client,
+  env: &toolu_runtime::env::Env,
+) -> Result<(), super::Failure> {
+  let backend = backend(record, env)?;
+  client.pin(backend);
+  if record.is_empty() {
+    record.insert("backend".into(), Value::String(backend.name().into()));
+  }
+  Ok(())
+}
+
 /// Write `record` to `path` as pretty JSON, atomically.
 ///
 /// # Errors
 /// The directory or file cannot be written.
 pub(crate) fn write_record(path: &Path, record: &Record) -> Result<(), String> {
+  require_local_record(record, path)?;
   crate::disk::write_pretty(path, record)
+}
+
+/// A retired address cannot be sent to a local pane manager.
+pub(crate) fn retired_target(target: &str) -> bool {
+  target.starts_with("hc:") || target.starts_with("relay:")
+}
+
+fn unsupported(path: &Path) -> String {
+  format!(
+    "unsupported retired worker state at {}; settle and remove this registration with the pre-removal toolu binary before restarting or using this state",
+    path.display()
+  )
+}
+
+/// Keep unsupported records byte-for-byte intact for the old binary.
+pub(crate) fn require_local(value: &Value, path: &Path) -> Result<(), String> {
+  match value.as_object() {
+    Some(record) => require_local_record(record, path),
+    None => Ok(()),
+  }
+}
+
+/// Check a record without changing its extension fields.
+pub(crate) fn require_local_record(record: &Map<String, Value>, path: &Path) -> Result<(), String> {
+  let retired = record.get("backend").and_then(Value::as_str) == Some("herdr-app")
+    || ["agent", "pane_id", "workspace_id"].iter().any(|key| {
+      record
+        .get(*key)
+        .and_then(Value::as_str)
+        .is_some_and(retired_target)
+    })
+    || ["relay", "relay_enabled"]
+      .iter()
+      .any(|key| record.get(*key) == Some(&Value::Bool(true)))
+    || record.keys().any(|key| {
+      key.starts_with("terminal_")
+        || key.starts_with("hc_")
+        || key.starts_with("remote_")
+        || matches!(
+          key.as_str(),
+          "relay_request"
+            | "machine"
+            | "expected_base"
+            | "controller_review"
+            | "review_prompt_state"
+        )
+    });
+  if retired {
+    Err(unsupported(path))
+  } else {
+    Ok(())
+  }
+}
+
+/// Refuse an old target or active graph record before registering or loading it.
+pub(crate) fn require_local_state(dir: &Path) -> Result<(), String> {
+  let target = dir.join("target.json");
+  if target
+    .try_exists()
+    .map_err(|err| format!("{}: {err}", target.display()))?
+  {
+    return Err(unsupported(&target));
+  }
+  let settings = dir.join("launch.json");
+  require_local(&crate::disk::read_value(&settings)?, &settings)?;
+  let graph = crate::disk::read_value(&dir.join("graph.json"))?;
+  if let Some(issues) = graph.get("issues").and_then(Value::as_array) {
+    for key in issues
+      .iter()
+      .filter_map(|issue| issue.get("key").and_then(Value::as_str))
+    {
+      let path = dir.join("issues").join(format!("{key}.json"));
+      require_local(&crate::disk::read_value(&path)?, &path)?;
+    }
+  }
+  Ok(())
+}
+
+/// The shared engine refuses the whole registry before contacting an old engine.
+pub(crate) fn require_local_registry(paths: &crate::paths::Paths) -> Result<(), String> {
+  let registry = crate::disk::read_value(&paths.registry())?;
+  if let Some(epics) = registry.get("epics").and_then(Value::as_array) {
+    for dir in epics
+      .iter()
+      .filter_map(|epic| epic.get("state_dir").and_then(Value::as_str))
+    {
+      require_local_state(Path::new(dir))?;
+    }
+  }
+  Ok(())
 }
 
 #[cfg(test)]

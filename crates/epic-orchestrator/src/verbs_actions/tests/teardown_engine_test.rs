@@ -144,7 +144,7 @@ fn an_engine_that_cannot_take_the_finish_leaves_the_record_untouched() {
   let listener = UnixListener::bind(s.paths.socket()).expect("bind");
   let old = thread::spawn(move || {
     let (mut stream, _) = listener.accept().expect("accept");
-    stream.write_all(b"{\"protocol\":2}\n").expect("hello");
+    crate::client::write_json(&mut stream, &json!({"protocol": crate::PROTOCOL})).expect("hello");
     let mut line = String::new();
     BufReader::new(stream.try_clone().expect("clone"))
       .read_line(&mut line)
@@ -178,7 +178,7 @@ fn one_shot_engine(paths: &Paths, reply: &'static str) -> thread::JoinHandle<()>
   let socket = paths.socket();
   thread::spawn(move || {
     let (mut stream, _) = listener.accept().expect("accept");
-    stream.write_all(b"{\"protocol\":2}\n").expect("hello");
+    crate::client::write_json(&mut stream, &json!({"protocol": crate::PROTOCOL})).expect("hello");
     let mut line = String::new();
     BufReader::new(stream.try_clone().expect("clone"))
       .read_line(&mut line)

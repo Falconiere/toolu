@@ -18,7 +18,7 @@ fn text<'v>(value: &'v Value, key: &str) -> &'v str {
 }
 
 impl Dispatcher<'_> {
-  fn stop_active(&self) -> Result<()> {
+  fn stop_active(&self) {
     let groups = self
       .fixer_field("groups")
       .and_then(Value::as_array)
@@ -28,16 +28,8 @@ impl Dispatcher<'_> {
       .iter()
       .find(|group| matches!(text(group, "status"), "running" | "launching" | "blocked"));
     if let Some(active) = active.filter(|_| !self.dry) {
-      if self.state.get("relayEnabled") == Some(&Value::Bool(true)) {
-        return self.cancel_relay(active);
-      }
-      if self.hc_backend() {
-        self.stop_hc(active)?;
-      } else {
-        self.stop_fixer(active);
-      }
+      self.stop_fixer(active);
     }
-    Ok(())
   }
 
   fn remove_worktree(&mut self, worktree: &Value) -> Result<()> {
@@ -199,16 +191,7 @@ impl Dispatcher<'_> {
   /// # Errors
   /// `worktree_dirty`, `herdr_unavailable` and git failures.
   pub(crate) fn cleanup(&mut self) -> Result<Value> {
-    self.stop_active()?;
-    if self.remote().is_some() {
-      if let Some(path) = self
-        .worktree_field("path")
-        .filter(|path| Path::new(path).exists())
-      {
-        clean_or_fail(self, path)?;
-      }
-      self.remove_remote()?;
-    }
+    self.stop_active();
     let worktree = self
       .state
       .get("herdrWorktree")

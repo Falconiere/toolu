@@ -2,22 +2,20 @@
 
 # `toolu setup`
 
-Configure agent profiles, workers and the delegation relay.
+Configure agent profiles.
 
 Owner: `plugins/toolu`.
 
 ## `toolu setup`
 
 ```text
-Configure agent profiles, workers and the delegation relay
+Configure agent profiles
 
 Usage: toolu setup [OPTIONS] [COMMAND]
 
 Commands:
-  machines  Register existing Herdr workers
-  relay     Select and prepare the always-on relay
-  agents    Preview, install or remove Codex agent profiles
-  help      Print this message or the help of the given subcommand(s)
+  agents  Preview, install or remove Codex agent profiles
+  help    Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -25,115 +23,6 @@ Options:
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
-```
-
-## `toolu setup machines`
-
-```text
-Register existing Herdr workers
-
-Usage: toolu setup machines [OPTIONS] [COMMAND]
-
-Commands:
-  list      List saved workers
-  register  Register or update a worker
-  remove    Remove an idle worker
-  recipe    Save explicit repository setup argv recipes
-  help      Print this message or the help of the given subcommand(s)
-
-Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
-
-## `toolu setup machines list`
-
-```text
-List saved workers
-
-Usage: toolu setup machines list [OPTIONS]
-
-Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
-
-## `toolu setup machines register`
-
-```text
-Register or update a worker
-
-Usage: toolu setup machines register [OPTIONS] --root <root> --agent <agent> <name>
-
-Arguments:
-  <name>
-
-Options:
-      --json                 Print exactly one JSON document on stdout
-      --root <root>          Absolute worker workspace root
-      --agent <agent>        [possible values: claude, codex, muse, cursor, opencode]
-  -q, --quiet                Drop the diagnostics of a successful run
-      --capacity <capacity>  [default: 1]
-      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
-  -h, --help                 Print help
-```
-
-## `toolu setup machines remove`
-
-```text
-Remove an idle worker
-
-Usage: toolu setup machines remove [OPTIONS] <name>
-
-Arguments:
-  <name>
-
-Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
-
-## `toolu setup machines recipe`
-
-```text
-Save explicit repository setup argv recipes
-
-Usage: toolu setup machines recipe [OPTIONS] --origin <origin> --file <file>
-
-Options:
-      --json              Print exactly one JSON document on stdout
-      --origin <origin>
-      --file <file>       JSON array of argv arrays; [] removes the recipe
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
-
-## `toolu setup relay`
-
-```text
-Select and prepare the always-on relay
-
-Usage: toolu setup relay [OPTIONS] --machine <machine>
-
-Options:
-      --json               Print exactly one JSON document on stdout
-      --machine <machine>
-  -q, --quiet              Drop the diagnostics of a successful run
-      --host <HOST>        The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --config-dir <DIR>   Read the toolu config from DIR instead of the host's default
-  -h, --help               Print help
 ```
 
 ## `toolu setup agents`

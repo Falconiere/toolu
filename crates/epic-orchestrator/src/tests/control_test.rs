@@ -92,6 +92,35 @@ fn ensure_does_nothing_for_an_empty_or_live_root() {
 }
 
 #[test]
+fn local_only_stale_socket_keeps_offline_reports_durable() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let env = env_at(tmp.path()).with("TOOLU_EPIC_MULTIPLEXER", "tmux");
+  let paths = Paths::from_env(&env);
+  let listener = std::os::unix::net::UnixListener::bind(paths.socket()).expect("socket");
+  drop(listener);
+  assert!(
+    paths.socket().exists(),
+    "the crashed engine left its socket"
+  );
+  let status = tmp.path().join("epic/status/a.json");
+  std::fs::create_dir_all(status.parent().expect("status parent")).expect("status dir");
+  let outcome = crate::query::report(
+    &verb(&[
+      "epic",
+      "report",
+      "spec",
+      "--status-file",
+      status.to_str().expect("status"),
+    ]),
+    &env,
+  );
+  assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
+  assert_eq!(read_value(&status).expect("status")["phase"], "spec");
+  let files: Vec<_> = std::fs::read_dir(paths.spool()).expect("spool").collect();
+  assert_eq!(files.len(), 1, "the offline report stays durable");
+}
+
+#[test]
 fn a_held_lock_makes_the_foreground_engine_busy() {
   let tmp = tempfile::tempdir().expect("temp");
   let env = env_at(tmp.path());
@@ -124,7 +153,7 @@ fn engine_http_defaults_on_and_no_http_turns_it_off() {
 }
 
 #[test]
-fn a_replace_that_cannot_drain_reports_it_and_ensure_stays_idle() {
+fn a_replace_that_cannot_drain_keeps_a_live_unreachable_engine_refused() {
   let tmp = tempfile::tempdir().expect("temp");
   let env = env_at(tmp.path());
   let paths = Paths::from_env(&env);
@@ -134,7 +163,10 @@ fn a_replace_that_cannot_drain_reports_it_and_ensure_stays_idle() {
     &paths,
     std::time::Duration::from_millis(100)
   ));
-  assert_eq!(ensure(&env), Ok(()));
+  let error = ensure(&env).expect_err("a live engine must provide a matching greeting");
+  assert!(error.starts_with("connect:"), "{error}");
+  assert!(crate::lock::live(&paths.lock()));
+  assert!(!paths.spool().exists());
 }
 
 #[test]
@@ -152,7 +184,6 @@ fn start_leaves_a_live_engine_in_place() {
     safe,
     no_jev,
     no_babysit: false,
-    workers: crate::epics::Workers::Local,
   };
   assert_eq!(crate::epics::launch_settings(&epic), settings(false, false));
   let dir = epic.display().to_string();
@@ -162,9 +193,6 @@ fn start_leaves_a_live_engine_in_place() {
   let local = start(&verb(&["epic", "start", &dir, "--no-babysit"]), &env);
   assert_eq!(local.exit, Exit::Success, "{local:?}");
   assert!(crate::epics::launch_settings(&epic).no_babysit);
-  let outcome = start(&verb(&["epic", "start", &dir, "--relay"]), &env);
-  assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
-  assert!(crate::epics::launch_settings(&epic).relay());
   let again = start(&verb(&["epic", "start", &dir]), &env);
   assert_eq!(again.exit, Exit::Success, "{again:?}");
   assert_eq!(crate::epics::launch_settings(&epic), settings(false, false));
@@ -209,8 +237,8 @@ fn start_rejects_a_missing_directory_and_a_bad_registry() {
   let outcome = start(&verb(&["epic", "start", &dir]), &env);
   assert_eq!(outcome.exit, Exit::Failure);
   assert!(outcome.stderr.expect("err").contains("toolu epic start"));
-  // The settings come first, so the epic is never registered without them.
-  assert!(epic.join("launch.json").is_file());
+  // A corrupt registry refuses before changing the epic's launch settings.
+  assert!(!epic.join("launch.json").exists());
 }
 
 fn verb(argv: &[&str]) -> clap::ArgMatches {

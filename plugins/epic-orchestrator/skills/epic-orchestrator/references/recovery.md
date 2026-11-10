@@ -29,10 +29,9 @@ and waits for the engine to launch it again, with no `--replace`.
 
 ## herdr
 
-These steps apply to the legacy herdr backend. For `herdr-app` workers,
-restore the recorded `HC_SESSION`, inspect the saved terminal address and
-ownership, and do not repeat an uncertain send. See
-[Herdr App recovery](../../../../../docs/epic-orchestrator/README.md#herdr-app-and-remote-workers).
+These steps apply to local Herdr workers. Retired hc/remote state is refused
+without mutation; use the previous binary to settle it before starting the
+resident engine. See [upgrade guidance](../../../../../docs/delegation.md).
 
 - **`HERDR_ENV` unset with the herdr backend:** the orchestrator is not inside herdr. Stop and tell
   the user to start the session from a herdr pane.
@@ -165,9 +164,8 @@ has nothing newer.
 
 - **Re-scoped while it idles** (no attention item): `toolu epic answer <key>
   "<new direction>"` delivers it, journals it and shows it in `toolu epic
-  status`. It refuses only when the issue has no live agent, or when its relay
-  worker has no running terminal yet. Never prompt the agent directly through
-  herdr or hc: the engine would not see the message.
+  status`. It refuses when the issue has no live agent. Never prompt the agent directly
+  through Herdr: the engine would not see the message.
 - **Keeps failing in the same phase:** one concrete redirect through
   `toolu epic answer <key> "<direction>"`. If it fails again, tear it down
   with `--abandon` only if the user authorizes teardown; otherwise escalate

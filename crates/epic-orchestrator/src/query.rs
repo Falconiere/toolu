@@ -12,9 +12,9 @@ use toolu_runtime::invocation::current_dir;
 
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
+use crate::client::report_token;
 use crate::control::{ensure, registry_nonempty};
 use crate::disk::{read_value, write_status, write_value};
-use crate::hc_report::report_token;
 use crate::job::run_job_with;
 use crate::lock::live;
 use crate::model::World;
@@ -142,9 +142,6 @@ pub(crate) fn wait(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
 
 /// Persist and submit a worker phase report.
 pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
-  if let Some(outcome) = crate::hc_report::report(matches, env) {
-    return outcome;
-  }
   let Some(phase) = text(matches, "phase") else {
     return failed("toolu epic report", "phase is required");
   };
@@ -155,7 +152,9 @@ pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
     Ok(pair) => pair,
     Err(err) => return failed("toolu epic report", &err),
   };
-  if let Err(err) = ensure(env) {
+  if let Err(err) =
+    crate::launch::record::require_local_state(Path::new(&state_dir)).and_then(|()| ensure(env))
+  {
     return failed("toolu epic report", &err);
   }
   let paths = Paths::from_env(env);
@@ -191,7 +190,9 @@ pub(crate) fn notify(matches: &ArgMatches, env: &Env) -> Outcome {
     Ok(pair) => pair,
     Err(err) => return failed("toolu epic notify", &err),
   };
-  if let Err(err) = ensure(env) {
+  if let Err(err) =
+    crate::launch::record::require_local_state(Path::new(&state_dir)).and_then(|()| ensure(env))
+  {
     return failed("toolu epic notify", &err);
   }
   let paths = Paths::from_env(env);

@@ -22,6 +22,7 @@ fn running_lease(state_dir: &Path, key: &str) -> Result<Option<(PathBuf, String)
   let Value::Object(record) = crate::disk::read_value(&path)? else {
     return Ok(None);
   };
+  super::record::require_local_record(&record, &path)?;
   if text(&record, "stage") != Some("running") {
     return Ok(None);
   }

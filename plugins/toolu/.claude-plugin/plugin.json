@@ -1,7 +1,7 @@
 {
   "name": "toolu",
   "version": "8.13.1",
-  "hookProtocol": 2,
+  "hookProtocol": 3,
   "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
   "author": {
     "name": "Falconiere Barbosa",

@@ -23,8 +23,6 @@ pub(crate) enum Fact {
   Event(Value),
   /// The socket could not be reached.
   Outage,
-  /// The hc event stream could not be reached.
-  HcOutage,
 }
 
 /// Apply one fact and journal it.
@@ -32,29 +30,35 @@ pub(crate) enum Fact {
 /// # Errors
 /// The journal or a cooldown file cannot be written.
 pub(crate) fn apply(engine: &mut Engine, env: &Env, fact: Fact) -> Result<(), String> {
+  crate::launch::record::require_local_registry(&engine.paths)?;
+  for issue in engine.world.issues.values() {
+    if crate::launch::record::retired_target(&issue.agent)
+      || issue
+        .pane
+        .as_deref()
+        .is_some_and(crate::launch::record::retired_target)
+    {
+      return Err(format!(
+        "unsupported retired worker state at {}; settle it with the pre-removal toolu binary",
+        crate::snapshot::issue_path(&issue.state_dir, &issue.key).display()
+      ));
+    }
+  }
   match fact {
-    Fact::Outage => outage(engine, false),
-    Fact::HcOutage => outage(engine, true),
+    Fact::Outage => outage(engine),
     Fact::Snapshot(body) => apply_snapshot(engine, &body),
     Fact::Event(line) => apply_event(engine, env, &line),
   }
 }
 
 fn apply_snapshot(engine: &mut Engine, body: &Value) -> Result<(), String> {
-  let hc = body.get("backend").and_then(Value::as_str) == Some("herdr-app");
-  if !hc {
-    note_herdr(&mut engine.world, true);
-    engine.save_watch()?;
-  }
+  note_herdr(&mut engine.world, true);
+  engine.save_watch()?;
   journal(engine, "herdr-snapshot", "", "session.snapshot");
   let rows = body.get("agents").and_then(Value::as_array);
   let keys: Vec<String> = engine.world.issues.keys().cloned().collect();
   for key in &keys {
-    if engine.world.issues.get(key).is_some_and(|issue| {
-      !issue.agent.starts_with("relay:") && issue.agent.starts_with("hc:") == hc
-    }) {
-      bind_or_gone(engine, key, rows);
-    }
+    bind_or_gone(engine, key, rows);
   }
   engine.pump().map(|_| ())
 }
@@ -86,21 +90,7 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
     issue.set_agent_status("unknown", now);
   }
   if running {
-    if engine
-      .world
-      .issues
-      .get(key)
-      .is_some_and(|issue| issue.agent.starts_with("hc:"))
-    {
-      push_attention(
-        &mut engine.world,
-        "needs-human",
-        key,
-        "hc terminal missing; inspect before recovery",
-      );
-    } else {
-      note_event(&mut engine.world, key, "gone");
-    }
+    note_event(&mut engine.world, key, "gone");
   }
 }
 
@@ -229,38 +219,17 @@ fn close_worktree(engine: &mut Engine, line: &Value) {
   }
 }
 
-fn outage(engine: &mut Engine, hc: bool) -> Result<(), String> {
-  if hc {
-    let now = engine.world.now_ms;
-    for issue in engine
-      .world
-      .issues
-      .values_mut()
-      .filter(|issue| issue.agent.starts_with("hc:"))
-    {
-      issue.set_agent_status("unknown", now);
-    }
-    return Ok(());
-  }
+fn outage(engine: &mut Engine) -> Result<(), String> {
   let first = engine.world.herdr_failures == 0;
   let running = engine
     .world
     .issues
     .iter()
-    .find(|(_, issue)| {
-      issue.stage == "running"
-        && !issue.agent.starts_with("hc:")
-        && !issue.agent.starts_with("relay:")
-    })
+    .find(|(_, issue)| issue.stage == "running")
     .map(|(key, _)| key.clone());
   note_herdr(&mut engine.world, false);
   let now = engine.world.now_ms;
-  for issue in engine
-    .world
-    .issues
-    .values_mut()
-    .filter(|issue| !issue.agent.starts_with("hc:") && !issue.agent.starts_with("relay:"))
-  {
+  for issue in engine.world.issues.values_mut() {
     issue.set_agent_status("unknown", now);
   }
   engine.save_watch()?;

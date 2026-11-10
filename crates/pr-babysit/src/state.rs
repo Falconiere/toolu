@@ -47,6 +47,63 @@ fn malformed(message: String) -> Failure {
   Failure::new("state_malformed", message).with("source", "state")
 }
 
+fn retired_group(group: &Value) -> bool {
+  let retired = [
+    "hcName",
+    "hcAddress",
+    "hcOwner",
+    "hcSession",
+    "hcCommand",
+    "hcSendStarted",
+    "hcSendConfirmed",
+    "relayRequest",
+    "remote",
+    "remoteImported",
+    "remoteExportStarted",
+  ]
+  .iter()
+  .any(|key| group.get(key).is_some_and(|value| !value.is_null()));
+  retired
+    || group
+      .get("agent")
+      .and_then(Value::as_str)
+      .is_some_and(|target| target.starts_with("hc:") || target.starts_with("relay:"))
+}
+
+/// Refuse retired worker state before reducing it or acting on its identities.
+pub(crate) fn require_local(path: &Path, value: &Value) -> Result<()> {
+  let has = |pointer| value.pointer(pointer).is_some_and(|value| !value.is_null());
+  let retired = value.get("relayEnabled") == Some(&Value::Bool(true))
+    || has("/relayMachine")
+    || value
+      .pointer("/herdrWorktree/multiplexer")
+      .and_then(Value::as_str)
+      == Some("herdr-app")
+    || has("/herdrWorktree/remote")
+    || has("/herdrWorktree/remoteRemoval")
+    || has("/fixer/remoteRemoval")
+    || value.get("remoteHistory").is_some_and(|history| {
+      !history.is_null() && history.as_array().is_none_or(|entries| !entries.is_empty())
+    })
+    || value
+      .pointer("/fixer/groups")
+      .and_then(Value::as_array)
+      .is_some_and(|groups| groups.iter().any(retired_group));
+  if retired {
+    return Err(
+      Failure::new(
+        "unsupported_worker_state",
+        format!(
+          "unsupported hc/relay worker state in {}; use a pre-removal Toolu binary to settle or recover it",
+          path.display()
+        ),
+      )
+      .with("source", "state"),
+    );
+  }
+  Ok(())
+}
+
 /// Read and check a version-2 state file the agent's write verbs act on.
 pub(crate) fn load(path: &Path) -> Result<Value> {
   let shown = path.display();
@@ -87,6 +144,7 @@ pub(crate) fn load(path: &Path) -> Result<Value> {
       value.get("number").unwrap_or(&Value::Null)
     )));
   }
+  require_local(path, &value)?;
   Ok(value)
 }
 

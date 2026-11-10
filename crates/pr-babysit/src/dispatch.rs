@@ -11,8 +11,6 @@ pub(crate) mod brief;
 pub(crate) mod cleanup;
 /// Persist and execute fixer dispatch operations.
 pub(crate) mod dispatcher;
-/// Manage owned herdr-core fixer terminals.
-pub(crate) mod hc;
 /// Call the legacy Herdr backend.
 pub(crate) mod herdr;
 /// Prepare and launch a fixer group.
@@ -23,15 +21,6 @@ pub(crate) mod names;
 pub(crate) mod outcome;
 /// Validate fixer route plans.
 pub(crate) mod plan;
-mod relay;
-/// Transfer bound remote fixer results.
-pub(crate) mod remote;
-/// Verify and retire remote worktrees.
-pub(crate) mod remote_finish;
-/// Rotate completed remote attempts safely.
-pub(crate) mod remote_round;
-/// Prepare committed remote fixer inputs.
-pub(crate) mod remote_setup;
 #[cfg(test)]
 #[path = "tests/sandbox_test.rs"]
 mod sandbox;

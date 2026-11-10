@@ -81,6 +81,35 @@ fn herdr_control() {
   assert_eq!(std::fs::read_to_string(&log).unwrap_or_default(), "");
 }
 
+#[test]
+fn local_only_prompt_text_is_not_a_retired_worker_address() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = Paths::at(tmp.path());
+  let herdr = crate::herdr_fixture::HerdrFixture::start();
+  let mut client = Client::new();
+  client.pin(toolu_mux::Backend::Herdr);
+  for text in [
+    "hc: remove the old integration",
+    "relay: preserve local messages",
+  ] {
+    client
+      .execute(&paths, &herdr.env(), &prompt(text))
+      .expect("local prompt");
+  }
+  let sent: Vec<_> = herdr
+    .calls()
+    .into_iter()
+    .map(|(_, params)| params["text"].clone())
+    .collect();
+  assert_eq!(
+    sent,
+    [
+      json!("hc: remove the old integration"),
+      json!("relay: preserve local messages")
+    ]
+  );
+}
+
 fn calls() -> [Call; 6] {
   crate::herdr_argv::sample_calls()
 }

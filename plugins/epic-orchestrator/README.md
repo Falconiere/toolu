@@ -14,8 +14,7 @@ issue's complexity and a routing table picks the model and effort per host.
 
 **Prerequisite:** the native `toolu` binary on `PATH`. See [docs/install.md](../../docs/install.md).
 
-Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies, in every worker host. Runtime: `toolu`, `gh`, and the selected worker backend: `herdr`, `hc`
-(`herdr-app`), or `tmux`. See [Herdr App and remote workers](../../docs/epic-orchestrator/README.md#herdr-app-and-remote-workers).
+Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies, in every worker host. Runtime: `toolu`, `gh`, and the selected worker backend: `herdr` or `tmux`. See [local workers](../../docs/epic-orchestrator/README.md#local-workers).
 
 Optional: `jev` with `TYPESAFE_API_KEY` (complexity routing; without it tiers
 come from a heuristic), Jira environment credentials (Jira epics), and `LINEAR_API_KEY`
@@ -133,7 +132,7 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | Verb | What it does |
 | --- | --- |
 | `engine [--replace] [--ensure]` | Resident process. One lock per resource root. |
-| `start <state-dir> [--safe] [--no-jev] [--no-babysit] [--relay]` | Register that epic directory, record the four flags in its `launch.json` (a start without a flag turns it off), and ensure the engine. `--safe` keeps host approval prompts on for its launches; `--no-jev` keeps routing and the coupling check heuristic; `--no-babysit` is the no-CI merge policy under [Merging](#merging); `--relay` sends implementation to the delegation relay's workers. |
+| `start <state-dir> [--safe] [--no-jev] [--no-babysit]` | Register that epic directory, record the three flags in its `launch.json` (a start without a flag turns it off), and ensure the engine. `--safe` keeps host approval prompts on for its launches; `--no-jev` keeps routing and the coupling check heuristic; `--no-babysit` is the no-CI merge policy under [Merging](#merging). |
 | `cleanup [--dry-run]` | Unregister locally complete or closed epics and confirmed missing state directories. Return removed/proposed and retained entries with reasons; keep active, pending, incomplete or uncertain state. Preserve files, history, worktrees, branches and tracker issues. Local machine only; no age threshold or tracker requests. Machine resources are `toolu gc`'s job (below). |
 | `status [epic]` | `engine`, `paused`, `epics`, `issues`, `attention`, GitHub budgets and PR check deadlines as one JSON document. |
 | `status --fleet` | This machine and every peer engine in `epic.peers` as the `/api/v1/fleet` document: per-machine state (`ok`, `unreachable`, `unauthorized`, `version-mismatch`), last seen, in-flight issues and hosts, and a summary. Peers are fetched by this command, never by the engine. |

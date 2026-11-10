@@ -88,3 +88,51 @@ fn writes_are_whole_documents_and_report_failure() {
   assert_eq!(err.code, "invalid_json");
   assert_eq!(err.extra["source"], "snapshot_out");
 }
+
+#[test]
+fn local_only_retired_fixer_state_is_refused_without_rewriting() {
+  let dir = tempfile::tempdir().unwrap();
+  for patch in [
+    json!({"herdrWorktree":{"multiplexer":"herdr-app", "path":"/work"}}),
+    json!({"herdrWorktree":{"remote":{"machine":"worker", "path":"/worker/task"}}}),
+    json!({"relayEnabled":true}),
+    json!({"fixer":{"groups":[{"seq":1,"status":"running","hcAddress":"t1"}]}}),
+    json!({"fixer":{"groups":[{"seq":1,"relayRequest":{"key":"attempt-1"}}]}}),
+    json!({"fixer":{"remoteRemoval":{"remote":{"machine":"worker"},"head":"commit"}}}),
+    json!({"remoteHistory":[{"machine":"worker","path":"/worker/task"}]}),
+  ] {
+    let mut body = json!({"version":2,"repo":"Falconiere/toolu","number":165});
+    body
+      .as_object_mut()
+      .unwrap()
+      .extend(patch.as_object().unwrap().clone());
+    let bytes = serde_json::to_vec_pretty(&body).unwrap();
+    let path = dir.path().join("retired.json");
+    std::fs::write(&path, &bytes).unwrap();
+    let result = load(&path);
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    let error = result.expect_err("retired fixer must not become a local fixer");
+    assert!(error.message.contains("unsupported"), "{error}");
+    assert!(
+      error.message.contains(&path.display().to_string()),
+      "{error}"
+    );
+    assert!(error.message.contains("pre-removal"), "{error}");
+  }
+}
+
+#[test]
+fn local_only_neutral_legacy_relay_metadata_keeps_local_state_readable() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = dir.path().join("local.json");
+  let body = json!({
+    "version":2, "repo":"Falconiere/toolu", "number":165,
+    "relayEnabled":false, "relayMachine":null, "remoteHistory":[],
+    "herdrWorktree":{"multiplexer":"herdr", "remote":null},
+    "fixer":{"remoteRemoval":null, "groups":[{"agent":"local-fixer", "status":"done"}]},
+  });
+  let bytes = serde_json::to_vec_pretty(&body).unwrap();
+  std::fs::write(&path, &bytes).unwrap();
+  assert_eq!(load(&path).unwrap(), body);
+  assert_eq!(std::fs::read(&path).unwrap(), bytes);
+}

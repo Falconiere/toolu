@@ -19,6 +19,7 @@ use crate::watch::{self, Watch};
 /// # Errors
 /// A snapshot or the journal cannot be read.
 pub(crate) fn load(paths: &Paths, now: SystemTime) -> Result<World, String> {
+  crate::launch::record::require_local_registry(paths)?;
   let now_ms = toolu_state::time::epoch_millis(now);
   let mut world = World::new(now_ms);
   apply_pause(&mut world, &read_value(&paths.pause())?);
@@ -124,6 +125,7 @@ fn load_epic(
   dir: &Path,
   stages: &mut BTreeMap<String, String>,
 ) -> Result<(), String> {
+  crate::launch::record::require_local_state(dir)?;
   let graph = read_value(&dir.join("graph.json"))?;
   if let Some(reference) = graph.pointer("/epic/ref").and_then(Value::as_str) {
     world
@@ -173,6 +175,7 @@ fn load_issue(
   let issue_path = dir.join("issues").join(format!("{key}.json"));
   let status_path = dir.join("status").join(format!("{key}.json"));
   let issue_doc = read_value(&issue_path)?;
+  crate::launch::record::require_local(&issue_doc, &issue_path)?;
   let status = read_value(&status_path)?;
   let issue = ensure_issue(world, key, epic, &state_dir);
   issue.blockers = crate::epics::blocker_keys(graph, &strings(item.get("open_blockers")));
@@ -237,6 +240,7 @@ fn rank(stage: &str) -> u8 {
 /// # Errors
 /// A new epic's graph or status file cannot be read.
 pub(crate) fn adopt_new_epics(world: &mut World, paths: &Paths) -> Result<(), String> {
+  crate::launch::record::require_local_registry(paths)?;
   let registry = read_value(&paths.registry())?;
   let Some(epics) = registry.get("epics").and_then(Value::as_array) else {
     return Ok(());

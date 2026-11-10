@@ -41,22 +41,7 @@ fn subscribe(
   signals: Signals,
   env: Env,
 ) -> thread::JoinHandle<()> {
-  thread::spawn(move || {
-    let hc_tx = tx.clone();
-    let hc_env = env.clone();
-    // Each subscriber consumes its wake-up; sharing it can lose a shutdown.
-    let hc_signals = Signals {
-      interrupt: Arc::new(Interrupt::default()),
-      ..signals.clone()
-    };
-    let hc_interrupt = Arc::clone(&hc_signals.interrupt);
-    let hc_shared = Arc::clone(&shared);
-    let hc = thread::spawn(move || crate::hc_source::run(&hc_tx, &hc_env, &hc_signals, &hc_shared));
-    run(&tx, &shared, &env, &signals);
-    signals.stop.store(true, Ordering::Relaxed);
-    hc_interrupt.trigger();
-    let _joined = hc.join();
-  })
+  thread::spawn(move || run(&tx, &shared, &env, &signals))
 }
 
 /// Subscribe until stopped. A quiet socket waits [`IDLE`]; a missing socket
