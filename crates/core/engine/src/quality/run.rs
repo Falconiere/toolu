@@ -81,7 +81,8 @@ struct FileFacts<'a> {
   gate: PathBuf,
 }
 
-fn gate_path(root: &Path, roots: &Roots) -> PathBuf {
+/// The project quality gate file shared by edit and shell checks.
+pub(super) fn gate_path(root: &Path, roots: &Roots) -> PathBuf {
   roots
     .project_state_root(None, Some(root))
     .unwrap_or_else(|| root.join(roots.project_dirname()).join("tmp"))
@@ -181,6 +182,7 @@ fn settle(
   state: &mut StateCtx,
   findings: QualityFindings,
 ) -> Decision {
+  super::shell::touch_marker(gate, &mut state.warnings);
   if findings.errors.is_empty() {
     clear_gate_file(state, gate, &file.path, rule.source());
     let advice = findings

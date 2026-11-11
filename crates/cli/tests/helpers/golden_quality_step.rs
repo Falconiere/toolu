@@ -202,6 +202,12 @@ fn project_state(sb: &Sandbox) -> Res<BTreeMap<String, String>> {
   }
   let mut state = BTreeMap::new();
   for path in paths {
+    if path
+      .file_name()
+      .is_some_and(|name| name == "quality-shell-mark")
+    {
+      continue;
+    }
     let body = String::from_utf8_lossy(&std::fs::read(&path)?).into_owned();
     let rel = path.strip_prefix(&sb.project)?.display().to_string();
     state.insert(rel, stamp.replace_all(&body, "<T>").into_owned());
