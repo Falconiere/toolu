@@ -62,7 +62,9 @@ fn run_command() -> Command {
       Arg::new("verify")
         .long("verify")
         .action(ArgAction::SetTrue)
-        .help("Re-run steps without paths and steps whose paths changed, and stamp the verified hash"),
+        .help(
+          "Re-run steps without paths and steps whose paths changed, and stamp the verified hash",
+        ),
     )
 }
 
