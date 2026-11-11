@@ -73,3 +73,19 @@ fn outline_text_caps_long_signatures_and_docs() {
   assert_eq!(found.doc.map(|doc| doc.chars().count()), Some(100));
   assert_eq!(cap("short", 10), "short");
 }
+
+#[test]
+fn outline_text_ignores_openers_inside_string_literals() {
+  let lines = [
+    "const NOTE: &str = \"a; b {c}\";",
+    "export const s = 'x;y';",
+  ];
+  assert_eq!(
+    at(&lines, 0, 0, "NOTE", Language::Rust).signature,
+    "const NOTE: &str = \"a; b {c}\""
+  );
+  assert_eq!(
+    at(&lines, 1, 1, "s", Language::Script).signature,
+    "export const s = 'x;y'"
+  );
+}

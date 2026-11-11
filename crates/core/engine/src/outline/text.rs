@@ -122,7 +122,7 @@ fn opener(lines: &[&str], from: usize, opens: impl Fn(&str) -> bool) -> Option<u
 /// The declaration from `start` up to its body opener, whitespace collapsed.
 fn signature(lines: &[&str], start: usize, end: usize, language: Language) -> (String, Cut) {
   let mut out = String::new();
-  let mut depth = 0_usize;
+  let mut state = Scan::default();
   let mut leading = true;
   for index in start..=end {
     let line = lines.get(index).map_or("", |line| line.trim());
@@ -133,7 +133,7 @@ fn signature(lines: &[&str], start: usize, end: usize, language: Language) -> (S
     if !line.is_empty() && !out.is_empty() && !out.ends_with(['(', '[']) {
       out.push(' ');
     }
-    if let Some(pos) = scan_line(line, language, &mut depth, &mut out) {
+    if let Some(pos) = scan_line(line, language, &mut state, &mut out) {
       return (finish(&out), Some((index, pos)));
     }
   }
@@ -147,27 +147,57 @@ fn finish(out: &str) -> String {
   tight.trim_end_matches(',').trim_end().to_owned()
 }
 
+/// Bracket depth and the open string literal while reading a signature.
+#[derive(Default)]
+struct Scan {
+  depth: usize,
+  quote: Option<char>,
+  escaped: bool,
+}
+
+impl Scan {
+  /// Whether `ch` lies inside, or closes, an open string literal.
+  fn in_string(&mut self, ch: char) -> bool {
+    let Some(quote) = self.quote else {
+      return false;
+    };
+    if self.escaped {
+      self.escaped = false;
+    } else if ch == '\\' {
+      self.escaped = true;
+    } else if ch == quote {
+      self.quote = None;
+    }
+    true
+  }
+}
+
 /// Append `line` to `out` until its body opener, returning the opener's byte offset.
-fn scan_line(line: &str, language: Language, depth: &mut usize, out: &mut String) -> Option<usize> {
+fn scan_line(line: &str, language: Language, state: &mut Scan, out: &mut String) -> Option<usize> {
   let python = language == Language::Python;
   for (pos, ch) in line.char_indices() {
+    if state.in_string(ch) {
+      out.push(ch);
+      continue;
+    }
     let rest = line.get(pos..).unwrap_or_default();
     if rest.starts_with("//") && !python || rest.starts_with('#') && python {
       return None;
     }
-    let opens_body = *depth == 0
-      && if python {
-        ch == ':'
-      } else {
-        ch == '{' || ch == ';'
-      };
-    if opens_body {
+    let opener = if python {
+      ch == ':'
+    } else {
+      ch == '{' || ch == ';'
+    };
+    if state.depth == 0 && opener {
       return Some(pos);
     }
     match ch {
-      '(' | '[' | '{' => *depth += 1,
+      '"' | '`' => state.quote = Some(ch),
+      '\'' if language != Language::Rust => state.quote = Some(ch),
+      '(' | '[' | '{' => state.depth += 1,
       ')' | ']' | '}' => {
-        *depth = depth.saturating_sub(1);
+        state.depth = state.depth.saturating_sub(1);
         let kept = out.trim_end().trim_end_matches(',').trim_end().len();
         out.truncate(kept);
       }
