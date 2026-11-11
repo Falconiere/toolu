@@ -31,7 +31,7 @@ pub fn enclosing(file: &FileOutline, line: usize) -> Option<&Item>; // innermost
 pub fn supported(path: &str) -> bool;                                // extension check, CLI only
 // toolu_engine::quality::scan
 pub fn binary(env: &Env, cwd: &Path) -> Option<PathBuf>;
-pub fn run_scan(env: &Env, cwd: &Path, rules: &str, paths: &[String]) -> Option<Result<String, ScanFailure>>;
+pub(crate) fn run_scan(env: &Env, cwd: &Path, rules: &str, paths: &[String]) -> Option<Result<String, ScanFailure>>;
 ```
 CLI: `toolu ast-grep outline <path>... [--json]` (global `--json`).
 

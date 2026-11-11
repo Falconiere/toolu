@@ -201,7 +201,7 @@ fn checked(output: Output) -> Result<String, ScanFailure> {
 ///
 /// `None` when ast-grep is absent from PATH; `Err` when it timed out, passed the
 /// 8 MiB output cap, exited nonzero, wrote stderr or could not start.
-pub fn run_scan(
+pub(crate) fn run_scan(
   env: &Env,
   cwd: &Path,
   rules: &str,
