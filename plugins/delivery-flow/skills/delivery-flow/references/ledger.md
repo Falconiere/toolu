@@ -13,6 +13,7 @@ Optional fields preserve the existing ledger contract:
 
 `paths` narrows iteration freshness to what the check actually reads. Declare
 all such paths: under-declaring can leave a stale green result. Before delivery,
-`toolu ledger run <plan_doc> --verify` judges every step against the whole
-branch diff, so
-scoped freshness never replaces final verification.
+`toolu ledger run <plan_doc> --verify` re-runs steps without paths and steps
+whose paths changed. Give the final full-gate step no `paths`, so one check
+always runs on the final diff; when every step declares paths, `--verify`
+re-runs them all.
