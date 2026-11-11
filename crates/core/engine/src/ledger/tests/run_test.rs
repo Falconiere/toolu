@@ -181,10 +181,9 @@ fn a_scoped_step_stays_fresh_until_its_paths_change_or_verify_runs() {
     "{}",
     skipped.stderr
   );
-  assert!(
-    run(&opts, &flags(None, true))
-      .stderr
-      .contains("s1: running check")
+  assert_eq!(
+    stable(&run(&opts, &flags(None, true)).stderr),
+    "plan-ledger: every step declares paths, so --verify re-runs them all; give the final full-gate step no paths\nplan-ledger: [1/1] s1: running check\nplan-ledger: [1/1] s1: green (Ns)\n"
   );
 }
 
@@ -241,4 +240,34 @@ fn bad_flags_plans_and_ledgers_fail_with_exit_2() {
     (2, format!("plan-ledger: corrupt prior ledger at {file}\n"))
   );
   assert_eq!(corrupt.stdout, "");
+}
+
+#[test]
+fn verify_carries_an_unchanged_scoped_step_until_its_check_text_changes() {
+  let repo = Repo::new().unwrap();
+  let steps = |check: &str| {
+    format!(
+      r#"[{{"id":"s1","title":"t","check":"{check}","paths":["docs"]}},{{"id":"s2","title":"u","check":"true"}}]"#
+    )
+  };
+  plan(&repo, &steps("true"));
+  let opts = repo.opts();
+  assert_eq!(run(&opts, &flags(None, true)).exit, 0);
+  repo.sh("echo y >> a.ts && git commit -qam edit").unwrap();
+  let carried = run(&opts, &flags(None, true));
+  assert_eq!(carried.exit, 0, "{}", carried.stderr);
+  assert_eq!(
+    stable(&carried.stderr),
+    "plan-ledger: [1/2] s1: fresh-green, skipped (--force re-runs)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: green (Ns)\n"
+  );
+  plan(&repo, &steps("echo edited"));
+  let edited = run(&opts, &flags(None, true));
+  assert_eq!(edited.exit, 0, "{}", edited.stderr);
+  assert!(
+    edited
+      .stderr
+      .starts_with("plan-ledger: [1/2] s1: running check\n"),
+    "{}",
+    edited.stderr
+  );
 }

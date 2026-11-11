@@ -47,7 +47,8 @@ pub struct RunFlags {
   pub activity: Option<String>,
   /// `--force`: re-run fresh steps.
   pub force: bool,
-  /// `--verify`: judge every step on the whole branch hash.
+  /// `--verify`: judge each step on the final diff and stamp the verified hash.
+  /// A scoped step keys on its scope hash only while some step has none.
   pub verify: bool,
 }
 

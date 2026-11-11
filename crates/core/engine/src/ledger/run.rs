@@ -61,6 +61,69 @@ fn pre_write(ctx: &RunContext<'_>) -> Result<(), CommandFail> {
   ctx.write_or_fail(&ledger, "plan-ledger: running pre-write failed")
 }
 
+/// Whether `--verify` may key scoped steps on their scope hash: only while some
+/// step has no scope hash, so that step's check always runs on the final diff.
+fn verify_scoped(ctx: &RunContext<'_>) -> bool {
+  ctx.flags.verify
+    && ctx
+      .steps
+      .iter()
+      .any(|step| !matches!(ctx.scope.get(&step_id(step)), Some(Ordered::String(sha)) if !sha.is_empty()))
+}
+
+/// Whether `prior` is fresh-green at the step's key and may be carried. Under
+/// `--verify` it also needs an unchanged `check`.
+fn is_carried(
+  ctx: &RunContext<'_>,
+  prior: &Ordered,
+  matches: &[&Ordered],
+  scope_now: &str,
+) -> bool {
+  let use_scope = !scope_now.is_empty() && (!ctx.flags.verify || verify_scoped(ctx));
+  let empty = string("");
+  let key_field = if use_scope { "scope_sha" } else { "diff_sha" };
+  let prior_key = raw(alt(get(prior, key_field).unwrap_or(&NULL), &empty));
+  let now_key = if use_scope {
+    scope_now
+  } else {
+    ctx.cur.as_str()
+  };
+  let green = raw(alt(get(prior, "status").unwrap_or(&NULL), &empty)) == "green";
+  let same_check = !ctx.flags.verify
+    || matches
+      .iter()
+      .all(|m| get(prior, "check").ok() == m.get("check"));
+  !ctx.flags.force
+    && ctx.flags.step().is_empty()
+    && green
+    && same_check
+    && !now_key.is_empty()
+    && prior_key == now_key
+}
+
+/// The carried entries; under `--verify` their `diff_sha` moves to the current branch hash.
+fn carry(
+  ctx: &RunContext<'_>,
+  prior: &Ordered,
+  matches: &[&Ordered],
+  id: &str,
+) -> Result<Vec<Ordered>, CommandFail> {
+  let stamp = |mut entry: Ordered| {
+    if ctx.flags.verify {
+      entry.set("diff_sha", string(&ctx.cur));
+    }
+    entry
+  };
+  let carried = matches
+    .iter()
+    .map(|m| carry_forward(prior, m).map(stamp))
+    .collect();
+  or_fail(
+    carried,
+    &format!("plan-ledger: failed to carry forward step {id}"),
+  )
+}
+
 /// A step already fresh-green at its key is carried forward; anything else runs.
 fn run_or_skip(
   ctx: &RunContext<'_>,
@@ -74,30 +137,11 @@ fn run_or_skip(
     Some(Ordered::String(sha)) => sha.clone(),
     _ => String::new(),
   };
-  let use_scope = !ctx.flags.verify && !scope_now.is_empty();
-  let empty = string("");
-  let key_field = if use_scope { "scope_sha" } else { "diff_sha" };
-  let prior_key = raw(alt(get(prior, key_field).unwrap_or(&NULL), &empty));
-  let now_key = if use_scope {
-    scope_now.clone()
-  } else {
-    ctx.cur.clone()
-  };
-  let green = raw(alt(get(prior, "status").unwrap_or(&NULL), &empty)) == "green";
-  if !ctx.flags.force
-    && ctx.flags.step().is_empty()
-    && green
-    && !now_key.is_empty()
-    && prior_key == now_key
-  {
+  if is_carried(ctx, prior, matches, &scope_now) {
     out.stderr(format!(
       "plan-ledger: {at} {id}: fresh-green, skipped (--force re-runs)"
     ));
-    let carried = matches.iter().map(|m| carry_forward(prior, m)).collect();
-    return or_fail(
-      carried,
-      &format!("plan-ledger: failed to carry forward step {id}"),
-    );
+    return carry(ctx, prior, matches, id);
   }
   run_step(
     ctx,
@@ -212,6 +256,9 @@ fn run_inner(
     out.stderr(line);
   }
   ctx.scope = scope.unwrap_or_else(|_| Ordered::Object(Vec::new()));
+  if flags.verify && flags.step().is_empty() && !ctx.steps.is_empty() && !verify_scoped(&ctx) {
+    out.stderr("plan-ledger: every step declares paths, so --verify re-runs them all; give the final full-gate step no paths".to_owned());
+  }
   let steps = run_steps(&ctx, out)?;
   finish(&ctx, out, steps)
 }
