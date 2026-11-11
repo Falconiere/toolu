@@ -16,6 +16,8 @@
 //!   pushed repository and branch);
 //! - `ledger` (#421): the delivery-flow plan ledger behind `toolu ledger`;
 //! - `resources` (#421): machine-wide leases and the managed job runner;
+//! - `outline` (#857): file items with ranges, signatures and docs from one
+//!   structural scan, behind `toolu ast-grep outline`;
 //! - `verdict`, `review_state` and `waiver` (#421): the four-gate verdict, the
 //!   push-review state checks and push waivers.
 //!
@@ -40,6 +42,7 @@ pub mod gc;
 pub mod ledger;
 /// Run only the MCP blocker for the standalone hook.
 pub mod mcp_hook;
+pub mod outline;
 pub mod quality;
 pub mod registry;
 pub mod resources;

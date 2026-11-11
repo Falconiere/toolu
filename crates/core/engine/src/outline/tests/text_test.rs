@@ -1,0 +1,75 @@
+use super::{cap, item};
+use crate::outline::parse::Match;
+use crate::outline::rules::Language;
+
+fn at(
+  lines: &[&str],
+  start: usize,
+  end: usize,
+  name: &str,
+  language: Language,
+) -> crate::outline::Item {
+  let found = Match {
+    file: "x".to_owned(),
+    start,
+    end,
+    name: name.to_owned(),
+  };
+  item(lines, &found, language)
+}
+
+#[test]
+fn outline_text_extends_over_a_multi_line_attribute() {
+  let lines = [
+    "",
+    "/// Run it.",
+    "#[cfg(any(",
+    "  unix,",
+    "))]",
+    "pub(crate) fn run() {}",
+  ];
+  let found = at(&lines, 5, 5, "run", Language::Rust);
+  assert_eq!((found.start, found.end), (2, 6));
+  assert_eq!(found.signature, "pub(crate) fn run()");
+  assert_eq!(found.doc.as_deref(), Some("Run it."));
+  assert!(found.public);
+}
+
+#[test]
+fn outline_text_stops_at_a_plain_comment_and_reads_one_line_jsdoc() {
+  let lines = [
+    "/* not a doc */",
+    "function a(): void {}",
+    "/** Says hi. */",
+    "export const b = 1;",
+  ];
+  let plain = at(&lines, 1, 1, "a", Language::Script);
+  assert_eq!((plain.start, plain.doc, plain.public), (2, None, false));
+  let documented = at(&lines, 3, 3, "b", Language::Script);
+  assert_eq!(
+    (documented.start, documented.doc.as_deref()),
+    (3, Some("Says hi."))
+  );
+  assert_eq!(documented.signature, "export const b = 1");
+}
+
+#[test]
+fn outline_text_drops_trailing_comments_and_keeps_python_private_names() {
+  let lines = ["def _hidden(a,  # first", "            b):", "    return a"];
+  let found = at(&lines, 0, 2, "_hidden", Language::Python);
+  assert_eq!(found.signature, "def _hidden(a, b)");
+  assert_eq!(found.doc, None);
+  assert!(!found.public);
+}
+
+#[test]
+fn outline_text_caps_long_signatures_and_docs() {
+  let long = format!("pub fn f({}) {{}}", "a: u8, ".repeat(40));
+  let doc = format!("/// {}", "word ".repeat(40));
+  let lines = [doc.as_str(), long.as_str()];
+  let found = at(&lines, 1, 1, "f", Language::Rust);
+  assert_eq!(found.signature.chars().count(), 160);
+  assert!(found.signature.ends_with("..."));
+  assert_eq!(found.doc.map(|doc| doc.chars().count()), Some(100));
+  assert_eq!(cap("short", 10), "short");
+}
