@@ -1,6 +1,6 @@
 {
   "name": "@toolu/plugins",
-  "version": "8.13.1",
+  "version": "9.0.0",
   "description": "Deprecated. Install the native toolu binary, then run toolu plugins install.",
   "keywords": [
     "claude-code",

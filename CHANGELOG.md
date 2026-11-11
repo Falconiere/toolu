@@ -6,6 +6,17 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [9.0.0](https://github.com/Falconiere/toolu/compare/v8.13.1...v9.0.0) (2026-11-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolu:** remove relay and hc worker support ([#851](https://github.com/Falconiere/toolu/issues/851))
+
+### Code Refactoring
+
+* **toolu:** remove relay and hc worker support ([#851](https://github.com/Falconiere/toolu/issues/851)) ([672fee4](https://github.com/Falconiere/toolu/commit/672fee42859c8d315467c3cd7744bdb0638e8293))
+
 ## [8.13.1](https://github.com/Falconiere/toolu/compare/v8.13.0...v8.13.1) (2026-11-10)
 
 
