@@ -1,5 +1,5 @@
-//! `cargo xtask gate`: every check of the quality bar, in a fixed order,
-//! stopping at the first failure. CI requires it; it is what runs locally.
+//! `cargo xtask gate`: every check of the quality bar, collecting cheap-step
+//! failures before the build steps. CI requires it; it is what runs locally.
 
 mod web;
 
@@ -29,7 +29,6 @@ const CLIPPY: &[&str] = &[
 pub(crate) const STEPS: &[&str] = &[
   "gate-change",
   "fmt",
-  "clippy",
   "guardrails",
   "layers",
   "reach",
@@ -38,22 +37,26 @@ pub(crate) const STEPS: &[&str] = &[
   "unused-pub",
   "hooks",
   "workflows",
-  "docs-cli",
-  "cli-compat",
   "jscpd",
   "web",
-  "rust-quality",
-  "tests",
-  "coverage",
-  "docs",
   "context-budget",
   "final-removal",
   "gate-coverage",
   "packaging",
   "ci-paths",
-  "bench",
   "pack",
+  "clippy",
+  "docs-cli",
+  "cli-compat",
+  "rust-quality",
+  "tests",
+  "coverage",
+  "docs",
+  "bench",
 ];
+
+/// The cheap prefix whose findings are reported together.
+pub(crate) const COLLECTED: usize = 19;
 
 /// Run every step, or the `--only` ones, in order.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
@@ -68,20 +71,33 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
     ));
   }
   let started = Instant::now();
-  for step in STEPS
+  let mut failed = Vec::new();
+  for (index, step) in STEPS
     .iter()
-    .filter(|step| options.only.is_empty() || options.only.iter().any(|only| only == *step))
+    .enumerate()
+    .filter(|(_, step)| options.only.is_empty() || options.only.iter().any(|only| only == *step))
   {
+    if index >= COLLECTED && !failed.is_empty() {
+      break;
+    }
     let clock = Instant::now();
     output::say(&format!("gate: {step}"));
     if step_run(step, options)? == Verdict::Findings {
       output::error(&format!("gate: {step} failed"));
-      return Ok(Verdict::Findings);
+      if index >= COLLECTED {
+        return Ok(Verdict::Findings);
+      }
+      failed.push(*step);
+      continue;
     }
     output::say(&format!(
       "gate: {step} ok ({:.1}s)",
       clock.elapsed().as_secs_f64()
     ));
+  }
+  if !failed.is_empty() {
+    output::error(&format!("gate: failed: {}", failed.join(", ")));
+    return Ok(Verdict::Findings);
   }
   output::say(&format!(
     "gate: ok ({:.1}s)",
@@ -175,7 +191,8 @@ fn status(
   })
 }
 
-fn cargo(root: &Path, args: &[&str]) -> Result<Verdict, String> {
+/// Run Cargo in the selected workspace root.
+pub(crate) fn cargo(root: &Path, args: &[&str]) -> Result<Verdict, String> {
   status(root, &cargo_bin(), args, &[])
 }
 
