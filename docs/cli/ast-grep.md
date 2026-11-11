@@ -18,6 +18,7 @@ Commands:
   files    List matching files
   scan     Scan with inline YAML or a rule file
   debug    Print a pattern's syntax tree
+  outline  Outline files and map directories
   savings  Summarize a byte-savings JSONL ledger
   help     Print this message or the help of the given subcommand(s)
 
@@ -103,6 +104,36 @@ Options:
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
+```
+
+## `toolu ast-grep outline`
+
+```text
+Print each file's items (functions, types, impls, classes, methods) with their line range, one-line signature and first doc sentence, nested by depth; a directory prints one line per supported file git lists (tracked or untracked, not ignored) with its public names. Reads Rust, TypeScript, JavaScript and Python. Caps: 150 items per file, 150 files per directory, 12 names per file, 12 KB of text. Exits 64 for a missing path or unsupported file, 1 when git or ast-grep fails, 69 without ast-grep.
+
+Usage: toolu ast-grep outline [OPTIONS] <PATH>...
+
+Arguments:
+  <PATH>...
+
+
+Options:
+      --json
+          Print exactly one JSON document on stdout
+
+  -q, --quiet
+          Drop the diagnostics of a successful run
+
+      --host <HOST>
+          The host to act for, instead of the detected one
+
+          [possible values: claude, codex, cursor, hermes, muse, opencode]
+
+      --config-dir <DIR>
+          Read the toolu config from DIR instead of the host's default
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```
 
 ## `toolu ast-grep savings`
