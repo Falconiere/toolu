@@ -37,8 +37,10 @@ reasons.
    Linux, the `lefthook.yml` pre-push hook, and what an agent runs locally.
    macOS runs the clippy and tests steps plus the shell-latency and
    launcher checks (the `rust-macos` matrix leg on `macos-15`), not the full gate.
-   The gate reports all failures from its first 19 cheap steps before starting the
-   build steps, which still stop at their first failure.
+   The gate collects findings from its first 19 steps, through clippy, and skips
+   the build steps if any have findings. Build steps stop at their first failure.
+   This also applies to the steps selected with `--only`; execution errors stop
+   the gate immediately.
 
 ## Why these limits
 
