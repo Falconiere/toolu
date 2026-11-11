@@ -26,3 +26,7 @@ pub struct QualityBinding<'a> {
   /// Rule used by the shared scan.
   pub rule: &'a dyn QualityRule,
 }
+
+#[cfg(test)]
+#[path = "quality/tests/shell_test.rs"]
+mod shell;

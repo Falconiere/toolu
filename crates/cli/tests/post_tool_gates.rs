@@ -56,6 +56,7 @@ impl Sandbox {
         .env("PATH", std::env::var("PATH")?)
         .env("HOME", self.root.join("home"))
         .env("CLAUDE_PROJECT_DIR", self.root.join("project"))
+        .env("TOOLU_HOST_OVERRIDE", "claude")
         .current_dir(self.root.join("project"))
         .write_stdin(stdin.to_string())
         .output()?,
@@ -161,4 +162,112 @@ fn an_unrecognized_gate_file_warns_on_stderr_and_is_replaced() {
     )
   );
   assert_eq!(sb.status().unwrap().as_deref(), Some("failing"));
+}
+
+#[test]
+fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
+  let sb = Sandbox::new().unwrap();
+  let project = sb.root.join("project");
+  std::fs::create_dir_all(project.join("src")).unwrap();
+  std::fs::write(
+    project.join("Cargo.toml"),
+    "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+  )
+  .unwrap();
+  std::fs::write(project.join("src/lib.rs"), "//! Demo.\nfn demo() {}\n").unwrap();
+  for args in [
+    &["add", "."][..],
+    &[
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "-qm",
+      "baseline",
+    ][..],
+  ] {
+    assert!(
+      Command::new("git")
+        .args(args)
+        .current_dir(&project)
+        .status()
+        .unwrap()
+        .success()
+    );
+  }
+  let plugin = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/rust-quality");
+  let registered = assert_cmd::Command::new(TOOLU)
+    .args([
+      "rust-quality",
+      "hook",
+      "register",
+      "--event",
+      "SessionStart",
+      "--plugin-root",
+    ])
+    .arg(plugin)
+    .env_clear()
+    .env("PATH", std::env::var("PATH").unwrap())
+    .env("HOME", sb.root.join("home"))
+    .env("CLAUDE_PROJECT_DIR", &project)
+    .env("TOOLU_HOST_OVERRIDE", "claude")
+    .current_dir(&project)
+    .write_stdin("{}")
+    .output()
+    .unwrap();
+  assert!(registered.status.success(), "{registered:?}");
+
+  let baseline = "touch baseline";
+  assert!(
+    Command::new("bash")
+      .args(["-c", baseline])
+      .current_dir(&project)
+      .status()
+      .unwrap()
+      .success()
+  );
+  let output = sb.ran(baseline, 0).unwrap();
+  assert!(output.status.success(), "{output:?}");
+
+  let edit = concat!(
+    "perl -pi -e 's/^fn demo/#[",
+    "allow(dead_code)]\\nfn demo/' src/lib.rs"
+  );
+  assert!(
+    Command::new("bash")
+      .args(["-c", edit])
+      .current_dir(&project)
+      .status()
+      .unwrap()
+      .success()
+  );
+  let output = sb.ran(edit, 0).unwrap();
+  let stdout = String::from_utf8(output.stdout).unwrap();
+  assert!(stdout.contains("QUALITY VIOLATION"), "{stdout}");
+  let gate: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
+  let entries = gate["entries"].as_object().unwrap();
+  let file = entries
+    .keys()
+    .find(|key| key.ends_with("src/lib.rs"))
+    .unwrap();
+  assert_eq!(entries[file]["source"], "rust-quality-hook");
+  let file = file.clone();
+  assert_eq!(gate["status"], "failing");
+
+  let remove = "rm src/lib.rs";
+  assert!(
+    Command::new("bash")
+      .args(["-c", remove])
+      .current_dir(&project)
+      .status()
+      .unwrap()
+      .success()
+  );
+  let output = sb.ran(remove, 0).unwrap();
+  assert!(output.status.success(), "{output:?}");
+  let gate: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
+  assert!(gate["entries"].get(&file).is_none(), "{gate}");
 }
