@@ -46,6 +46,15 @@ scan runner split → outline core module → CLI verb and map → agent text an
     "ac_refs": ["AC-5"],
     "paths": ["plugins/ast-grep/skills/ast-grep/SKILL.md", "plugins/toolu/agents/deep-explore.md", "docs/cli", "crates/ast-grep/src/cli.rs"],
     "input": "the built toolu's commands --json and --help output; boundary: a stale docs/cli page fails --check"
+  },
+  {
+    "id": "s5",
+    "title": "Full quality gate over the branch",
+    "check": "cargo xtask gate",
+    "depends_on": ["s1", "s2", "s3", "s4"],
+    "ac_refs": ["AC-4"],
+    "paths": ["crates", "plugins", "docs", "fixtures", "tooling", "Cargo.toml", "Cargo.lock"],
+    "input": "the whole workspace at the committed branch head"
   }
 ]
 ```
@@ -63,6 +72,9 @@ scan runner split → outline core module → CLI verb and map → agent text an
 - Quality unchanged: s1 checks.
 - Docs: s4 checks; `cargo xtask gate` as one `toolu epic job` before push.
 - Delivery: scoped commits, `toolu ledger run <plan> --verify`, code review, `toolu ledger verdict status` = ready, push, PR with `Closes Falconiere/toolu#857` / `Part of Falconiere/toolu#853`, then `toolu epic report babysit --pr N`.
+
+## Deviations
+- Added s5 (full gate) as the final step, as execution requires.
 
 ## Plan review
 - AC coverage checked by hand: AC-1, AC-2, AC-6 → s2; AC-3 → s3; AC-4 → s1; AC-5 → s4. No dangling refs.

@@ -5,6 +5,7 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
+use toolu_runtime::env::Env;
 use toolu_runtime::process::{Output, Spec, run};
 use toolu_runtime::registry::rule::RuleContext;
 
@@ -98,7 +99,7 @@ pub fn file_hits<S: std::hash::BuildHasher>(
   }
 }
 
-fn failed(stage: ScanStage, exit_code: i32, stderr: &str) -> AstGrepScan {
+fn failure(stage: ScanStage, exit_code: i32, stderr: &str) -> ScanFailure {
   let stderr_first = stderr
     .lines()
     .next()
@@ -106,16 +107,20 @@ fn failed(stage: ScanStage, exit_code: i32, stderr: &str) -> AstGrepScan {
     .chars()
     .take(200)
     .collect();
-  AstGrepScan::Failed(ScanFailure {
+  ScanFailure {
     stage,
     exit_code,
     stderr_first,
-  })
+  }
 }
 
-fn binary(ctx: &RuleContext<'_>) -> Option<PathBuf> {
-  let cwd = ctx.cwd.unwrap_or(ctx.project_root);
-  ctx.env.get("PATH")?.split(':').find_map(|part| {
+fn failed(stage: ScanStage, exit_code: i32, stderr: &str) -> AstGrepScan {
+  AstGrepScan::Failed(failure(stage, exit_code, stderr))
+}
+
+/// The executable `ast-grep` on `env`'s PATH, resolving relative entries against `cwd`.
+pub fn binary(env: &Env, cwd: &Path) -> Option<PathBuf> {
+  env.get("PATH")?.split(':').find_map(|part| {
     let dir = if part.is_empty() {
       Path::new(".")
     } else {
@@ -178,7 +183,7 @@ fn match_lines(value: &Value) -> Option<Vec<AstGrepHit>> {
     .collect()
 }
 
-fn parse(output: &Output) -> AstGrepScan {
+fn checked(output: Output) -> Result<String, ScanFailure> {
   if output.timed_out || output.truncated || output.exit_code != 0 || !output.stderr.is_empty() {
     let reason = if output.timed_out {
       "ast-grep timed out"
@@ -187,21 +192,53 @@ fn parse(output: &Output) -> AstGrepScan {
     } else {
       &output.stderr
     };
-    return failed(ScanStage::AstGrep, output.exit_code, reason);
+    return Err(failure(ScanStage::AstGrep, output.exit_code, reason));
   }
-  if output.stdout.trim().is_empty() {
+  Ok(output.stdout)
+}
+
+/// Run one `ast-grep scan --inline-rules <rules> --json <paths>` in `cwd`.
+///
+/// `None` when ast-grep is absent from PATH; `Err` when it timed out, passed the
+/// 8 MiB output cap, exited nonzero, wrote stderr or could not start.
+pub fn run_scan(
+  env: &Env,
+  cwd: &Path,
+  rules: &str,
+  paths: &[String],
+) -> Option<Result<String, ScanFailure>> {
+  let bin = binary(env, cwd)?;
+  let mut spec = Spec::new([
+    bin.to_string_lossy().into_owned(),
+    "scan".to_owned(),
+    "--inline-rules".to_owned(),
+    rules.to_owned(),
+    "--json".to_owned(),
+  ]);
+  spec.argv.extend(paths.iter().cloned());
+  spec.cwd = Some(cwd.to_path_buf());
+  spec.env = Some(env.clone());
+  spec.max_output_bytes = 8 * 1024 * 1024;
+  Some(match run(&spec) {
+    Ok(output) => checked(output),
+    Err(error) => Err(failure(ScanStage::AstGrep, 1, &format!("{error:?}"))),
+  })
+}
+
+fn parse(stdout: &str) -> AstGrepScan {
+  if stdout.trim().is_empty() {
     return AstGrepScan::Ok {
       hits: Vec::new(),
       empty: true,
     };
   }
-  let Ok(Value::Array(matches)) = serde_json::from_str::<Value>(&output.stdout) else {
-    return failed(ScanStage::Parse, output.exit_code, "");
+  let Ok(Value::Array(matches)) = serde_json::from_str::<Value>(stdout) else {
+    return failed(ScanStage::Parse, 0, "");
   };
   let mut hits = Vec::new();
   for one in &matches {
     let Some(lines) = match_lines(one) else {
-      return failed(ScanStage::Parse, output.exit_code, "");
+      return failed(ScanStage::Parse, 0, "");
     };
     hits.extend(lines);
   }
@@ -216,23 +253,11 @@ pub fn scan_inline(files: &[EditedFile], rules: &str, ctx: &RuleContext<'_>) -> 
       empty: true,
     };
   }
-  let Some(bin) = binary(ctx) else {
-    return AstGrepScan::Missing;
-  };
-  let mut spec = Spec::new([
-    bin.to_string_lossy().into_owned(),
-    "scan".to_owned(),
-    "--inline-rules".to_owned(),
-    rules.to_owned(),
-    "--json".to_owned(),
-  ]);
-  spec.argv.extend(files.iter().map(|file| file.path.clone()));
-  spec.cwd = Some(ctx.cwd.unwrap_or(ctx.project_root).to_path_buf());
-  spec.env = Some(ctx.env.clone());
-  spec.max_output_bytes = 8 * 1024 * 1024;
-  match run(&spec) {
-    Ok(output) => parse(&output),
-    Err(error) => failed(ScanStage::AstGrep, 1, &format!("{error:?}")),
+  let paths: Vec<String> = files.iter().map(|file| file.path.clone()).collect();
+  match run_scan(ctx.env, ctx.cwd.unwrap_or(ctx.project_root), rules, &paths) {
+    None => AstGrepScan::Missing,
+    Some(Ok(stdout)) => parse(&stdout),
+    Some(Err(failure)) => AstGrepScan::Failed(failure),
   }
 }
 
