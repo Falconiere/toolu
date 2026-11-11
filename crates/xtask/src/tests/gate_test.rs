@@ -1,6 +1,7 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Output};
 
-use super::{STEPS, require, run, status};
+use super::{COLLECTED, STEPS, require, run, status};
 use crate::Verdict;
 use crate::options::Options;
 
@@ -19,7 +20,6 @@ fn every_step_has_an_inventory_free_name_and_unknown_steps_are_refused() {
     &[
       "gate-change",
       "fmt",
-      "clippy",
       "guardrails",
       "layers",
       "reach",
@@ -28,23 +28,26 @@ fn every_step_has_an_inventory_free_name_and_unknown_steps_are_refused() {
       "unused-pub",
       "hooks",
       "workflows",
-      "docs-cli",
-      "cli-compat",
       "jscpd",
       "web",
-      "rust-quality",
-      "tests",
-      "coverage",
-      "docs",
       "context-budget",
       "final-removal",
       "gate-coverage",
       "packaging",
       "ci-paths",
-      "bench",
       "pack",
+      "clippy",
+      "docs-cli",
+      "cli-compat",
+      "rust-quality",
+      "tests",
+      "coverage",
+      "docs",
+      "bench",
     ]
   );
+  assert_eq!(STEPS.len(), 26);
+  assert_eq!(STEPS[COLLECTED - 1], "clippy");
   let err = run(&options(PathBuf::from("."), &["nope"])).unwrap_err();
   assert!(
     err.starts_with("unknown gate step nope; steps: gate-change, fmt"),
@@ -81,11 +84,56 @@ fn bench_step_runs_the_deterministic_tier() {
   assert!(err.contains("queries file not found"), "{err}");
 }
 
+fn invalid_cargo_project(root: &Path) {
+  std::fs::create_dir(root.join("src")).unwrap();
+  std::fs::write(
+    root.join("Cargo.toml"),
+    "[package]\nname = \"gate-invalid\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+  )
+  .unwrap();
+  std::fs::write(root.join("src/main.rs"), "fn main( {\n").unwrap();
+}
+
+fn gate_process(root: &Path, only: &[&str]) -> Output {
+  let repo = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."));
+  let mut command = Command::new("cargo");
+  command
+    .args(["run", "--quiet", "-p", "xtask", "--", "gate", "--root"])
+    .arg(root)
+    .current_dir(repo);
+  for step in only {
+    command.args(["--only", step]);
+  }
+  command.output().unwrap()
+}
+
 #[test]
-fn a_failing_step_stops_the_gate() {
+fn collected_failures_are_all_reported_before_build_steps() {
   let dir = tempfile::tempdir().unwrap();
-  let verdict = run(&options(dir.path().to_path_buf(), &["fmt", "clippy"])).unwrap();
-  assert_eq!(verdict, Verdict::Findings);
+  invalid_cargo_project(dir.path());
+  let output = gate_process(dir.path(), &["fmt", "clippy", "docs"]);
+  let stdout = String::from_utf8_lossy(&output.stdout);
+  let stderr = String::from_utf8_lossy(&output.stderr);
+  assert_eq!(output.status.code(), Some(1), "{stdout}\n{stderr}");
+  assert!(stdout.contains("gate: fmt"), "{stdout}");
+  assert!(stdout.contains("gate: clippy"), "{stdout}");
+  assert!(!stdout.contains("gate: docs"), "{stdout}");
+  assert!(stderr.contains("gate: fmt failed"), "{stderr}");
+  assert!(stderr.contains("gate: clippy failed"), "{stderr}");
+  assert!(stderr.contains("gate: failed: fmt, clippy"), "{stderr}");
+}
+
+#[test]
+fn build_steps_still_stop_at_the_first_failure() {
+  let dir = tempfile::tempdir().unwrap();
+  invalid_cargo_project(dir.path());
+  let output = gate_process(dir.path(), &["docs", "bench"]);
+  let stdout = String::from_utf8_lossy(&output.stdout);
+  let stderr = String::from_utf8_lossy(&output.stderr);
+  assert_eq!(output.status.code(), Some(1), "{stdout}\n{stderr}");
+  assert!(stdout.contains("gate: docs"), "{stdout}");
+  assert!(!stdout.contains("gate: bench"), "{stdout}");
+  assert!(stderr.contains("gate: docs failed"), "{stderr}");
 }
 
 #[test]
