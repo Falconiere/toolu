@@ -3,6 +3,7 @@
 use std::error::Error;
 use std::fs;
 use std::os::unix::fs::symlink;
+use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
@@ -158,7 +159,6 @@ fn outlines_reuse_content_across_linked_worktrees_and_rescan_edits() {
     on_path("ast-grep").unwrap().display()
   );
   fs::write(bin.join("ast-grep"), script).unwrap();
-  use std::os::unix::fs::PermissionsExt as _;
   fs::set_permissions(bin.join("ast-grep"), fs::Permissions::from_mode(0o755)).unwrap();
   for base in [root, root, &other] {
     let out = outline(base, &["src/a.rs"], Some(&bin)).unwrap();
