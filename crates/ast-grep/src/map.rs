@@ -1,6 +1,7 @@
 //! `toolu ast-grep outline <path>...`: a file prints its items with ranges, a
 //! directory prints one line per file with its public names.
 
+use std::collections::HashMap;
 use std::path::Path;
 
 mod large;
@@ -243,7 +244,11 @@ fn dir_json(dir: &str, files: &[Listed<'_>], omitted: usize) -> Value {
 }
 
 fn render(targets: &[Target], outlines: &[FileOutline], json_output: bool, cwd: &Path) -> String {
-  let find = |path: &str| outlines.iter().find(|file| file.path == path);
+  let by_path: HashMap<&str, &FileOutline> = outlines
+    .iter()
+    .map(|file| (file.path.as_str(), file))
+    .collect();
+  let find = |path: &str| by_path.get(path).copied();
   let mut texts = Vec::with_capacity(targets.len());
   let mut docs = Vec::with_capacity(targets.len());
   for target in targets {

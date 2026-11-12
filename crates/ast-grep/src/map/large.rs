@@ -13,30 +13,50 @@ fn module_doc(cwd: &Path, files: &[Listed<'_>]) -> Option<String> {
     for (path, _) in files {
       if Path::new(path).file_name().is_some_and(|part| part == name) {
         let source = std::fs::read_to_string(cwd.join(path)).ok()?;
-        let line = source.lines().find(|line| !line.trim().is_empty())?.trim();
-        let text = line
-          .strip_prefix("//!")
-          .or_else(|| line.strip_prefix("/**"))
-          .or_else(|| line.strip_prefix("\"\"\""))
-          .or_else(|| line.strip_prefix("'''"))?;
-        let text = text
-          .trim()
-          .trim_end_matches("*/")
-          .trim_end_matches("\"\"\"")
-          .trim_end_matches("'''")
-          .trim();
-        return Some(
-          text
-            .split_once(". ")
-            .map_or(text, |(first, _)| first)
-            .trim_end_matches('.')
-            .to_owned()
-            + ".",
-        );
+        return first_sentence(&source);
       }
     }
   }
   None
+}
+
+fn first_sentence(source: &str) -> Option<String> {
+  let mut lines = source
+    .lines()
+    .map(str::trim)
+    .filter(|line| !line.is_empty());
+  let line = lines.next()?;
+  let text = line
+    .strip_prefix("//!")
+    .or_else(|| line.strip_prefix("/**"))
+    .or_else(|| line.strip_prefix("\"\"\""))
+    .or_else(|| line.strip_prefix("'''"))?;
+  let text = if text.trim().is_empty() {
+    let next = lines.next()?;
+    if line.starts_with("//!") {
+      next.strip_prefix("//!")?
+    } else if line.starts_with("/**") {
+      next.strip_prefix('*')?
+    } else {
+      next
+    }
+  } else {
+    text
+  };
+  let text = text
+    .trim()
+    .trim_end_matches("*/")
+    .trim_end_matches("\"\"\"")
+    .trim_end_matches("'''")
+    .trim();
+  (!text.is_empty()).then(|| {
+    text
+      .split_once(". ")
+      .map_or(text, |(first, _)| first)
+      .trim_end_matches('.')
+      .to_owned()
+      + "."
+  })
 }
 
 fn directory_rows<'a>(files: &'a [Listed<'a>]) -> BTreeMap<String, Vec<Listed<'a>>> {
@@ -44,6 +64,7 @@ fn directory_rows<'a>(files: &'a [Listed<'a>]) -> BTreeMap<String, Vec<Listed<'a
   for &(path, file) in files {
     let dir = Path::new(path)
       .parent()
+      .filter(|parent| !parent.as_os_str().is_empty())
       .unwrap_or(Path::new("."))
       .to_string_lossy()
       .into_owned();
