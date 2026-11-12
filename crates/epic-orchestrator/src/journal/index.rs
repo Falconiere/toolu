@@ -1,8 +1,8 @@
 //! Rebuildable sequence cache for the daily JSONL log.
 //!
 //! `sequence.index` is the committed summary. `sequence.offsets` is an ASCII
-//! table of each complete line. The JSONL record is synced before either
-//! update. A missing, stale, or corrupt cache is rebuilt from the log.
+//! table of each complete line. Only the JSONL record is synced; a missing,
+//! stale, or corrupt cache is rebuilt from the log.
 
 use std::cell::RefCell;
 use std::fs::File;
@@ -190,20 +190,18 @@ fn store(dir: &Path, summary: &Summary) -> Result<(), String> {
   let path = summary_path(dir);
   let tmp = dir.join(format!(".sequence.index.{}.tmp", std::process::id()));
   let text = serde_json::to_string(summary).map_err(|err| err.to_string())?;
-  write_synced(&tmp, text.as_bytes())?;
-  std::fs::rename(&tmp, &path).map_err(|err| err.to_string())?;
-  flush(&File::open(dir).map_err(|err| err.to_string())?)
+  write_cache(&tmp, text.as_bytes())?;
+  std::fs::rename(&tmp, &path).map_err(|err| err.to_string())
 }
 
-fn write_synced(path: &Path, bytes: &[u8]) -> Result<(), String> {
+fn write_cache(path: &Path, bytes: &[u8]) -> Result<(), String> {
   let mut file = std::fs::OpenOptions::new()
     .write(true)
     .create(true)
     .truncate(true)
     .open(path)
     .map_err(|err| err.to_string())?;
-  file.write_all(bytes).map_err(|err| err.to_string())?;
-  flush(&file)
+  file.write_all(bytes).map_err(|err| err.to_string())
 }
 
 fn len_of(path: &Path) -> Result<u64, String> {
@@ -234,7 +232,6 @@ fn publish(
       pos: placed.start,
     },
   )?;
-  flush(&file)?;
   summary.records = summary.records.saturating_add(1);
   summary.last = record.seq;
   if summary.oldest.is_none() {

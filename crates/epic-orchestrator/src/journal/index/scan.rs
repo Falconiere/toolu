@@ -209,5 +209,5 @@ fn write_offsets(dir: &Path, hits: &[Off]) -> Result<(), String> {
   for hit in hits {
     write_off(&mut file, hit)?;
   }
-  super::flush(&file)
+  Ok(())
 }
