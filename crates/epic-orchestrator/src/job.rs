@@ -31,22 +31,46 @@ pub(crate) fn run_job_with(
   bound: Duration,
   poll: Duration,
 ) -> Outcome {
-  let binding = match resource_binding(cwd) {
-    Ok(Some(binding)) => binding,
-    Ok(None) => {
-      return Outcome::failed(
-        Exit::Failure,
-        "worktree has no epic resource binding".to_owned(),
-      );
-    }
-    Err(err) => return Outcome::failed(Exit::Failure, err),
+  run_job_observed(argv, cwd, bound, poll, &mut || {}).0
+}
+
+/// The bound worktree for `cwd`, or the verb's failure outcome.
+///
+/// # Errors
+/// The binding is missing or invalid, or `cwd` does not exist (in the outcome).
+pub(crate) fn binding_of(cwd: &Path) -> Result<ResourceBinding, Outcome> {
+  match resource_binding(cwd) {
+    Ok(Some(binding)) => Ok(binding),
+    Ok(None) => Err(Outcome::failed(
+      Exit::Failure,
+      "worktree has no epic resource binding".to_owned(),
+    )),
+    Err(err) => Err(Outcome::failed(Exit::Failure, err)),
+  }
+}
+
+/// [`run_job_with`], calling `on_attempt` at every admission attempt and
+/// returning the command's exit code when it ran.
+pub(crate) fn run_job_observed(
+  argv: &[String],
+  cwd: &Path,
+  bound: Duration,
+  poll: Duration,
+  on_attempt: &mut dyn FnMut(),
+) -> (Outcome, Option<i32>) {
+  let binding = match binding_of(cwd) {
+    Ok(binding) => binding,
+    Err(outcome) => return (outcome, None),
   };
   let mut notes: Vec<String> = Vec::new();
   let mut observe = |admission: Admission<'_>| {
     let note = match admission {
-      Admission::Attempt => admit(&binding, argv)
-        .err()
-        .map(|journal| format!("job not journaled: {journal}")),
+      Admission::Attempt => {
+        on_attempt();
+        admit(&binding, argv)
+          .err()
+          .map(|journal| format!("job not journaled: {journal}"))
+      }
       Admission::Refused(reason) => journal_refusal(&binding, reason),
     };
     notes.extend(note);
@@ -60,7 +84,8 @@ pub(crate) fn run_job_with(
   spec.timeout = Duration::from_secs(3600);
   spec.cwd = Some(binding.worktree.clone());
   let result = run_managed_job_waiting(argv, &binding, &spec, &mut wait);
-  outcome(&binding, argv, result, notes.last())
+  let code = result.as_ref().ok().map(|output| output.exit_code);
+  (outcome(&binding, argv, result, notes.last()), code)
 }
 
 /// The verb's outcome: bounded stdout, the failure tail, or the runner's

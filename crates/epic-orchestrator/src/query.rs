@@ -280,6 +280,12 @@ pub(crate) fn job(matches: &ArgMatches) -> Outcome {
   } else {
     JOB_WAIT_BOUND
   };
+  if let Some(id) = text(matches, "result") {
+    return crate::job_detach::run_result(id, &argv, &cwd, bound, JOB_WAIT_POLL);
+  }
+  if matches.get_flag("detach") {
+    return crate::job_detach::run_detached(&argv, &cwd, bound, JOB_WAIT_POLL);
+  }
   run_job_with(&argv, &cwd, bound, JOB_WAIT_POLL)
 }
 

@@ -62,6 +62,20 @@ pub(crate) fn job_command() -> Command {
       "Refuse at once when capacity or pressure holds instead of waiting",
     ))
     .arg(
+      flag(
+        "detach",
+        "Print a job id and run the command detached, recording its result",
+      )
+      .conflicts_with("result"),
+    )
+    .arg(
+      Arg::new("result")
+        .long("result")
+        .value_name("ID")
+        .hide(true)
+        .help("Record the outcome in job result ID (detached copy)"),
+    )
+    .arg(
       Arg::new("argv")
         .value_name("ARGV")
         .required(true)

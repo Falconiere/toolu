@@ -91,6 +91,7 @@ mod http_secrets;
 mod http_stream;
 mod jira_cli;
 mod job;
+mod job_detach;
 mod journal;
 mod launch;
 #[cfg(test)]
