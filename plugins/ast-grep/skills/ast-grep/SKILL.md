@@ -6,7 +6,7 @@ description: "ALWAYS ACTIVE — Structural code search and rewrite protocol. You
 # ast-grep Structural Search & Rewrite Protocol
 
 You have ast-grep (tree-sitter AST pattern matcher + rewriter) via the `ast-grep` / `sg` CLI.
-`toolu ast-grep search|files|scan|debug` wraps the external binary when you need inferred language or a fixed no-color output; `toolu ast-grep savings <ledger.jsonl>` summarizes session accounting.
+`toolu ast-grep search|files|scan|debug` wraps the external binary when you need inferred language or a fixed no-color output; `toolu ast-grep outline <path>...` lists a file's items with line ranges or maps a directory; `toolu ast-grep savings <ledger.jsonl>` summarizes session accounting.
 This protocol is **MANDATORY and ALWAYS ACTIVE**.
 
 ## Hard Constraints
@@ -89,6 +89,12 @@ Examples:
 | same var assigned to itself | `$X = $X` |
 | arrow fn with single body expr | `($$$) => $BODY` |
 | catch-all `try` no catch | `try { $$$ } finally { $$$ }` |
+
+## Workflow — Outline Before Reading
+
+1. Outline first: `toolu ast-grep outline src/lib.rs src/parser/` prints each item's `start-end` range, one-line signature and first doc sentence (Rust, TypeScript, JavaScript, Python); a directory prints one line per file with its public names.
+2. Then read only the printed ranges (Read with offset/limit, or `sed -n 'START,ENDp'`), not the whole file.
+3. `--json` prints one document for scripts. Without ast-grep on PATH it exits 69 and prints the install command.
 
 ## Workflow — Search
 

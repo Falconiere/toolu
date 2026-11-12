@@ -3,6 +3,7 @@
 mod cli;
 
 mod launched;
+mod map;
 mod nudge;
 mod register;
 mod report;

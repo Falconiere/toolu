@@ -38,7 +38,7 @@ fn external(name: &'static str, about: &'static str) -> Command {
     )
 }
 
-/// Search, list matching files, scan a rule, debug a pattern, or report bytes.
+/// Search, list matching files, scan a rule, debug a pattern, outline files, or report bytes.
 pub fn command() -> Command {
   Command::new("ast-grep")
     .about("Structural code search and rewrite with ast-grep")
@@ -47,6 +47,24 @@ pub fn command() -> Command {
     .subcommand(external("files", "List matching files"))
     .subcommand(external("scan", "Scan with inline YAML or a rule file"))
     .subcommand(external("debug", "Print a pattern's syntax tree"))
+    .subcommand(
+      Command::new("outline")
+        .about("Outline files and map directories")
+        .long_about(
+          "Print each file's items (functions, types, impls, classes, methods) with their line range, \
+one-line signature and first doc sentence, nested by depth; a directory prints one line per \
+supported file git lists (tracked or untracked, not ignored) with its public names. Reads Rust, \
+TypeScript, JavaScript and Python. Caps: 150 items per file, 150 files per directory, 12 names \
+per file, 12 KB of text. Exits 64 for a missing path or unsupported file, 1 when git or \
+ast-grep fails, 69 without ast-grep.",
+        )
+        .arg(
+          Arg::new("paths")
+            .value_name("PATH")
+            .num_args(1..)
+            .required(true),
+        ),
+    )
     .subcommand(
       Command::new("savings")
         .about("Summarize a byte-savings JSONL ledger")
@@ -219,6 +237,7 @@ fn savings(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
 pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   match matches.subcommand() {
     Some((verb @ ("search" | "files" | "scan" | "debug"), args)) => execute(verb, args, ctx),
+    Some(("outline", args)) => crate::map::run(args, ctx),
     Some(("savings", args)) => savings(args, ctx),
     _ => Outcome::failed(Exit::Usage, "toolu ast-grep: unknown verb".to_owned()),
   }

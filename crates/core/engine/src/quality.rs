@@ -12,9 +12,10 @@ pub use plugin::{QualityPlugin, check_toolu, publish};
 pub(crate) use run::QualityBatch;
 pub use run::{QualityFindings, QualityOutcome, QualityRule, run_quality, run_quality_event};
 pub use scan::{
-  AstGrepHit, AstGrepScan, ScanFailure, ScanStage, file_hits, partition_hits, scan_inline,
+  AstGrepHit, AstGrepScan, ScanFailure, ScanStage, binary, file_hits, partition_hits, scan_inline,
   scan_rule_dirs,
 };
+pub(crate) use scan::{OUTPUT_LIMIT, run_scan};
 
 /// A compiled quality rule paired with the manifest that enables it.
 pub struct QualityBinding<'a> {

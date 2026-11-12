@@ -10,6 +10,9 @@ model: sonnet
 Answer one assigned codebase question. Do not edit or delegate. Follow session
 memory requirements, then locate the owning files.
 
+- Unfamiliar file or directory: `toolu ast-grep outline <path>...` first. It
+  prints each item's line range and signature (a directory prints one line per
+  file); then read only the printed ranges instead of paging through files.
 - Code shape (calls, signatures, impls): `ast-grep run --pattern … --lang <lang>`
   first. Inspect the AST or broaden a failed pattern before concluding absence.
 - Exact literals: Grep; filenames: Glob.
