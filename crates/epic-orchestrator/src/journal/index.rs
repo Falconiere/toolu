@@ -28,6 +28,11 @@ thread_local! {
   pub(crate) static SINK: RefCell<Option<Arc<AtomicU64>>> = const { RefCell::new(None) };
 }
 
+thread_local! {
+  /// Per-thread file flush counter. Absent unless a test installs one.
+  static FLUSH_SINK: RefCell<Option<Arc<AtomicU64>>> = const { RefCell::new(None) };
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 struct Day {
   #[serde(rename = "day")]
@@ -68,6 +73,15 @@ fn note(bytes: usize) {
       let _prev = sink.fetch_add(count, Ordering::Relaxed);
     }
   });
+}
+
+fn flush(file: &File) -> Result<(), String> {
+  FLUSH_SINK.with(|slot| {
+    if let Some(sink) = slot.borrow().as_ref() {
+      let _prev = sink.fetch_add(1, Ordering::Relaxed);
+    }
+  });
+  file.sync_all().map_err(|err| err.to_string())
 }
 
 fn as_u64(value: usize) -> Result<u64, String> {
@@ -178,9 +192,7 @@ fn store(dir: &Path, summary: &Summary) -> Result<(), String> {
   let text = serde_json::to_string(summary).map_err(|err| err.to_string())?;
   write_synced(&tmp, text.as_bytes())?;
   std::fs::rename(&tmp, &path).map_err(|err| err.to_string())?;
-  File::open(dir)
-    .and_then(|file| file.sync_all())
-    .map_err(|err| err.to_string())
+  flush(&File::open(dir).map_err(|err| err.to_string())?)
 }
 
 fn write_synced(path: &Path, bytes: &[u8]) -> Result<(), String> {
@@ -191,7 +203,7 @@ fn write_synced(path: &Path, bytes: &[u8]) -> Result<(), String> {
     .open(path)
     .map_err(|err| err.to_string())?;
   file.write_all(bytes).map_err(|err| err.to_string())?;
-  file.sync_all().map_err(|err| err.to_string())
+  flush(&file)
 }
 
 fn len_of(path: &Path) -> Result<u64, String> {
@@ -222,7 +234,7 @@ fn publish(
       pos: placed.start,
     },
   )?;
-  file.sync_all().map_err(|err| err.to_string())?;
+  flush(&file)?;
   summary.records = summary.records.saturating_add(1);
   summary.last = record.seq;
   if summary.oldest.is_none() {
