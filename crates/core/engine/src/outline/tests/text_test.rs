@@ -89,3 +89,17 @@ fn outline_text_ignores_openers_inside_string_literals() {
     "export const s = 'x;y'"
   );
 }
+
+#[test]
+fn outline_text_does_not_climb_past_a_call_into_an_earlier_decorator() {
+  let lines = [
+    "@dec",
+    "def a(): pass",
+    "x = foo(1)",
+    "def b():",
+    "    pass",
+  ];
+  assert_eq!(at(&lines, 3, 4, "b", Language::Python).start, 4);
+  let multi = ["@route(", "    \"/x\",", ")", "def c():", "    pass"];
+  assert_eq!(at(&multi, 3, 4, "c", Language::Python).start, 1);
+}

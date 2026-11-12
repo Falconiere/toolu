@@ -59,3 +59,13 @@ fn outline_map_truncates_text_at_a_whole_line() {
   assert!(short.ends_with(&format!("{}\n{TRUNCATED}", "x".repeat(99))));
   assert_eq!(capped("small".to_owned()), "small");
 }
+
+#[test]
+fn outline_map_truncates_inside_multi_byte_text() {
+  // 102-byte lines put byte 12,238, the first past the room, inside an `é`.
+  let line = format!("x{}", "é".repeat(50));
+  let short = capped(vec![line; 200].join("\n"));
+  assert!(short.starts_with("xé"));
+  assert!(short.len() <= MAX_TEXT);
+  assert!(short.ends_with(TRUNCATED));
+}

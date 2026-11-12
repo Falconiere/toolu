@@ -160,7 +160,7 @@ fn capped(text: String) -> String {
   }
   let room = MAX_TEXT - TRUNCATED.len() - 1;
   let cut = text
-    .get(..=room)
+    .get(..text.floor_char_boundary(room + 1))
     .and_then(|head| head.rfind('\n'))
     .unwrap_or(0);
   format!("{}\n{TRUNCATED}", text.get(..cut).unwrap_or_default())

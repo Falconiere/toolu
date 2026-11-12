@@ -79,9 +79,9 @@ fn extend(lines: &[&str], start: usize, language: Language) -> usize {
     } else if above.ends_with("*/") {
       block_opener(lines, index)
     } else if language == Language::Rust && above.ends_with(']') {
-      opener(lines, index, |line| line.starts_with("#["))
+      opener(lines, index, "#[")
     } else if language != Language::Rust && above.ends_with(')') {
-      opener(lines, index, |line| line.starts_with('@'))
+      opener(lines, index, "@")
     } else {
       None
     };
@@ -105,14 +105,23 @@ fn block_opener(lines: &[&str], from: usize) -> Option<usize> {
   None
 }
 
-/// The nearest line at or above `from` that `opens` a multi-line attribute, before any blank line.
-fn opener(lines: &[&str], from: usize, opens: impl Fn(&str) -> bool) -> Option<usize> {
+/// The line where the brackets that close on `from` open, when it starts with
+/// `prefix`: the first line of a multi-line attribute or decorator.
+fn opener(lines: &[&str], from: usize, prefix: &str) -> Option<usize> {
+  let mut unclosed = 0_i64;
   for index in (0..=from).rev() {
     let line = lines.get(index)?.trim();
-    if opens(line) {
-      return Some(index);
+    for ch in line.chars() {
+      match ch {
+        ')' | ']' | '}' => unclosed += 1,
+        '(' | '[' | '{' => unclosed -= 1,
+        _ => {}
+      }
     }
-    if line.is_empty() || line.ends_with(';') || line.ends_with('{') || line.ends_with('}') {
+    if unclosed <= 0 {
+      return line.starts_with(prefix).then_some(index);
+    }
+    if line.is_empty() {
       return None;
     }
   }
