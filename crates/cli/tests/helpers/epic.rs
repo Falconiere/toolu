@@ -56,6 +56,7 @@ impl Home {
       command.env("LLVM_PROFILE_FILE", profile);
     }
     let child = command
+      .stdin(Stdio::null())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped())
       .spawn()?;
