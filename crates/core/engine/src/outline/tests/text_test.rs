@@ -129,3 +129,22 @@ fn outline_text_ignores_a_trailing_comment_on_a_code_line() {
   let found = at(&lines, 3, 3, "go", Language::Script);
   assert_eq!((found.start, found.doc), (4, None));
 }
+
+#[test]
+fn outline_text_keeps_a_declaration_after_an_inline_decorator() {
+  let lines = [
+    "  @Input() set value(v: string) {",
+    "    this.v = v;",
+    "  }",
+    "function* worker() {}",
+  ];
+  assert_eq!(
+    at(&lines, 0, 2, "value", Language::Script).signature,
+    "set value(v: string)"
+  );
+  let generator = at(&lines, 3, 3, "worker", Language::Script);
+  assert_eq!(
+    (generator.signature.as_str(), generator.public),
+    ("function* worker()", false)
+  );
+}

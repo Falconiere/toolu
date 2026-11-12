@@ -53,7 +53,12 @@ fn script_public(signature: &str) -> bool {
     "var",
     "declare",
   ];
-  let first = signature.split_whitespace().next().unwrap_or_default();
+  // `function*` declares a generator.
+  let first = signature
+    .split_whitespace()
+    .next()
+    .unwrap_or_default()
+    .trim_end_matches('*');
   if first == "export" {
     return true;
   }
@@ -135,9 +140,12 @@ fn signature(lines: &[&str], start: usize, end: usize, language: Language) -> (S
   let mut state = Scan::default();
   let mut leading = true;
   for index in start..=end {
-    let line = lines.get(index).map_or("", |line| line.trim());
+    let mut line = lines.get(index).map_or("", |line| line.trim());
     if leading && decorator(language, line) {
-      continue;
+      line = strip_decorators(line);
+      if line.is_empty() {
+        continue;
+      }
     }
     leading = false;
     if !line.is_empty() && !out.is_empty() && !out.ends_with(['(', '[']) {
@@ -148,6 +156,31 @@ fn signature(lines: &[&str], start: usize, end: usize, language: Language) -> (S
     }
   }
   (finish(&out), None)
+}
+
+/// `line` without its leading `@name` and `@name(...)` decorators.
+fn strip_decorators(line: &str) -> &str {
+  let mut rest = line;
+  while let Some(after) = rest.strip_prefix('@') {
+    let name = after
+      .find(|ch: char| !(ch.is_alphanumeric() || matches!(ch, '_' | '.' | '$')))
+      .unwrap_or(after.len());
+    let mut tail = after.get(name..).unwrap_or_default();
+    if tail.starts_with('(') {
+      let mut depth = 0_usize;
+      let close = tail.char_indices().find_map(|(pos, ch)| {
+        match ch {
+          '(' => depth += 1,
+          ')' => depth = depth.saturating_sub(1),
+          _ => return None,
+        }
+        (depth == 0).then_some(pos + 1)
+      });
+      tail = close.and_then(|end| tail.get(end..)).unwrap_or_default();
+    }
+    rest = tail.trim_start();
+  }
+  rest
 }
 
 /// `out` with single spaces, no space inside brackets and no trailing comma.
