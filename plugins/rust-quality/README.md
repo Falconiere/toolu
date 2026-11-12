@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Every Rust file the agent edits is checked on the spot, including files changed by a shell command after the first non-quiet shell event establishes a baseline. Shell checks cover at most 20 changed source files per command and advise about the rest. Findings contribute to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its `.json` manifest into toolu's registry, and removes the `.js` module and `.sh` bridge of earlier releases once, with a notice:
+Supported Rust edits are checked on the spot, including eligible shell changes after an edit quality settlement or the first non-quiet shell event establishes a baseline. Shell checks cover at most 20 changed source files per command and advise about the rest. Findings contribute to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its `.json` manifest into toolu's registry, and removes the `.js` module and `.sh` bridge of earlier releases once, with a notice:
 
 - File / function / `impl` line limits (config-driven).
 - No `.unwrap()` / `.expect()` — use `?` or `match`.
