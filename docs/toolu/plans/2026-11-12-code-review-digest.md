@@ -69,3 +69,6 @@ visibility of reused helpers → digest data and caps with unit tests → CLI ve
 - Jev: ready 0.85. No blockers.
 
 **Status:** Approved
+
+## Deviations
+- Code review round 1: names an added line still defines are not reported as removed (no-outline case), and printed lines are cut at 200 characters so one long line cannot spend the 6 KB hunk budget. Both covered by s1 tests.

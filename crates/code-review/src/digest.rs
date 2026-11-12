@@ -266,15 +266,18 @@ fn removed_names(file: &ShapedFile, outline: Option<&FileOutline>) -> Vec<String
   let Ok(pattern) = Regex::new(DEFINITION) else {
     return Vec::new();
   };
-  let kept: BTreeSet<&str> = outline
-    .map(|outline| {
-      outline
-        .items
-        .iter()
-        .map(|item| item.name.as_str())
-        .collect()
-    })
-    .unwrap_or_default();
+  // A name the new side still defines (an item, or an added definition) is not removed.
+  let mut kept: BTreeSet<&str> = outline.map_or_else(BTreeSet::new, |outline| {
+    outline
+      .items
+      .iter()
+      .map(|item| item.name.as_str())
+      .collect()
+  });
+  for line in file.lines.iter().filter(|line| line.side == Side::New) {
+    let found = pattern.captures_iter(&line.text);
+    kept.extend(found.filter_map(|one| one.get(1)).map(|name| name.as_str()));
+  }
   let mut names: Vec<String> = Vec::new();
   for line in file.lines.iter().filter(|line| line.side == Side::Old) {
     for found in pattern.captures_iter(&line.text) {

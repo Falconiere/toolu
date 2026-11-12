@@ -4,7 +4,7 @@ use std::path::Path;
 
 use tempfile::TempDir;
 
-use super::{build, render};
+use super::{build, removed_names, render};
 use crate::shape::shape;
 use crate::shape::tests::{commit, git, isolated_env as env};
 
@@ -86,21 +86,34 @@ fn digest_past_the_hunk_budget_prints_counts_and_the_path_hint() {
   let dir = repo(&[("a.txt", "a\n")]);
   let root = dir.path();
   let long = format!("{}\n", "y".repeat(300));
-  for name in ["f1", "f2", "f3", "f4"] {
+  for name in ["f1", "f2", "f3", "f4", "f5"] {
     write(root, &format!("{name}.txt"), &long.repeat(8));
   }
   commit(root);
   let text = digest_text(root);
   assert!(
-    text.contains("\nf2.txt +8 -0 (added)\n  @@ -0,0 +1,8 @@\n"),
+    text.contains("\nf3.txt +8 -0 (added)\n  @@ -0,0 +1,8 @@\n"),
     "{text}"
   );
   assert!(
-    text.contains("\nf3.txt +8 -0 (added)\nf4.txt +8 -0 (added)\n"),
+    text.contains("\nf4.txt +8 -0 (added)\nf5.txt +8 -0 (added)\n"),
     "{text}"
   );
   assert!(
     text.ends_with("\nhunks omitted for 2 files past 6 KB; pass --path to see them"),
     "{text}"
   );
+}
+
+#[test]
+fn a_changed_signature_is_not_a_removal_without_an_outline() {
+  let dir = repo(&[(
+    "src/lib.rs",
+    "pub fn keep() -> u32 {\n  1\n}\n\npub fn gone() {}\n",
+  )]);
+  let root = dir.path();
+  write(root, "src/lib.rs", "pub fn keep() -> u64 {\n  1\n}\n");
+  commit(root);
+  let shaped = shape(&env(), root, Some("main")).expect("shaped");
+  assert_eq!(removed_names(&shaped.files[0], None), ["gone"]);
 }

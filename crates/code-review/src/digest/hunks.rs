@@ -1,5 +1,6 @@
 //! Bounded hunks of a zero-context patch: at most three per file and eight
-//! changed lines each, within one hunk-text budget for the whole digest.
+//! changed lines each, cut at 200 characters, within one hunk-text budget
+//! for the whole digest.
 
 use serde::Serialize;
 
@@ -7,6 +8,8 @@ use serde::Serialize;
 const MAX_HUNKS: usize = 3;
 /// The most changed lines printed per hunk.
 const HUNK_LINES: usize = 8;
+/// The most characters printed per changed line, so one file cannot spend the budget.
+const LINE_CHARS: usize = 200;
 /// The most hunk text, in bytes, one digest prints.
 const HUNK_BYTES: usize = 6 * 1024;
 
@@ -70,6 +73,12 @@ fn split(patch: &str) -> Vec<(String, Vec<String>)> {
 fn cut((header, mut lines): (String, Vec<String>)) -> Hunk {
   let left = lines.len().saturating_sub(HUNK_LINES);
   lines.truncate(HUNK_LINES);
+  for line in &mut lines {
+    if let Some((end, _)) = line.char_indices().nth(LINE_CHARS) {
+      line.truncate(end);
+      line.push_str("...");
+    }
+  }
   let more = (left > 0).then(|| {
     let ranges = remaining(&header).unwrap_or_default();
     if ranges.is_empty() {
