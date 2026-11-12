@@ -66,7 +66,7 @@ rule:
     - any: [{SCRIPT_KINDS}{kinds}]
       has: {{field: name, pattern: $NAME}}
     - kind: variable_declarator
-      has: {{field: name, pattern: $NAME}}
+      has: {{field: name, kind: identifier, pattern: $NAME}}
       inside: {{kind: lexical_declaration, any: [{{inside: {{kind: program}}}}, {{inside: {{kind: export_statement}}}}]}}
   not:
     inside:

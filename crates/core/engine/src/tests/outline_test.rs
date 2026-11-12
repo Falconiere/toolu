@@ -217,3 +217,13 @@ fn outline_batches_split_by_source_size_and_keep_order() {
   );
   assert_eq!(groups, [vec!["a", "b"], vec!["c"], vec!["d"]]);
 }
+
+#[test]
+fn outline_skips_destructuring_bindings() {
+  let file = outlined(
+    "d.ts",
+    "export const {\n  up,\n  down,\n} = slice.actions;\nexport const one = 1;\n",
+  );
+  let names: Vec<&str> = file.items.iter().map(|item| item.name.as_str()).collect();
+  assert_eq!(names, ["one"]);
+}
