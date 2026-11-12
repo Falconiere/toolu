@@ -75,7 +75,7 @@ fn gate_entries_are_written_only_when_each_path_is_reached() {
     first,
     toolu_protocol::decision::Decision::Advisory { .. }
   ));
-  assert_eq!(gate_paths(&gate), [a.clone()]);
+  assert_eq!(gate_paths(&gate).as_slice(), std::slice::from_ref(&a));
   std::fs::write(root.join("b.ts"), "throw \"b\";\n").unwrap();
   batch.invalidate();
   let (second, warnings) = batch.decide(1, (0, &[0], &binding), &ctx);
