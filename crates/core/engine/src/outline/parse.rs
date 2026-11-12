@@ -13,10 +13,16 @@ pub(super) struct Match {
   pub(super) end: usize,
   /// The captured `$NAME`.
   pub(super) name: String,
+  /// Start and end byte offsets, to nest items that share a line.
+  pub(super) bytes: (usize, usize),
 }
 
 fn line(value: &Value, edge: &str) -> Option<usize> {
   usize::try_from(value.get("range")?.get(edge)?.get("line")?.as_u64()?).ok()
+}
+
+fn byte(value: &Value, edge: &str) -> Option<usize> {
+  usize::try_from(value.get("range")?.get("byteOffset")?.get(edge)?.as_u64()?).ok()
 }
 
 fn one(value: &Value) -> Option<Match> {
@@ -31,6 +37,7 @@ fn one(value: &Value) -> Option<Match> {
       .get("text")?
       .as_str()?
       .to_owned(),
+    bytes: (byte(value, "start")?, byte(value, "end")?),
   })
 }
 

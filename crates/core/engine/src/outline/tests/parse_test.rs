@@ -12,6 +12,7 @@ fn outline_parse_reads_file_range_and_name() {
       start: 2,
       end: 2,
       name: "S".to_owned(),
+      bytes: (36, 59),
     }]
   );
 }

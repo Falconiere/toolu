@@ -227,3 +227,32 @@ fn outline_skips_destructuring_bindings() {
   let names: Vec<&str> = file.items.iter().map(|item| item.name.as_str()).collect();
   assert_eq!(names, ["one"]);
 }
+
+#[test]
+fn outline_keeps_items_sharing_a_line_as_siblings() {
+  let file = outlined("e.ts", "export const a = 1, b = 2;\n");
+  let depths: Vec<(&str, usize)> = file
+    .items
+    .iter()
+    .map(|item| (item.name.as_str(), item.depth))
+    .collect();
+  assert_eq!(depths, [("a", 0), ("b", 0)]);
+}
+
+#[test]
+fn outline_leaves_out_a_file_whose_matches_pass_the_output_cap() {
+  let dir = tempfile::tempdir().unwrap();
+  // One 60 KB line with 200 bindings: each match repeats the line, about 12 MB of JSON.
+  let pad = "x".repeat(280);
+  let line: Vec<String> = (0..200)
+    .map(|n| format!("export const v{n} = '{pad}';"))
+    .collect();
+  let line = line.concat();
+  std::fs::write(dir.path().join("bundle.js"), format!("{line}\n")).unwrap();
+  std::fs::write(dir.path().join("small.ts"), "export function ok() {}\n").unwrap();
+  let paths = ["bundle.js".to_owned(), "small.ts".to_owned()];
+  let files = outline(&Env::process(), dir.path(), &paths).unwrap();
+  assert_eq!(files.len(), 1);
+  assert_eq!(files[0].path, "small.ts");
+  assert_eq!(files[0].items[0].name, "ok");
+}

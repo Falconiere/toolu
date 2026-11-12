@@ -68,7 +68,9 @@ Names are depth-0 public items, at most 12, then `, +<n> more`; the `: names` pa
 - Directory outside a Git work tree or `git ls-files` failure: `ast-grep outline: git ls-files failed: <first stderr line>`, exit 1.
 - Directory with no supported files: `<dir>: 0 files`, exit 0.
 - File with no items (empty, comments only): `<path>: <n> lines, 0 items`, exit 0.
-- Unreadable file, ast-grep failure, timeout or output limit: `ast-grep outline: <reason>`, exit 1; no partial output.
+- Unreadable file, ast-grep failure or timeout: `ast-grep outline: <reason>`, exit 1; no partial output.
+- A batch passing the 8 MiB output cap is rescanned file by file; a file whose own matches still pass it (a minified bundle) prints `<path>: too large to outline` (JSON `{"path": ..., "error": "too large to outline"}`) and the rest are outlined. Code review found this case on a 300 KB single-line bundle; Jev chose per-file retry (0.89) over skipping long-line files or failing.
+- Items that share a line (`export const a = 1, b = 2;`) nest by byte range, so they stay siblings.
 - Files tracked but deleted from the work tree are skipped in directory expansion.
 - Non-UTF-8 file: read lossily; ranges remain correct.
 

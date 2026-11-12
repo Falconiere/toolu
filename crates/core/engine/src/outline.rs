@@ -9,12 +9,12 @@ mod parse;
 mod rules;
 mod text;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use toolu_runtime::env::Env;
 
-use crate::quality::run_scan;
+use crate::quality::{OUTPUT_LIMIT, run_scan};
 
 /// One item of a file: a function, type, impl, class, method or top-level binding.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,6 +60,9 @@ pub fn supported(path: &str) -> bool {
 
 /// Outline each file in `paths`, relative to `cwd`, in their order.
 ///
+/// A file whose matches alone pass the scan's 8 MiB output cap (a minified
+/// bundle) is left out of the result.
+///
 /// # Errors
 /// An unsupported or unreadable file, ast-grep missing ([`MISSING`]), or a
 /// failed scan.
@@ -72,48 +75,86 @@ pub fn outline(env: &Env, cwd: &Path, paths: &[String]) -> Result<Vec<FileOutlin
     let meta = std::fs::metadata(cwd.join(path)).map_err(|err| format!("{path}: {err}"))?;
     sized.push((path.clone(), meta.len()));
   }
-  let rules = rules::rules();
-  let mut found: HashMap<String, Vec<parse::Match>> = HashMap::new();
+  let mut scan = Scan {
+    env,
+    cwd,
+    rules: rules::rules(),
+    found: HashMap::new(),
+    too_large: HashSet::new(),
+  };
   for batch in batches(sized, BATCH_BYTES) {
-    let stdout = match run_scan(env, cwd, &rules, &batch) {
-      None => return Err(MISSING.to_owned()),
-      Some(Err(failure)) => return Err(format!("ast-grep failed: {}", failure.stderr_first)),
-      Some(Ok(stdout)) => stdout,
-    };
-    for one in parse::matches(&stdout)? {
-      found.entry(one.file.clone()).or_default().push(one);
+    scan.batch(batch)?;
+  }
+  let mut outlines = Vec::with_capacity(paths.len());
+  for path in paths.iter().filter(|path| !scan.too_large.contains(*path)) {
+    let bytes = std::fs::read(cwd.join(path)).map_err(|err| format!("{path}: {err}"))?;
+    let source = String::from_utf8_lossy(&bytes);
+    // ast-grep prints `./a.rs` as `a.rs`.
+    let matches = scan
+      .found
+      .get(path.as_str())
+      .or_else(|| scan.found.get(path.trim_start_matches("./")))
+      .map_or(&[][..], Vec::as_slice);
+    outlines.push(file_outline(path, &source, matches));
+  }
+  Ok(outlines)
+}
+
+/// One `outline` call's scans and their matches by file.
+struct Scan<'a> {
+  env: &'a Env,
+  cwd: &'a Path,
+  rules: String,
+  found: HashMap<String, Vec<parse::Match>>,
+  /// Files whose matches alone pass the output cap, such as minified bundles.
+  too_large: HashSet<String>,
+}
+
+impl Scan<'_> {
+  /// Scan `batch`; when it passes the output cap, scan its files one by one.
+  fn batch(&mut self, batch: Vec<String>) -> Result<(), String> {
+    match run_scan(self.env, self.cwd, &self.rules, &batch) {
+      None => Err(MISSING.to_owned()),
+      Some(Ok(stdout)) => {
+        for one in parse::matches(&stdout)? {
+          self.found.entry(one.file.clone()).or_default().push(one);
+        }
+        Ok(())
+      }
+      Some(Err(failure)) if failure.stderr_first == OUTPUT_LIMIT => {
+        if batch.len() == 1 {
+          self.too_large.extend(batch);
+          return Ok(());
+        }
+        batch
+          .into_iter()
+          .try_for_each(|path| self.batch(vec![path]))
+      }
+      Some(Err(failure)) => Err(format!("ast-grep failed: {}", failure.stderr_first)),
     }
   }
-  paths
-    .iter()
-    .map(|path| {
-      let bytes = std::fs::read(cwd.join(path)).map_err(|err| format!("{path}: {err}"))?;
-      let source = String::from_utf8_lossy(&bytes);
-      // ast-grep prints `./a.rs` as `a.rs`.
-      let matches = found
-        .get(path.as_str())
-        .or_else(|| found.get(path.trim_start_matches("./")))
-        .map_or(&[][..], Vec::as_slice);
-      Ok(file_outline(path, &source, matches))
-    })
-    .collect()
 }
 
 fn file_outline(path: &str, source: &str, matches: &[parse::Match]) -> FileOutline {
   let lines: Vec<&str> = source.lines().collect();
   let language = rules::language(path).unwrap_or(rules::Language::Rust);
-  let mut items: Vec<Item> = matches
+  let mut found: Vec<((usize, usize), Item)> = matches
     .iter()
-    .map(|one| text::item(&lines, one, language))
+    .map(|one| (one.bytes, text::item(&lines, one, language)))
     .collect();
-  items.sort_by(|a, b| a.start.cmp(&b.start).then(b.end.cmp(&a.end)));
-  items.dedup_by(|a, b| a.start == b.start && a.end == b.end && a.name == b.name);
+  found.sort_by(|(a, _), (b, _)| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
+  found.dedup_by(|(a, _), (b, _)| a == b);
+  // Byte ranges, not lines, so items sharing a line stay siblings.
   let mut open: Vec<usize> = Vec::new();
-  for item in &mut items {
-    open.retain(|end| *end >= item.end);
-    item.depth = open.len();
-    open.push(item.end);
-  }
+  let items = found
+    .into_iter()
+    .map(|((_, end), mut item)| {
+      open.retain(|close| *close >= end);
+      item.depth = open.len();
+      open.push(end);
+      item
+    })
+    .collect();
   FileOutline {
     path: path.to_owned(),
     lines: lines.len(),

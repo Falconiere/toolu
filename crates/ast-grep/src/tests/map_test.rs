@@ -43,10 +43,10 @@ fn outline_map_caps_names_per_file_and_counts_omitted_files() {
     .collect();
   items.push(item("method", 14, 1));
   let one = file("a.rs", items);
-  let text = dir_text("src/", &[&one], 1);
+  let text = dir_text("src/", &[("a.rs", Some(&one)), ("min.js", None)], 1);
   assert_eq!(
     text,
-    "src/: 2 files\na.rs: 14 lines, 14 items: n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, +1 more\n... 1 more files"
+    "src/: 3 files\na.rs: 14 lines, 14 items: n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, +1 more\nmin.js: too large to outline\n... 1 more files"
   );
 }
 

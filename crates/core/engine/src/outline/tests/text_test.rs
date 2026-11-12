@@ -14,6 +14,7 @@ fn at(
     start,
     end,
     name: name.to_owned(),
+    bytes: (0, 0),
   };
   item(lines, &found, language)
 }

@@ -64,7 +64,8 @@ pub enum AstGrepScan {
   Failed(ScanFailure),
 }
 
-const OUTPUT_LIMIT: &str = "ast-grep output exceeded limit";
+/// The failure text when ast-grep passed the 8 MiB output cap.
+pub(crate) const OUTPUT_LIMIT: &str = "ast-grep output exceeded limit";
 
 /// Whether only the combined output limit, rather than a rule or tool, failed.
 pub(super) fn output_limited(scan: &AstGrepScan) -> bool {

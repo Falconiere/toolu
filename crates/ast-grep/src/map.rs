@@ -17,6 +17,7 @@ const MAX_ITEMS: usize = 150;
 const MAX_FILES: usize = 150;
 const MAX_NAMES: usize = 12;
 const MAX_TEXT: usize = 12 * 1024;
+const TOO_LARGE: &str = "too large to outline";
 const TRUNCATED: &str = "... output truncated at 12 KB; outline fewer paths";
 
 /// One command-line path: a file, or a directory's listed files.
@@ -127,9 +128,15 @@ fn names(file: &FileOutline) -> (Vec<&str>, usize) {
   (all.into_iter().take(MAX_NAMES).collect(), more)
 }
 
-fn dir_text(dir: &str, files: &[&FileOutline], omitted: usize) -> String {
+/// A listed file and its outline, `None` when its matches passed the scan's output cap.
+type Listed<'a> = (&'a str, Option<&'a FileOutline>);
+
+fn dir_text(dir: &str, files: &[Listed<'_>], omitted: usize) -> String {
   let mut out = vec![format!("{dir}: {} files", files.len() + omitted)];
-  out.extend(files.iter().map(|file| {
+  out.extend(files.iter().map(|(path, file)| {
+    let Some(file) = file else {
+      return format!("{path}: {TOO_LARGE}");
+    };
     let (shown, more) = names(file);
     let names = if shown.is_empty() {
       String::new()
@@ -183,10 +190,13 @@ fn file_json(file: &FileOutline) -> Value {
   json!({"path": file.path, "lines": file.lines, "items": items, "omitted": omitted})
 }
 
-fn dir_json(dir: &str, files: &[&FileOutline], omitted: usize) -> Value {
+fn dir_json(dir: &str, files: &[Listed<'_>], omitted: usize) -> Value {
   let files: Vec<Value> = files
     .iter()
-    .map(|file| {
+    .map(|(path, file)| {
+      let Some(file) = file else {
+        return json!({"path": path, "error": TOO_LARGE});
+      };
       let (shown, _) = names(file);
       json!({"path": file.path, "lines": file.lines, "items": file.items.len(), "names": shown})
     })
@@ -204,6 +214,9 @@ fn render(targets: &[Target], outlines: &[FileOutline], json_output: bool) -> St
         if let Some(file) = find(path) {
           texts.push(file_text(file));
           docs.push(file_json(file));
+        } else {
+          texts.push(format!("{path}: {TOO_LARGE}"));
+          docs.push(json!({"path": path, "error": TOO_LARGE}));
         }
       }
       Target::Dir {
@@ -211,7 +224,10 @@ fn render(targets: &[Target], outlines: &[FileOutline], json_output: bool) -> St
         files,
         omitted,
       } => {
-        let found: Vec<&FileOutline> = files.iter().filter_map(|path| find(path)).collect();
+        let found: Vec<Listed<'_>> = files
+          .iter()
+          .map(|path| (path.as_str(), find(path)))
+          .collect();
         texts.push(dir_text(dir, &found, *omitted));
         docs.push(dir_json(dir, &found, *omitted));
       }
