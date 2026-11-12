@@ -2,6 +2,7 @@
 
 use std::fmt::Write as _;
 
+use super::hunks::Hunk;
 use super::{Digest, FileDigest};
 use crate::shape::FileKind;
 
@@ -77,37 +78,45 @@ fn file_text(file: &FileDigest, unavailable: bool) -> String {
   if unavailable {
     out.push_str("\n  items unavailable");
   } else if !file.items.is_empty() {
-    let names: Vec<String> = file
-      .items
-      .iter()
-      .map(|item| {
-        let new = if item.new { " (new)" } else { "" };
-        format!("{} {}-{}{new}", item.name, item.start, item.end)
-      })
-      .collect();
-    let more = if file.items_omitted > 0 {
-      format!(", +{} more", file.items_omitted)
-    } else {
-      String::new()
-    };
-    let _ = write!(out, "\n  items: {}{more}", names.join(", "));
+    let _ = write!(out, "\n  items: {}", items(file));
   }
   if !file.removed_items.is_empty() {
     let _ = write!(out, "\n  removed: {}", file.removed_items.join(", "));
   }
   for hunk in &file.hunks {
-    let _ = write!(out, "\n  {}", hunk.header);
-    for line in &hunk.lines {
-      let _ = write!(out, "\n  {line}");
-    }
-    if let Some(more) = &hunk.more {
-      let _ = write!(out, "\n  {more}");
-    }
+    hunk_text(&mut out, hunk);
   }
   if !file.hunks.is_empty() && file.hunks_omitted > 0 {
     let _ = write!(out, "\n  ... {} more hunks", file.hunks_omitted);
   }
   out
+}
+
+/// `name start-end` per item, `(new)` when wholly added, then `+<n> more`.
+fn items(file: &FileDigest) -> String {
+  let names: Vec<String> = file
+    .items
+    .iter()
+    .map(|item| {
+      let new = if item.new { " (new)" } else { "" };
+      format!("{} {}-{}{new}", item.name, item.start, item.end)
+    })
+    .collect();
+  let mut text = names.join(", ");
+  if file.items_omitted > 0 {
+    let _ = write!(text, ", +{} more", file.items_omitted);
+  }
+  text
+}
+
+fn hunk_text(out: &mut String, hunk: &Hunk) {
+  let _ = write!(out, "\n  {}", hunk.header);
+  for line in &hunk.lines {
+    let _ = write!(out, "\n  {line}");
+  }
+  if let Some(more) = &hunk.more {
+    let _ = write!(out, "\n  {more}");
+  }
 }
 
 #[cfg(test)]

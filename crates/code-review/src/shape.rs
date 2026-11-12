@@ -334,9 +334,10 @@ fn omit(omitted: &mut Vec<Omitted>, paths: &[String], reason: &str) {
   }));
 }
 
+/// Shape tests; their Git fixtures are shared with the digest tests.
 #[cfg(test)]
 #[path = "tests/shape_test.rs"]
-pub(crate) mod tests;
+pub mod tests;
 
 #[cfg(test)]
 #[path = "tests/shape_edge_test.rs"]
