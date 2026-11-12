@@ -3,6 +3,7 @@
 ## Behaviour
 - Evidence before claims: verify (tests/logs/runtime).
 - Failed twice? Stop and change hypothesis.
+- Outline before reading: `toolu ast-grep outline <path>`, `toolu ast-grep symbol <name>`, `toolu code-review digest`.
 - No unsolicited changes (gate excepted).
 - Follow installed Ponytail's selected mode unless user-disabled; discover it in the host skill catalog, never auto-install.
 

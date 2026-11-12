@@ -71,6 +71,9 @@ directly.
    test plan is not a passing test. Contradictory or changed sibling contracts
    need a `contract-changed` notice; reconcile the contract before implementing
    affected work, reporting `needs-human` for unresolved contradictions.
+   Map code with `toolu ast-grep outline <path>` and `toolu ast-grep symbol
+   <name>` before opening whole files; after a resume, `toolu code-review
+   digest` shows what the branch already changed.
 2. **Deliver.** Invoke {{DELIVERY}} for this issue. Carry the verified issue
    contract into the spec and plan; do not reopen settled choices without new
    evidence. Within that
