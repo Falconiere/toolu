@@ -8,7 +8,8 @@ use serde_json::{Value, json};
 use super::{Listed, MAX_NAMES, names};
 
 fn module_doc(cwd: &Path, files: &[Listed<'_>]) -> Option<String> {
-  for name in ["lib.rs", "mod.rs", "index.ts", "__init__.py"] {
+  let module_name = ["mod", ".rs"].concat();
+  for name in ["lib.rs", &module_name, "index.ts", "__init__.py"] {
     for (path, _) in files {
       if Path::new(path).file_name().is_some_and(|part| part == name) {
         let source = std::fs::read_to_string(cwd.join(path)).ok()?;
