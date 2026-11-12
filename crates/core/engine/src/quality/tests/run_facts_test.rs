@@ -156,15 +156,17 @@ fn nested_repository_and_next_event_use_the_current_owner() {
     serde_json::from_slice(&std::fs::read(&parent_gate).unwrap()).unwrap();
   let nested_doc: serde_json::Value =
     serde_json::from_slice(&std::fs::read(&nested_gate).unwrap()).unwrap();
-  assert!(parent_doc["entries"]["parent.fx"].is_object());
-  assert!(nested_doc["entries"]["nested/child.fx"].is_object());
-  assert!(parent_doc["entries"]["nested/child.fx"].is_null());
+  let parent_file = root.join("parent.fx").display().to_string();
+  let child_file = nested.join("child.fx").display().to_string();
+  assert!(parent_doc["entries"][parent_file.as_str()].is_object());
+  assert!(nested_doc["entries"][child_file.as_str()].is_object());
+  assert!(parent_doc["entries"][child_file.as_str()].is_null());
   std::fs::remove_dir_all(nested.join(".git")).unwrap();
   let second = run_quality(&records[1..], &ctx, &[&rule]);
   assert_eq!(second.decisions.len(), 1);
   let parent_doc: serde_json::Value =
     serde_json::from_slice(&std::fs::read(parent_gate).unwrap()).unwrap();
-  assert!(parent_doc["entries"]["nested/child.fx"].is_object());
+  assert!(parent_doc["entries"][child_file.as_str()].is_object());
 }
 
 #[test]
