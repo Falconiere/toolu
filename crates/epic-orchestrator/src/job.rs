@@ -4,15 +4,20 @@
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
+use clap::ArgMatches;
 use toolu_engine::resources::binding::{ResourceBinding, resource_binding};
 use toolu_engine::resources::job_logs;
-use toolu_engine::resources::jobs::{Admission, JobWait, refusal, run_managed_job_waiting};
+use toolu_engine::resources::jobs::{
+  Admission, JOB_WAIT_BOUND, JOB_WAIT_POLL, JobWait, refusal, run_managed_job_waiting,
+};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
+use toolu_runtime::invocation::current_dir;
 use toolu_runtime::process::Spec;
 
 use crate::journal::{self, Record};
 use crate::paths::Paths;
+use crate::verbs::{failed, text};
 use crate::waiting_jobs;
 
 /// Lines of the merged log printed after a failure.
@@ -21,6 +26,33 @@ const FAIL_TAIL: usize = 80;
 const OK_TAIL: usize = 40;
 /// How much of the log's end is read for the tail.
 const TAIL_BYTES: usize = 64 * 1024;
+
+/// Run one managed expensive job from its CLI arguments.
+pub(crate) fn run(matches: &ArgMatches) -> Outcome {
+  let cwd = match current_dir() {
+    Ok(cwd) => cwd,
+    Err(err) => return failed("toolu epic job", &err.to_string()),
+  };
+  let argv: Vec<String> = matches
+    .get_many::<String>("argv")
+    .map(|values| values.cloned().collect())
+    .unwrap_or_default();
+  if argv.is_empty() {
+    return failed("toolu epic job", "a command is required");
+  }
+  let bound = if matches.get_flag("no-wait") {
+    Duration::ZERO
+  } else {
+    JOB_WAIT_BOUND
+  };
+  if let Some(id) = text(matches, "result") {
+    return crate::job_detach::run_result(id, &argv, &cwd, bound, JOB_WAIT_POLL);
+  }
+  if matches.get_flag("detach") {
+    return crate::job_detach::run_detached(&argv, &cwd, bound);
+  }
+  run_job_with(&argv, &cwd, bound, JOB_WAIT_POLL)
+}
 
 /// Run `argv` in `cwd`'s bound worktree, waiting up to `bound` for admission
 /// and retrying every `poll`; a zero bound refuses at once. The engine does

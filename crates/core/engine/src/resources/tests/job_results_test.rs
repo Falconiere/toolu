@@ -27,7 +27,7 @@ fn a_record_runs_waiting_running_done_and_reads_back() {
   let path = root
     .join("jobs/results")
     .join(format!("{}.json", record.id));
-  let text = std::fs::read_to_string(path).unwrap();
+  let text = std::fs::read_to_string(&path).unwrap();
   assert!(text.contains("\"schema\":1"), "{text}");
   record.state = "running".to_owned();
   update(&root, &record).unwrap();
@@ -38,6 +38,10 @@ fn a_record_runs_waiting_running_done_and_reads_back() {
   );
   assert_eq!(get(&root, &done.id).unwrap(), Some(done));
   assert_eq!(get(&root, "missing").unwrap(), None);
+  let mut invalid: serde_json::Value = serde_json::from_str(&text).unwrap();
+  invalid["finished_at"] = serde_json::json!(3);
+  std::fs::write(path, invalid.to_string()).unwrap();
+  assert!(get(&root, &record.id).is_err());
 }
 
 #[test]
@@ -54,14 +58,14 @@ fn pending_is_oldest_first_per_worktree_and_claim_takes_a_done_record_once() {
     running.iter().map(|r| r.label.as_str()).collect::<Vec<_>>(),
     ["first", "second"]
   );
-  assert!(claim_finished(&root, &tree).unwrap().is_empty());
+  assert_eq!(claim_finished(&root, &tree).unwrap().len(), 0);
   finish(&root, &first.id, 0);
   finish(&root, &second.id, 1);
   let claimed = claim_finished(&root, &tree).unwrap();
   assert_eq!(claimed.len(), 2);
   assert!(claimed.iter().all(|r| r.delivered_at.is_some()));
-  assert!(claim_finished(&root, &tree).unwrap().is_empty());
-  assert!(pending(&root, &tree).unwrap().is_empty());
+  assert_eq!(claim_finished(&root, &tree).unwrap().len(), 0);
+  assert_eq!(pending(&root, &tree).unwrap().len(), 0);
   assert_eq!(pending(&root, &other).unwrap().len(), 1);
 }
 

@@ -16,21 +16,16 @@ use crate::job::{binding_of, run_job_observed};
 
 /// Record `record` as failed before it ever ran, and fail the launcher.
 fn fail_early(root: &Path, record: &mut job_results::Record, message: String) -> Outcome {
-  record.state = "done".to_owned();
+  "done".clone_into(&mut record.state);
   record.exit_code = Some(1);
   record.finished_at = Some(iso_millis(SystemTime::now()));
-  record.output = message.clone();
+  record.output.clone_from(&message);
   let _recorded = job_results::update(root, record);
   Outcome::failed(Exit::Failure, message)
 }
 
 /// Create the `waiting` record, relaunch this verb as its copy, print the id.
-pub(crate) fn run_detached(
-  argv: &[String],
-  cwd: &Path,
-  bound: Duration,
-  poll: Duration,
-) -> Outcome {
+pub(crate) fn run_detached(argv: &[String], cwd: &Path, bound: Duration) -> Outcome {
   let binding = match binding_of(cwd) {
     Ok(binding) => binding,
     Err(outcome) => return outcome,
@@ -61,7 +56,6 @@ pub(crate) fn run_detached(
   if bound.is_zero() {
     relaunch.push("--no-wait".to_owned());
   }
-  let _poll = poll;
   relaunch.push("--".to_owned());
   relaunch.extend(argv.iter().cloned());
   let mut spec = Spec::new(relaunch);
@@ -88,7 +82,7 @@ pub(crate) fn run_result(
     Ok(binding) => binding,
     Err(outcome) => return outcome,
   };
-  let root = binding.root.clone();
+  let root = binding.root;
   let mut record = match job_results::get(&root, id) {
     Ok(Some(record)) => record,
     Ok(None) => {
@@ -101,13 +95,13 @@ pub(crate) fn run_result(
     let mut on_admitted = || {
       if !running {
         running = true;
-        record.state = "running".to_owned();
+        "running".clone_into(&mut record.state);
         let _recorded = job_results::update(&root, &record);
       }
     };
     run_job_observed(argv, cwd, bound, poll, &mut on_admitted)
   };
-  record.state = "done".to_owned();
+  "done".clone_into(&mut record.state);
   record.exit_code = Some(i64::from(code.unwrap_or(1)));
   record.finished_at = Some(iso_millis(SystemTime::now()));
   record.output = if outcome.exit == Exit::Success {

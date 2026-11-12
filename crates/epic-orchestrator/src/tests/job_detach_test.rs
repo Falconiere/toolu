@@ -44,13 +44,12 @@ fn a_refused_copy_stays_waiting_until_it_acquires_the_lease() {
   std::fs::write(root.join("policy.json"), r#"{"maxAgents":1,"maxJobs":1}"#).unwrap();
   let token = hold(&root);
   let record = job_results::create(&root, "detached", &work, "true").unwrap();
-  let copy_work = work.clone();
   let id = record.id.clone();
   let copy = std::thread::spawn(move || {
     run_result(
       &id,
       &argv(&["true"]),
-      &copy_work,
+      &work,
       Duration::from_secs(5),
       Duration::from_millis(20),
     )
@@ -94,7 +93,7 @@ fn an_unknown_result_and_an_unbound_detach_run_nothing() {
   );
   let unbound = tmp.path().join("unbound");
   std::fs::create_dir_all(&unbound).expect("unbound");
-  let detached = run_detached(&argv(&["true"]), &unbound, Duration::ZERO, Duration::ZERO);
+  let detached = run_detached(&argv(&["true"]), &unbound, Duration::ZERO);
   assert_eq!(detached.exit, Exit::Failure);
   assert!(
     !root.join("jobs/results").exists() || job_results::pending(&root, &work).unwrap().is_empty()

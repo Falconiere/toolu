@@ -5,7 +5,8 @@
 #[path = "helpers/epic.rs"]
 mod epic;
 
-use std::process::Command;
+use std::path::Path;
+use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
 use serde_json::Value;
@@ -19,7 +20,9 @@ fn bound(home: &Home) -> Res<std::path::PathBuf> {
     .args(["init", "-q"])
     .current_dir(&work)
     .status()?;
-  assert!(init.success());
+  if !init.success() {
+    return Err(std::io::Error::other("git init failed").into());
+  }
   let git_dir = work.join(".git");
   let binding = serde_json::json!({
     "version": 1,
@@ -44,7 +47,30 @@ fn leases(home: &Home) -> Vec<Value> {
   let Ok(state) = serde_json::from_str::<Value>(&text) else {
     return Vec::new();
   };
-  state["leases"].as_array().cloned().unwrap_or_default()
+  state
+    .get("leases")
+    .and_then(Value::as_array)
+    .cloned()
+    .unwrap_or_default()
+}
+
+fn launch(home: &Home, work: &Path) -> Res<(Output, u32)> {
+  let mut command = home.command(&[
+    "epic",
+    "job",
+    "--detach",
+    "--",
+    "sh",
+    "-c",
+    "sleep 2; exit 3",
+  ]);
+  let child = command
+    .current_dir(work)
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()?;
+  let pid = child.id();
+  Ok((child.wait_with_output()?, pid))
 }
 
 #[test]
@@ -54,20 +80,7 @@ fn a_detached_job_returns_an_id_and_records_its_failure() {
   assert_eq!(usage.status.code(), Some(64), "{}", err(&usage));
   let work = bound(&home).unwrap();
   let started = Instant::now();
-  let (output, launcher_pid) = home
-    .run_in(
-      &work,
-      &[
-        "epic",
-        "job",
-        "--detach",
-        "--",
-        "sh",
-        "-c",
-        "sleep 2; exit 3",
-      ],
-    )
-    .unwrap();
+  let (output, launcher_pid) = launch(&home, &work).unwrap();
   assert!(
     started.elapsed() < Duration::from_secs(1),
     "launcher took {:?}",
@@ -79,14 +92,12 @@ fn a_detached_job_returns_an_id_and_records_its_failure() {
   let mut saw_copy_lease = false;
   let deadline = Instant::now() + Duration::from_secs(15);
   loop {
-    for lease in leases(&home) {
-      if lease["type"] == "job" {
-        let owner = lease["ownerPid"].as_u64().unwrap_or(0);
-        if owner != u64::from(launcher_pid) && owner != 0 {
-          saw_copy_lease = true;
-        }
-      }
-    }
+    saw_copy_lease |= leases(&home).iter().any(|lease| {
+      let owner = lease.get("ownerPid").and_then(Value::as_u64).unwrap_or(0);
+      lease.get("type").and_then(Value::as_str) == Some("job")
+        && owner != u64::from(launcher_pid)
+        && owner != 0
+    });
     if let Ok(done) = record(&home, &id)
       && done["state"] == "done"
     {
@@ -105,7 +116,9 @@ fn a_detached_job_returns_an_id_and_records_its_failure() {
   }
   assert!(saw_copy_lease, "the copy never held the job lease");
   assert!(
-    leases(&home).iter().all(|lease| lease["type"] != "job"),
+    leases(&home)
+      .iter()
+      .all(|lease| lease.get("type").and_then(Value::as_str) != Some("job")),
     "job lease remains after the copy ended"
   );
 }

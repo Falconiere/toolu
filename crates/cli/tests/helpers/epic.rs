@@ -29,15 +29,11 @@ impl Home {
 
   /// Run `toolu` with `args` in a clean environment rooted here.
   pub(crate) fn run(&self, args: &[&str]) -> Res<Output> {
-    self.run_at(None, args).map(|(output, _)| output)
+    Ok(self.command(args).output()?)
   }
 
-  /// Run `toolu` from `cwd`, returning its output and launcher PID.
-  pub(crate) fn run_in(&self, cwd: &std::path::Path, args: &[&str]) -> Res<(Output, u32)> {
-    self.run_at(Some(cwd), args)
-  }
-
-  fn run_at(&self, cwd: Option<&std::path::Path>, args: &[&str]) -> Res<(Output, u32)> {
+  /// A configured native `toolu` command for a test that needs its process.
+  pub(crate) fn command(&self, args: &[&str]) -> Command {
     let mut command = Command::new(TOOLU);
     command
       .env_clear()
@@ -47,21 +43,13 @@ impl Home {
       .env("EPIC_STATE_HOME", self.path("epics"))
       .env("HERDR_SOCKET_PATH", self.path("no-herdr.sock"))
       .env("TOOLU_EPIC_HERDR", "off")
-      .args(args);
-    if let Some(cwd) = cwd {
-      command.current_dir(cwd);
-    }
+      .args(args)
+      .stdin(Stdio::null());
     // Coverage runs write each child's profile where the harness says.
     if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
       command.env("LLVM_PROFILE_FILE", profile);
     }
-    let child = command
-      .stdin(Stdio::null())
-      .stdout(Stdio::piped())
-      .stderr(Stdio::piped())
-      .spawn()?;
-    let pid = child.id();
-    Ok((child.wait_with_output()?, pid))
+    command
   }
 }
 

@@ -63,11 +63,11 @@ fn text(value: &Value, key: &str) -> Option<String> {
   value.get(key).and_then(Value::as_str).map(str::to_owned)
 }
 
-fn optional_text(value: &Value, key: &str) -> Option<Option<String>> {
+fn optional_text(value: &Value, key: &str) -> Result<Option<String>, ()> {
   match value.get(key) {
-    Some(Value::Null) | None => Some(None),
-    Some(Value::String(text)) => Some(Some(text.clone())),
-    _ => None,
+    Some(Value::Null) | None => Ok(None),
+    Some(Value::String(text)) => Ok(Some(text.clone())),
+    _ => Err(()),
   }
 }
 
@@ -85,13 +85,13 @@ fn parse(value: &Value, path: &Path) -> Result<Record, String> {
       Some(code) => Some(code.as_i64().ok_or_else(invalid)?),
     },
     started_at: text(value, "started_at").ok_or_else(invalid)?,
-    finished_at: optional_text(value, "finished_at").ok_or_else(invalid)?,
+    finished_at: optional_text(value, "finished_at").map_err(|()| invalid())?,
     output: text(value, "output").ok_or_else(invalid)?,
     stale: value
       .get("stale")
       .and_then(Value::as_bool)
       .ok_or_else(invalid)?,
-    delivered_at: optional_text(value, "delivered_at").ok_or_else(invalid)?,
+    delivered_at: optional_text(value, "delivered_at").map_err(|()| invalid())?,
   };
   if schema != Some(1) || !matches!(record.state.as_str(), "waiting" | "running" | "done") {
     return Err(invalid());

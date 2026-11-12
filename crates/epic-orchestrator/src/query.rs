@@ -8,20 +8,17 @@ use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
-use toolu_runtime::invocation::current_dir;
 
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
 use crate::client::report_token;
 use crate::control::{ensure, registry_nonempty};
 use crate::disk::{read_value, write_status, write_value};
-use crate::job::run_job_with;
 use crate::lock::live;
 use crate::model::World;
 use crate::paths::Paths;
 use crate::status::document;
 use crate::verbs::{failed, json_out, text};
-use toolu_engine::resources::jobs::{JOB_WAIT_BOUND, JOB_WAIT_POLL};
 
 /// `toolu epic status [EPIC | --fleet]`.
 pub(crate) fn status_command() -> Command {
@@ -257,36 +254,6 @@ pub(crate) fn ask_checked(env: &Env, verb: &str, request: &Value) -> Outcome {
     },
     Err(err) => failed(&format!("toolu epic {verb}"), &err),
   }
-}
-
-/// Run one managed expensive job.
-pub(crate) fn job(matches: &ArgMatches) -> Outcome {
-  let cwd = match current_dir() {
-    Ok(cwd) => cwd,
-    Err(err) => {
-      let err = err.to_string();
-      return failed("toolu epic job", &err);
-    }
-  };
-  let argv: Vec<String> = matches
-    .get_many::<String>("argv")
-    .map(|values| values.cloned().collect())
-    .unwrap_or_default();
-  if argv.is_empty() {
-    return failed("toolu epic job", "a command is required");
-  }
-  let bound = if matches.get_flag("no-wait") {
-    std::time::Duration::ZERO
-  } else {
-    JOB_WAIT_BOUND
-  };
-  if let Some(id) = text(matches, "result") {
-    return crate::job_detach::run_result(id, &argv, &cwd, bound, JOB_WAIT_POLL);
-  }
-  if matches.get_flag("detach") {
-    return crate::job_detach::run_detached(&argv, &cwd, bound, JOB_WAIT_POLL);
-  }
-  run_job_with(&argv, &cwd, bound, JOB_WAIT_POLL)
 }
 
 /// Resolve a status file to its issue key and state directory.
