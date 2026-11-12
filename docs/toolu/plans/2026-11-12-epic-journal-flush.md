@@ -25,7 +25,7 @@ Add recovery and flush-count tests, make the minimal journal flush change, updat
   {
     "id": "s2",
     "title": "Check affected crates and journal documentation",
-    "check": "cargo xtask check-changed --base origin/main && cargo xtask check-markdown-cli",
+    "check": "env -u PUSH_REVIEW_BASE cargo xtask check-changed --base origin/main && env -u PUSH_REVIEW_BASE cargo xtask check-markdown-cli",
     "depends_on": ["s1"],
     "ac_refs": ["AC-1", "AC-2", "AC-3"],
     "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/journal/index.rs", "crates/epic-orchestrator/src/journal/index", "crates/epic-orchestrator/src/journal/tests", "docs/epic-orchestrator/README.md", "docs/toolu/specs/2026-11-12-epic-journal-flush-design.md", "docs/toolu/plans/2026-11-12-epic-journal-flush.md"],
@@ -34,10 +34,9 @@ Add recovery and flush-count tests, make the minimal journal flush change, updat
   {
     "id": "s3",
     "title": "Run the complete quality gate",
-    "check": "cargo xtask gate",
+    "check": "env -u PUSH_REVIEW_BASE cargo xtask gate",
     "depends_on": ["s1", "s2"],
     "ac_refs": ["AC-1", "AC-2", "AC-3"],
-    "paths": ["crates", "docs", "plugins", "fixtures", "tooling", "Cargo.toml", "Cargo.lock"],
     "input": "the committed branch against current origin/main"
   }
 ]
@@ -57,3 +56,5 @@ The `journal::` target proves the flush count and both truncation recovery paths
 ## Deviations
 
 The committed-diff documentation audit found that the owning epic guide did not explain journal durability. Added its concise cache-recovery paragraph, extended s2 to check that guide, and synchronized the spec's documentation impact. No behavior or acceptance criterion changed.
+
+The first s2 check inherited the ledger's `PUSH_REVIEW_BASE=origin/main` into temporary Git repositories used by two golden gate tests, where that remote ref does not exist. The checks now unset the override in their child environment while the ledger itself keeps the correct origin base; s2 still passes `--base origin/main` explicitly. The final full-gate step has no scoped paths so branch-wide verification runs it once.
