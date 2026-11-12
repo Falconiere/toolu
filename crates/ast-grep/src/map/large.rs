@@ -98,3 +98,7 @@ pub(super) fn json(dir: &str, files: &[Listed<'_>], cwd: &Path) -> Value {
   }).collect();
   json!({"dir": dir, "directories": dirs, "omitted": rows.len().saturating_sub(148)})
 }
+
+#[cfg(test)]
+#[path = "tests/large_test.rs"]
+mod tests;

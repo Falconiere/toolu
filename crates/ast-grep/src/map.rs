@@ -85,16 +85,19 @@ fn walk(cwd: &Path, dir: &str) -> Result<Vec<String>, String> {
         .map_err(|err| format!("{}: {err}", entry.path().display()))?;
       if kind.is_dir() {
         dirs.push(entry.path());
-      } else if kind.is_file() {
-        let path = entry.path();
-        let relative = path
-          .strip_prefix(cwd)
-          .map_err(|err| err.to_string())?
-          .to_string_lossy()
-          .into_owned();
-        if supported(&relative) {
-          files.push(relative);
-        }
+        continue;
+      }
+      if !kind.is_file() {
+        continue;
+      }
+      let path = entry.path();
+      let relative = path
+        .strip_prefix(cwd)
+        .map_err(|err| err.to_string())?
+        .to_string_lossy()
+        .into_owned();
+      if supported(&relative) {
+        files.push(relative);
       }
     }
   }

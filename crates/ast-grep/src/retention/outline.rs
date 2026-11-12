@@ -12,7 +12,7 @@ const WARN: &str = "toolu-outline-sweep";
 const RETENTION: Duration = Duration::from_hours(24 * 14);
 const MAX: usize = 20_000;
 
-/// Sweep the shared Git cache at SessionStart without failing startup.
+/// Sweep the shared Git cache at `SessionStart` without failing startup.
 pub(crate) fn sweep_outlines(env: &Env) -> Vec<String> {
   let Some(dir) = current_dir().ok().and_then(|cwd| common_dir(env, &cwd)) else {
     return Vec::new();
@@ -46,7 +46,7 @@ fn entries(dir: &Path, warnings: &mut Vec<String>) -> Vec<PathBuf> {
       match entry.file_type() {
         Ok(kind) if kind.is_dir() => pending.push(path),
         Ok(kind) if kind.is_file() && path.extension().is_some_and(|ext| ext == "json") => {
-          found.push(path)
+          found.push(path);
         }
         Ok(_) => {}
         Err(err) => warnings.push(format!("{WARN}: could not stat {}: {err}", path.display())),
@@ -75,7 +75,7 @@ pub(crate) fn sweep_outline_dir(dir: &Path, now: SystemTime, max: usize) -> Vec<
   for path in entries(dir, &mut warnings) {
     match fs::metadata(&path).and_then(|meta| meta.modified()) {
       Ok(mtime) if now.duration_since(mtime).is_ok_and(|age| age > RETENTION) => {
-        remove(&path, &mut warnings)
+        remove(&path, &mut warnings);
       }
       Ok(mtime) => survivors.push((mtime, path)),
       Err(err) => warnings.push(format!("{WARN}: could not judge {}: {err}", path.display())),
@@ -88,3 +88,7 @@ pub(crate) fn sweep_outline_dir(dir: &Path, now: SystemTime, max: usize) -> Vec<
   }
   warnings
 }
+
+#[cfg(test)]
+#[path = "tests/outline_test.rs"]
+mod tests;

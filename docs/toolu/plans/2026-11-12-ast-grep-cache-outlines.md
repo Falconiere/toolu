@@ -24,16 +24,16 @@ Add content IDs and cache with real Git tests, then large and outside-Git maps, 
     "title": "Summarize large Git maps and walk outside-Git directories",
     "depends_on": ["content-cache"],
     "ac_refs": ["AC-4", "AC-5"],
-    "paths": ["crates/ast-grep/src/map.rs", "crates/ast-grep/src/map/large.rs", "crates/ast-grep/src/tests/map_test.rs", "crates/cli/tests/ast_grep_outline.rs"],
+    "paths": ["crates/ast-grep/src/map.rs", "crates/ast-grep/src/map/large.rs", "crates/ast-grep/src/map/tests/large_test.rs", "crates/ast-grep/src/tests/map_test.rs", "crates/cli/tests/ast_grep_outline.rs"],
     "input": "160 real files across directories plus a non-Git directory",
-    "check": "cargo test -p toolu-cli --test ast_grep_outline"
+    "check": "cargo test -p toolu-ast-grep --lib map::large && cargo test -p toolu-cli --test ast_grep_outline"
   },
   {
     "id": "retention-docs",
     "title": "Sweep outline entries at SessionStart and document behavior",
     "depends_on": ["content-cache", "large-map"],
     "ac_refs": ["AC-3"],
-    "paths": ["crates/ast-grep/src/retention.rs", "crates/ast-grep/src/retention/outline.rs", "crates/ast-grep/src/register.rs", "crates/ast-grep/src/tests/retention_test.rs", "docs/ast-grep/README.md"],
+    "paths": ["crates/ast-grep/src/retention.rs", "crates/ast-grep/src/retention/outline.rs", "crates/ast-grep/src/retention/tests/outline_test.rs", "crates/ast-grep/src/register.rs", "crates/ast-grep/src/tests/retention_test.rs", "docs/ast-grep/README.md"],
     "input": "Real cache files with pinned mtimes around 14 days and a reduced test capacity; production uses 20,000",
     "check": "cargo test -p toolu-ast-grep retention && cargo xtask check-markdown-cli"
   },
@@ -53,7 +53,7 @@ Add content IDs and cache with real Git tests, then large and outside-Git maps, 
 The paths in the three ledger steps, plus this plan and its spec.
 
 ## Deviations
-The large-map and retention code needed `map/large.rs` and `retention/outline.rs` to stay within the repository's 300-code-line and 50-line-function limits. Their paths are now declared in the ledger. The content-cache check also runs the real working-tree blob ID test.
+The large-map and retention code needed `map/large.rs` and `retention/outline.rs` to stay within the repository's 300-code-line and 50-line-function limits. Guardrails required module-sibling tests for both, so those test paths are now declared. The content-cache check also runs the real working-tree blob ID test.
 
 ## Verification
 Run real Git and ast-grep tests, quality scan regression tests, and `toolu epic job -- cargo xtask gate`. Before editing, `toolu ledger preflight` must pass. Before push, commit a scoped conventional change, run `toolu ledger run docs/toolu/plans/2026-11-12-ast-grep-cache-outlines.md --verify`, complete native code review and ready verdict, and verify the PR head/base. Delivery authorization comes from the worker brief and delivery-flow.
