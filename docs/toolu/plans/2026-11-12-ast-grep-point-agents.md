@@ -31,9 +31,9 @@ nudge kinds → savings kinds → agent docs → full gate.
   {
     "id": "s3",
     "title": "Session-start Behaviour bullet and worker-brief Sync sentence",
-    "check": "cargo xtask gate --only context-budget && cargo xtask check-markdown-cli && cargo test -p toolu-epic-orchestrator launch::brief && cargo nextest run -p toolu-cli --test epic_markdown",
+    "check": "cargo xtask gate --only context-budget && cargo xtask check-markdown-cli && cargo test -p toolu-epic-orchestrator launch::brief && cargo nextest run -p toolu-cli --test epic_markdown --test golden_lifecycle",
     "ac_refs": ["AC-4"],
-    "paths": ["plugins/toolu/hooks/docs/session-start.md", "plugins/epic-orchestrator/skills/epic-orchestrator/references/worker-brief.md", "crates/xtask/src/context_budget", "crates/epic-orchestrator/src/launch", "crates/cli/tests/epic_markdown.rs"],
+    "paths": ["plugins/toolu/hooks/docs/session-start.md", "fixtures/gates/lifecycle-golden.json", "crates/cli/tests/golden_lifecycle.rs", "crates/cli/tests/helpers", "plugins/epic-orchestrator/skills/epic-orchestrator/references/worker-brief.md", "crates/xtask/src/context_budget", "crates/epic-orchestrator/src/launch", "crates/cli/tests/epic_markdown.rs"],
     "input": "the edited session-start.md (word count under 110) and worker-brief.md rendered by the brief tests"
   },
   {
@@ -59,6 +59,9 @@ nudge kinds → savings kinds → agent docs → full gate.
 End to end through the real `toolu` binary: pre-tool hook advisories for the three AC-1 commands and the missing/opt-out fallbacks; post-tool hook writes `outline` and `digest` ledger lines that `toolu ast-grep savings` lists. Boundaries: pipe-filtered grep silent, non-code path generic, `symbol` not recorded. Docs synchronized in the session text and worker brief; context-budget and markdown CLI checks prove they fit and name real commands.
 
 Delivery: commit per step (`feat(ast-grep): …` with an `Intent:` trailer), push the branch after green steps, run `toolu ledger run docs/toolu/plans/2026-11-12-ast-grep-point-agents.md --verify` on the final commit, code review, `toolu ledger verdict status` = ready, push, open the PR (`Closes Falconiere/toolu#862`, `Part of Falconiere/toolu#853`), then report babysit to the epic engine.
+
+## Deviations
+- s3: the session-start text is captured in `fixtures/gates/lifecycle-golden.json` (48 SessionStart cases); the first full gate failed `golden_lifecycle`. Added the bullet to those captures and the `golden_lifecycle` test to s3's check and paths.
 
 ## Plan review
 - Jev step/AC alignment 0.66; checked by hand: AC-1..AC-4 each mapped, boundaries listed per step, paths cover tests and fixtures. Approved.
