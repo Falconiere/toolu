@@ -1,7 +1,10 @@
 //! `toolu ast-grep outline <path>...`: a file prints its items with ranges, a
 //! directory prints one line per file with its public names.
 
+use std::collections::HashMap;
 use std::path::Path;
+
+mod large;
 
 use clap::ArgMatches;
 use serde_json::{Value, json};
@@ -12,6 +15,7 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
 use toolu_runtime::invocation::current_dir;
 use toolu_runtime::process::{Spec, run as spawn};
+use toolu_state::git::common_dir;
 
 const MAX_ITEMS: usize = 150;
 const MAX_FILES: usize = 150;
@@ -36,6 +40,9 @@ fn usage(message: &str) -> Outcome {
 
 /// The supported files git lists under `dir`, sorted.
 fn listed(env: &Env, cwd: &Path, dir: &str) -> Result<Vec<String>, String> {
+  if common_dir(env, cwd).is_none() {
+    return walk(cwd, dir);
+  }
   let mut spec = Spec::new([
     "git",
     "ls-files",
@@ -66,15 +73,47 @@ fn listed(env: &Env, cwd: &Path, dir: &str) -> Result<Vec<String>, String> {
   Ok(files)
 }
 
+fn walk(cwd: &Path, dir: &str) -> Result<Vec<String>, String> {
+  let mut dirs = vec![cwd.join(dir)];
+  let mut files = Vec::new();
+  while let Some(folder) = dirs.pop() {
+    let entries =
+      std::fs::read_dir(&folder).map_err(|err| format!("{}: {err}", folder.display()))?;
+    for entry in entries {
+      let entry = entry.map_err(|err| format!("{}: {err}", folder.display()))?;
+      let kind = entry
+        .file_type()
+        .map_err(|err| format!("{}: {err}", entry.path().display()))?;
+      if kind.is_dir() {
+        dirs.push(entry.path());
+        continue;
+      }
+      if !kind.is_file() {
+        continue;
+      }
+      let path = entry.path();
+      let relative = path
+        .strip_prefix(cwd)
+        .map_err(|err| err.to_string())?
+        .to_string_lossy()
+        .into_owned();
+      if supported(&relative) {
+        files.push(relative);
+      }
+    }
+  }
+  files.sort();
+  Ok(files)
+}
+
 fn targets(env: &Env, cwd: &Path, paths: &[String]) -> Result<Vec<Target>, Outcome> {
   let mut targets = Vec::with_capacity(paths.len());
   for path in paths {
     let full = cwd.join(path);
     if full.is_dir() {
-      let mut files = listed(env, cwd, path)
+      let files = listed(env, cwd, path)
         .map_err(|error| Outcome::failed(Exit::Failure, format!("ast-grep outline: {error}")))?;
-      let omitted = files.len().saturating_sub(MAX_FILES);
-      files.truncate(MAX_FILES);
+      let omitted = 0;
       targets.push(Target::Dir {
         dir: path.clone(),
         files,
@@ -204,8 +243,12 @@ fn dir_json(dir: &str, files: &[Listed<'_>], omitted: usize) -> Value {
   json!({"dir": dir, "files": files, "omitted": omitted})
 }
 
-fn render(targets: &[Target], outlines: &[FileOutline], json_output: bool) -> String {
-  let find = |path: &str| outlines.iter().find(|file| file.path == path);
+fn render(targets: &[Target], outlines: &[FileOutline], json_output: bool, cwd: &Path) -> String {
+  let by_path: HashMap<&str, &FileOutline> = outlines
+    .iter()
+    .map(|file| (file.path.as_str(), file))
+    .collect();
+  let find = |path: &str| by_path.get(path).copied();
   let mut texts = Vec::with_capacity(targets.len());
   let mut docs = Vec::with_capacity(targets.len());
   for target in targets {
@@ -228,8 +271,13 @@ fn render(targets: &[Target], outlines: &[FileOutline], json_output: bool) -> St
           .iter()
           .map(|path| (path.as_str(), find(path)))
           .collect();
-        texts.push(dir_text(dir, &found, *omitted));
-        docs.push(dir_json(dir, &found, *omitted));
+        if files.len() > MAX_FILES {
+          texts.push(large::text(dir, &found, cwd));
+          docs.push(large::json(dir, &found, cwd));
+        } else {
+          texts.push(dir_text(dir, &found, *omitted));
+          docs.push(dir_json(dir, &found, *omitted));
+        }
       }
     }
   }
@@ -269,7 +317,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     .cloned()
     .collect();
   match outline(&env, &cwd, &files) {
-    Ok(outlines) => Outcome::data(render(&targets, &outlines, ctx.json)),
+    Ok(outlines) => Outcome::data(render(&targets, &outlines, ctx.json, &cwd)),
     Err(error) => Outcome::failed(Exit::Failure, format!("ast-grep outline: {error}")),
   }
 }

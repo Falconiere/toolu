@@ -1,4 +1,7 @@
-//! Whole-file retention for completed byte-savings session ledgers.
+//! Whole-file retention for completed byte-savings session ledgers and outlines.
+
+mod outline;
+pub(crate) use outline::sweep_outlines;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,7 +18,6 @@ pub(crate) const BYTE_SAVINGS_RETENTION: Duration = Duration::from_hours(24 * 7)
 pub(crate) const BYTE_SAVINGS_MAX_COMPLETED: usize = 64;
 
 const WARN: &str = "toolu-byte-savings-sweep";
-
 /// Reclaim completed ledgers under the config-root byte-savings directory.
 ///
 /// Never fails hard: I/O problems become warning strings. File contents are

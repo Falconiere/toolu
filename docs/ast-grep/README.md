@@ -20,6 +20,12 @@ brew install ast-grep
 
 ## What It Provides
 
+### Outlines and repository maps
+
+`toolu ast-grep outline <path>... [--json]` prints source items with line ranges for files. A directory with at most 150 supported files lists each file and its public names. Larger directories summarize all supported files by containing directory, with file and line counts, a module doc where available, and public names. Text output is capped at 150 lines and 12 KiB; JSON contains the corresponding directory summaries.
+
+Outlines in Git repositories are cached by the working file's blob hash under `<git common dir>/toolu/outline/`, so linked worktrees share entries. Editing a file changes its key. Unreadable entries are rebuilt. At SessionStart, entries older than 14 days are removed, then the oldest entries beyond 20,000. Outside Git, supported files can be outlined without writing cache files.
+
 ### 1. `ast-grep` Skill (Always Active)
 
 Mandates ast-grep over Grep/sed for any find-or-rewrite-by-code-shape task. Falls back to Grep only for exact literals.

@@ -2,6 +2,7 @@
 
 use std::error::Error;
 use std::fs;
+use std::os::unix::fs::PermissionsExt as _;
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -133,4 +134,147 @@ fn ast_grep_outline_refuses_unsupported_and_missing_paths() {
     text(&missing.stderr),
     "ast-grep outline: src/none.rs: no such file or directory\n"
   );
+}
+
+#[test]
+fn outlines_reuse_content_across_linked_worktrees_and_rescan_edits() {
+  let dir = repo().unwrap();
+  let root = dir.path();
+  git(root, &["config", "user.email", "test@example.com"]).unwrap();
+  git(root, &["config", "user.name", "Test"]).unwrap();
+  git(root, &["commit", "-qm", "initial"]).unwrap();
+  let other = root.join("linked");
+  git(
+    root,
+    &["worktree", "add", "-qb", "other", other.to_str().unwrap()],
+  )
+  .unwrap();
+  let bin = root.join("bin");
+  fs::create_dir(&bin).unwrap();
+  symlink(on_path("git").unwrap(), bin.join("git")).unwrap();
+  let log = root.join("scans.log");
+  let script = format!(
+    "#!/bin/sh\nif [ \"$1\" = scan ]; then echo scan >> '{}'; fi\nexec '{}' \"$@\"\n",
+    log.display(),
+    on_path("ast-grep").unwrap().display()
+  );
+  fs::write(bin.join("ast-grep"), script).unwrap();
+  fs::set_permissions(bin.join("ast-grep"), fs::Permissions::from_mode(0o755)).unwrap();
+  for base in [root, root, &other] {
+    let out = outline(base, &["src/a.rs"], Some(&bin)).unwrap();
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+  }
+  assert_eq!(fs::read_to_string(&log).unwrap().lines().count(), 1);
+  fs::write(root.join("src/a.rs"), "pub fn changed() {}\n").unwrap();
+  let out = outline(root, &["src/a.rs"], Some(&bin)).unwrap();
+  assert!(text(&out.stdout).contains("changed"));
+  assert_eq!(fs::read_to_string(&log).unwrap().lines().count(), 2);
+}
+
+#[test]
+fn large_repository_map_summarizes_all_files_by_directory() {
+  let dir = repo().unwrap();
+  let root = dir.path();
+  for i in 0..160 {
+    let folder = root.join(format!("pkg{}", i / 80));
+    fs::create_dir_all(&folder).unwrap();
+    fs::write(
+      folder.join(format!("f{i}.rs")),
+      format!("pub fn f{i}() {{}}\n"),
+    )
+    .unwrap();
+  }
+  fs::write(
+    root.join("pkg0/lib.rs"),
+    "//! First module sentence. More.\npub fn entry() {}\n",
+  )
+  .unwrap();
+  let out = outline(root, &["."], None).unwrap();
+  assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+  let result = text(&out.stdout);
+  assert!(result.lines().count() <= 150);
+  assert!(result.contains("pkg0: 81 files"), "{result}");
+  assert!(result.contains("pkg1: 80 files"), "{result}");
+  assert!(result.contains("First module sentence."), "{result}");
+}
+
+#[test]
+fn outside_git_directory_outlines_without_cache() {
+  let dir = tempfile::tempdir().unwrap();
+  fs::write(dir.path().join("one.rs"), "pub fn one() {}\n").unwrap();
+  let out = outline(dir.path(), &["."], None).unwrap();
+  assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+  assert!(text(&out.stdout).contains("one.rs"));
+  assert!(!dir.path().join(".git").exists());
+  assert!(!dir.path().join("toolu").exists());
+}
+
+#[test]
+fn large_map_labels_root_level_files_with_dot() {
+  let dir = repo().unwrap();
+  for i in 0..160 {
+    fs::write(
+      dir.path().join(format!("top{i}.rs")),
+      format!("pub fn top{i}() {{}}\n"),
+    )
+    .unwrap();
+  }
+  let out = outline(dir.path(), &["."], None).unwrap();
+  assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+  assert!(
+    text(&out.stdout)
+      .lines()
+      .any(|line| line.starts_with(".: 160 files,"))
+  );
+}
+
+#[test]
+fn large_map_reads_module_doc_after_empty_opening_line() {
+  let dir = repo().unwrap();
+  let folder = dir.path().join("pkg");
+  fs::create_dir(&folder).unwrap();
+  for i in 0..160 {
+    fs::write(
+      folder.join(format!("f{i}.rs")),
+      format!("pub fn f{i}() {{}}\n"),
+    )
+    .unwrap();
+  }
+  fs::write(
+    folder.join("lib.rs"),
+    "//!\n//! Module overview. More.\npub fn entry() {}\n",
+  )
+  .unwrap();
+  let out = outline(dir.path(), &["."], None).unwrap();
+  assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+  assert!(text(&out.stdout).contains("pkg: 161 files, 163 lines // Module overview."));
+}
+
+#[test]
+fn edit_during_scan_cannot_poison_the_old_content_cache() {
+  let dir = repo().unwrap();
+  let root = dir.path();
+  let original = fs::read(root.join("src/a.rs")).unwrap();
+  let bin = root.join("bin");
+  fs::create_dir(&bin).unwrap();
+  symlink(on_path("git").unwrap(), bin.join("git")).unwrap();
+  let script = format!(
+    "#!/bin/sh\nif [ \"$1\" = scan ]; then printf 'pub fn changed() {{}}\\n' > src/a.rs; fi\nexec '{}' \"$@\"\n",
+    on_path("ast-grep").unwrap().display()
+  );
+  fs::write(bin.join("ast-grep"), script).unwrap();
+  fs::set_permissions(bin.join("ast-grep"), fs::Permissions::from_mode(0o755)).unwrap();
+  let changed = outline(root, &["src/a.rs"], Some(&bin)).unwrap();
+  assert_eq!(changed.status.code(), Some(0), "{}", text(&changed.stderr));
+  assert!(text(&changed.stdout).contains("changed"));
+  fs::write(root.join("src/a.rs"), original).unwrap();
+  let restored = outline(root, &["src/a.rs"], None).unwrap();
+  assert_eq!(
+    restored.status.code(),
+    Some(0),
+    "{}",
+    text(&restored.stderr)
+  );
+  assert!(text(&restored.stdout).contains("pub fn add("));
+  assert!(!text(&restored.stdout).contains("changed"));
 }
