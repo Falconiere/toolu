@@ -1468,6 +1468,7 @@ dependencies = [
 name = "toolu-engine"
 version = "9.0.0"
 dependencies = [
+ "serde",
  "serde_json",
  "tempfile",
  "toolu-protocol",

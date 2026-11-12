@@ -113,6 +113,7 @@ pub fn register(env: &Env, host: Host, payload: &str) -> Outcome {
   });
   let active = crate::retention::active_session_from_payload(payload);
   let sweep_warnings = crate::retention::sweep_byte_savings(env, active.as_deref());
+  let outline_warnings = crate::retention::sweep_outlines(env);
   // A module removed before a later rule failed is gone, so its notice shows now.
   let lines: Vec<String> = migrated
     .then(|| MIGRATED.to_owned())
@@ -123,6 +124,7 @@ pub fn register(env: &Env, host: Host, payload: &str) -> Outcome {
         .map(|error| format!("ast-grep registration failed: {error}")),
     )
     .chain(sweep_warnings)
+    .chain(outline_warnings)
     .collect();
   Outcome::notice((!lines.is_empty()).then(|| lines.join("\n")))
 }

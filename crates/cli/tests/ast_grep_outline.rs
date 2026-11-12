@@ -143,7 +143,11 @@ fn outlines_reuse_content_across_linked_worktrees_and_rescan_edits() {
   git(root, &["config", "user.name", "Test"]).unwrap();
   git(root, &["commit", "-qm", "initial"]).unwrap();
   let other = root.join("linked");
-  git(root, &["worktree", "add", "-qb", "other", other.to_str().unwrap()]).unwrap();
+  git(
+    root,
+    &["worktree", "add", "-qb", "other", other.to_str().unwrap()],
+  )
+  .unwrap();
   let bin = root.join("bin");
   fs::create_dir(&bin).unwrap();
   symlink(on_path("git").unwrap(), bin.join("git")).unwrap();
@@ -174,9 +178,17 @@ fn large_repository_map_summarizes_all_files_by_directory() {
   for i in 0..160 {
     let folder = root.join(format!("pkg{}", i / 80));
     fs::create_dir_all(&folder).unwrap();
-    fs::write(folder.join(format!("f{i}.rs")), format!("pub fn f{i}() {{}}\n")).unwrap();
+    fs::write(
+      folder.join(format!("f{i}.rs")),
+      format!("pub fn f{i}() {{}}\n"),
+    )
+    .unwrap();
   }
-  fs::write(root.join("pkg0/lib.rs"), "//! First module sentence. More.\npub fn entry() {}\n").unwrap();
+  fs::write(
+    root.join("pkg0/lib.rs"),
+    "//! First module sentence. More.\npub fn entry() {}\n",
+  )
+  .unwrap();
   let out = outline(root, &["."], None).unwrap();
   assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
   let result = text(&out.stdout);

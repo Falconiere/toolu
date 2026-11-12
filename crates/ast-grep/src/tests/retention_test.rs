@@ -9,7 +9,7 @@ use toolu_runtime::env::Env;
 
 use super::{
   BYTE_SAVINGS_MAX_COMPLETED, BYTE_SAVINGS_RETENTION, active_session_from_payload,
-  sweep_byte_savings, sweep_dir,
+  sweep_byte_savings, sweep_dir, sweep_outline_dir,
 };
 use crate::report::{parse, read_ledger, render};
 use crate::savings::byte_savings_dir;
@@ -245,4 +245,31 @@ fn payload_session_id_matches_savings_sanitization() {
   );
   assert_eq!(active_session_from_payload("{}"), None);
   assert_eq!(active_session_from_payload(r#"{"session_id":""}"#), None);
+}
+
+#[test]
+fn outline_sweep_removes_old_entries_then_oldest_over_capacity() {
+  let root = tempfile::tempdir().unwrap();
+  let dir = root.path().join("toolu/outline");
+  let version = dir.join("v1-ast-grep-1/rust");
+  put(
+    &version.join("cold.json"),
+    "{}",
+    Duration::from_hours(24 * 15),
+  );
+  for i in 0..5 {
+    put(
+      &version.join(format!("hot-{i}.json")),
+      "{}",
+      Duration::from_secs(60 + i),
+    );
+  }
+  let warnings = sweep_outline_dir(&dir, SystemTime::now(), 3);
+  assert!(warnings.is_empty(), "{warnings:?}");
+  assert!(!version.join("cold.json").exists());
+  assert!(!version.join("hot-4.json").exists());
+  assert!(!version.join("hot-3.json").exists());
+  for i in 0..3 {
+    assert!(version.join(format!("hot-{i}.json")).exists());
+  }
 }

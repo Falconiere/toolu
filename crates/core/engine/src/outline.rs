@@ -5,6 +5,7 @@
 //! rule document per parser (`rules`); `parse` reads its JSON and `text`
 //! derives each item's fields from the file text.
 
+mod cache;
 mod doc;
 mod parse;
 mod rules;
@@ -13,12 +14,14 @@ mod text;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
+use serde::{Deserialize, Serialize};
 use toolu_runtime::env::Env;
+use toolu_state::content_id::blob_ids;
 
 use crate::quality::{OUTPUT_LIMIT, run_scan};
 
 /// One item of a file: a function, type, impl, class, method or top-level binding.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Item {
   /// The item's name (an impl's type).
   pub name: String,
@@ -37,7 +40,7 @@ pub struct Item {
 }
 
 /// One file's items, ordered by start line.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileOutline {
   /// The path as the caller gave it.
   pub path: String,
@@ -76,6 +79,9 @@ pub fn outline(env: &Env, cwd: &Path, paths: &[String]) -> Result<Vec<FileOutlin
     let meta = std::fs::metadata(cwd.join(path)).map_err(|err| format!("{path}: {err}"))?;
     sized.push((path.clone(), meta.len()));
   }
+  let cache_dir = cache::root(env, cwd);
+  let ids = cache_dir.as_ref().and_then(|_| blob_ids(env, cwd, paths));
+  let (mut cached, missing) = cache_candidates(sized, cache_dir.as_deref(), ids.as_deref());
   let mut scan = Scan {
     env,
     cwd,
@@ -83,22 +89,68 @@ pub fn outline(env: &Env, cwd: &Path, paths: &[String]) -> Result<Vec<FileOutlin
     found: HashMap::new(),
     too_large: HashSet::new(),
   };
-  for batch in batches(sized, BATCH_BYTES) {
+  for batch in batches(missing, BATCH_BYTES) {
     scan.batch(batch)?;
   }
   let mut outlines = Vec::with_capacity(paths.len());
-  for path in paths.iter().filter(|path| !scan.too_large.contains(*path)) {
-    let bytes = std::fs::read(cwd.join(path)).map_err(|err| format!("{path}: {err}"))?;
-    let source = String::from_utf8_lossy(&bytes);
-    // ast-grep prints `./a.rs` as `a.rs`.
-    let matches = scan
-      .found
-      .get(path.as_str())
-      .or_else(|| scan.found.get(path.trim_start_matches("./")))
-      .map_or(&[][..], Vec::as_slice);
-    outlines.push(file_outline(path, &source, matches));
+  for (index, path) in paths
+    .iter()
+    .enumerate()
+    .filter(|(_, path)| !scan.too_large.contains(*path))
+  {
+    if let Some(hit) = cached.remove(&index) {
+      outlines.push(hit);
+      continue;
+    }
+    outlines.push(scanned_file(
+      &scan,
+      path,
+      cache_dir.as_deref(),
+      ids.as_deref().and_then(|ids| ids.get(index)),
+    )?);
   }
   Ok(outlines)
+}
+
+fn cache_candidates(
+  sized: Vec<(String, u64)>,
+  root: Option<&Path>,
+  ids: Option<&[String]>,
+) -> (HashMap<usize, FileOutline>, Vec<(String, u64)>) {
+  let mut cached = HashMap::new();
+  let mut missing = Vec::new();
+  for (index, (path, bytes)) in sized.into_iter().enumerate() {
+    let hit = root
+      .zip(ids.and_then(|ids| ids.get(index)))
+      .and_then(|(root, id)| cache::read(root, &path, id));
+    if let Some(hit) = hit {
+      cached.insert(index, hit);
+    } else {
+      missing.push((path, bytes));
+    }
+  }
+  (cached, missing)
+}
+
+fn scanned_file(
+  scan: &Scan<'_>,
+  path: &str,
+  root: Option<&Path>,
+  id: Option<&String>,
+) -> Result<FileOutline, String> {
+  let bytes = std::fs::read(scan.cwd.join(path)).map_err(|err| format!("{path}: {err}"))?;
+  let source = String::from_utf8_lossy(&bytes);
+  // ast-grep prints `./a.rs` as `a.rs`.
+  let matches = scan
+    .found
+    .get(path)
+    .or_else(|| scan.found.get(path.trim_start_matches("./")))
+    .map_or(&[][..], Vec::as_slice);
+  let file = file_outline(path, &source, matches);
+  if let Some((root, id)) = root.zip(id) {
+    cache::write(root, id, &file);
+  }
+  Ok(file)
 }
 
 /// One `outline` call's scans and their matches by file.

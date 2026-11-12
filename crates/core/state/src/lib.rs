@@ -11,6 +11,8 @@
 //!   read from `.git`; `detect`: project markers, linters, tools and line counts.
 
 pub mod apply_patch;
+/// Working-tree blob IDs for content-addressed caches.
+pub mod content_id;
 pub mod ctx;
 pub mod detect;
 pub mod diff_sha;
