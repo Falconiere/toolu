@@ -315,6 +315,7 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 The hook engine and language gates are covered by Rust tests that spawn the real `toolu` binary. CI selects checks from the changed paths; see [testing](docs/testing.md). Live host smoke tests use temporary host configuration roots:
 
 ```sh
+cargo xtask check-changed           # branch pre-check after each plan code step
 cargo xtask gate                    # the quality gate
 cargo test --workspace             # every Rust test
 cargo xtask host-smoke --host both  # live Claude, Codex and Muse check (macOS or Linux)

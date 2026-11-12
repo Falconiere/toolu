@@ -12,6 +12,7 @@ mod bench_result;
 mod bench_statusline;
 mod bench_statusline_repo;
 mod bench_statusline_report;
+mod check_changed;
 mod check_hooks;
 mod check_workflows;
 mod ci_aggregate;
@@ -106,6 +107,7 @@ type Task = fn(&Options) -> Result<Verdict, String>;
 /// Every `cargo xtask` task. The behaviour inventory discovers its entries here.
 const TASKS: &[(&str, Task)] = &[
   ("gate", gate::run),
+  ("check-changed", check_changed::run),
   ("guardrails", guardrails::run),
   ("check-layers", layers_check::run),
   ("check-reach", reach::run),
@@ -144,7 +146,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   [--only STEP]... [--timeout N] [--timeout-ms N] [--resolver] [--bin PATH] [--home DIR] \
   [--check] [ARG]...\n\
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
-  tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
+  tasks: gate, check-changed, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, print-muse-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, deploy-gate, deploy-guard, context-budget, ci-changes, \
   check-ci-paths, ci-aggregate, final-removal, gate-coverage, packaging, bench, bench-hooks, bench-statusline, host-smoke, pack";

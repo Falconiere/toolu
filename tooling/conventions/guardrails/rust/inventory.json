@@ -8,6 +8,12 @@
     },
     {
       "kind": "xtask-task",
+      "id": "check-changed",
+      "pass": "crates/xtask/src/tests/check_changed_test.rs::changed_paths_select_the_deepest_crate_or_workspace",
+      "fail": "crates/xtask/src/tests/check_changed_test.rs::invalid_base_is_a_setup_error"
+    },
+    {
+      "kind": "xtask-task",
       "id": "guardrails",
       "pass": "crates/xtask/tests/fixtures_guardrails.rs::file_length_clean",
       "fail": "crates/xtask/tests/fixtures_guardrails.rs::file_length_violating"

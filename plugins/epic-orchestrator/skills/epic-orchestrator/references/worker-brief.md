@@ -81,6 +81,8 @@ directly.
    delivery preflight. A failed review or check stops at that phase; fix it and
    resume there. Before implementation and before pushing, fetch and rebase on
    `origin/{{BASE}}` if it moved, then re-run affected checks.
+   When repository instructions name a scoped pre-check, make it each code
+   step's check with that step's paths; the final full gate remains required.
 3. **PR.** The skill creates or finds the PR targeting `{{BASE}}`. Use a
    conventional-commit title. Its body starts with `{{CLOSES}}` and `Part of {{EPIC_REF}}`, followed by a
    summary and verification evidence. Verify its number and head/base branches;

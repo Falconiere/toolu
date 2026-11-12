@@ -71,6 +71,7 @@ pub(crate) fn verdict(gate: &[String], product: &[String], title: Option<&str>) 
   found
 }
 
+/// Run Git in the workspace and return its stdout, or its failure text.
 pub(crate) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
   let output = Command::new("git")
     .arg("-C")
@@ -106,7 +107,7 @@ pub(crate) fn show(root: &Path, base: &str, path: &Path) -> Result<Option<String
 }
 
 /// Paths that differ between `base` and the working tree, untracked files included.
-fn changed(root: &Path, base: &str) -> Result<Vec<PathBuf>, String> {
+pub(crate) fn changed(root: &Path, base: &str) -> Result<Vec<PathBuf>, String> {
   let diff = git(root, &["diff", "--name-only", "--no-renames", base])?;
   let untracked = git(root, &["ls-files", "--others", "--exclude-standard"])?;
   let mut paths: Vec<PathBuf> = diff

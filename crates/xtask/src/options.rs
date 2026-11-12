@@ -6,11 +6,11 @@ use std::path::PathBuf;
 const DEFAULT_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
 /// Parsed options. Each task reads the ones it needs.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct Options {
   /// The workspace root (`--root`, default: this repository).
   pub(crate) root: PathBuf,
-  /// The base revision for `check-gate-change` and `check-cli-compat` (`--base`).
+  /// The base revision for `check-changed`, `check-gate-change` and `check-cli-compat` (`--base`).
   pub(crate) base: Option<String>,
   /// The pull request title for `check-gate-change` and `check-cli-compat` (`--title`).
   pub(crate) title: Option<String>,
