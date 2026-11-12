@@ -209,5 +209,5 @@ fn write_offsets(dir: &Path, hits: &[Off]) -> Result<(), String> {
   for hit in hits {
     write_off(&mut file, hit)?;
   }
-  file.sync_all().map_err(|err| err.to_string())
+  Ok(())
 }

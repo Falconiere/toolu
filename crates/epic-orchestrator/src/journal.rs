@@ -1,7 +1,7 @@
 //! Append-only JSON lines under `<root>/journal/`, one file a day, with a
 //! sequence number. A line without a trailing newline is ignored.
 //! `sequence.index` and `sequence.offsets` are a rebuildable cache of the last
-//! sequence and each complete line's offset. The JSONL line is synced first.
+//! sequence and each complete line's offset. Only the JSONL line is synced.
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

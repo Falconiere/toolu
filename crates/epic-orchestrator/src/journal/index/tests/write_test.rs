@@ -10,3 +10,35 @@ fn the_synced_record_is_a_single_terminated_line() {
   assert_eq!(text.chars().filter(|ch| *ch == '\n').count(), 1);
   assert!(text.contains(&format!("\"seq\":{}", stored.seq)));
 }
+
+#[test]
+fn each_append_flushes_only_its_jsonl_line() {
+  use std::sync::Arc;
+  use std::sync::atomic::{AtomicU64, Ordering};
+
+  let root = tempfile::tempdir().unwrap();
+  let dir = root.path().join("journal");
+  let lock = root.path().join("journal.lock");
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+  let sink = Arc::new(AtomicU64::new(0));
+  super::super::FLUSH_SINK.with(|slot| *slot.borrow_mut() = Some(Arc::clone(&sink)));
+  let _disarm = FlushDisarm;
+  for _ in 0..2 {
+    crate::journal::append(
+      &dir,
+      &lock,
+      &crate::journal::Record::new("action", "flush-count", "k", "t", "n"),
+      at,
+    )
+    .unwrap();
+    assert_eq!(sink.swap(0, Ordering::Relaxed), 1);
+  }
+}
+
+struct FlushDisarm;
+
+impl Drop for FlushDisarm {
+  fn drop(&mut self) {
+    super::super::FLUSH_SINK.with(|slot| *slot.borrow_mut() = None);
+  }
+}

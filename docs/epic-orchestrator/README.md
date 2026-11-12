@@ -199,6 +199,16 @@ The resident engine subscribes to herdr (`events.subscribe`) instead of polling.
 herdr answers one request per socket connection, so each herdr call, the
 session's ping and snapshot included, opens its own connection; only the
 subscription stays open.
+
+The journal stores one JSONL file per UTC day. Each append writes a complete
+record and syncs the daily JSONL file before updating `sequence.index` and
+`sequence.offsets`.
+Those files are rebuildable caches; neither their writes nor the containing
+directory are synced. Missing, stale or corrupt caches rebuild from complete
+JSONL records on the next append or paged read. An incomplete trailing line is
+ignored. If a day file is truncated, recovery resumes sequence allocation from
+the last complete record still in the log.
+
 The local control socket is mode `0600`. A connected peer has five seconds
 total to finish one JSON request line (up to 16 MiB); idle, incomplete and
 slow-trickling requests close at that deadline. Once a valid request is read,

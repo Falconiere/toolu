@@ -1,8 +1,8 @@
 //! Rebuildable sequence cache for the daily JSONL log.
 //!
 //! `sequence.index` is the committed summary. `sequence.offsets` is an ASCII
-//! table of each complete line. The JSONL record is synced before either
-//! update. A missing, stale, or corrupt cache is rebuilt from the log.
+//! table of each complete line. Only the JSONL record is synced; a missing,
+//! stale, or corrupt cache is rebuilt from the log.
 
 use std::cell::RefCell;
 use std::fs::File;
@@ -26,6 +26,11 @@ const ROW: u64 = 41;
 thread_local! {
   /// Per-thread JSONL read counter. Absent unless a test installs one.
   pub(crate) static SINK: RefCell<Option<Arc<AtomicU64>>> = const { RefCell::new(None) };
+}
+
+thread_local! {
+  /// Per-thread file flush counter. Absent unless a test installs one.
+  static FLUSH_SINK: RefCell<Option<Arc<AtomicU64>>> = const { RefCell::new(None) };
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -68,6 +73,15 @@ fn note(bytes: usize) {
       let _prev = sink.fetch_add(count, Ordering::Relaxed);
     }
   });
+}
+
+fn flush(file: &File) -> Result<(), String> {
+  FLUSH_SINK.with(|slot| {
+    if let Some(sink) = slot.borrow().as_ref() {
+      let _prev = sink.fetch_add(1, Ordering::Relaxed);
+    }
+  });
+  file.sync_all().map_err(|err| err.to_string())
 }
 
 fn as_u64(value: usize) -> Result<u64, String> {
@@ -176,22 +190,18 @@ fn store(dir: &Path, summary: &Summary) -> Result<(), String> {
   let path = summary_path(dir);
   let tmp = dir.join(format!(".sequence.index.{}.tmp", std::process::id()));
   let text = serde_json::to_string(summary).map_err(|err| err.to_string())?;
-  write_synced(&tmp, text.as_bytes())?;
-  std::fs::rename(&tmp, &path).map_err(|err| err.to_string())?;
-  File::open(dir)
-    .and_then(|file| file.sync_all())
-    .map_err(|err| err.to_string())
+  write_cache(&tmp, text.as_bytes())?;
+  std::fs::rename(&tmp, &path).map_err(|err| err.to_string())
 }
 
-fn write_synced(path: &Path, bytes: &[u8]) -> Result<(), String> {
+fn write_cache(path: &Path, bytes: &[u8]) -> Result<(), String> {
   let mut file = std::fs::OpenOptions::new()
     .write(true)
     .create(true)
     .truncate(true)
     .open(path)
     .map_err(|err| err.to_string())?;
-  file.write_all(bytes).map_err(|err| err.to_string())?;
-  file.sync_all().map_err(|err| err.to_string())
+  file.write_all(bytes).map_err(|err| err.to_string())
 }
 
 fn len_of(path: &Path) -> Result<u64, String> {
@@ -222,7 +232,6 @@ fn publish(
       pos: placed.start,
     },
   )?;
-  file.sync_all().map_err(|err| err.to_string())?;
   summary.records = summary.records.saturating_add(1);
   summary.last = record.seq;
   if summary.oldest.is_none() {

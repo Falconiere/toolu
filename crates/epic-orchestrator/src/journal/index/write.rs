@@ -38,7 +38,7 @@ pub(super) fn write_line(
   file
     .write_all(line_text(record)?.as_bytes())
     .map_err(|err| err.to_string())?;
-  file.sync_all().map_err(|err| err.to_string())?;
+  super::flush(&file)?;
   let end = file.metadata().map_err(|err| err.to_string())?.len();
   Ok(Placed {
     day,
