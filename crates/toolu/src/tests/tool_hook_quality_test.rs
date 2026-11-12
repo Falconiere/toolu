@@ -156,7 +156,11 @@ fn production_multi_path_quality_uses_one_real_scan() {
   let gate = project.join(".claude/tmp/quality-gate-status.json");
   let entries = failing_entries(&gate);
   assert_eq!(entries.len(), 1);
-  assert_eq!(entries.first().map(|entry| entry.0.as_str()), Some("a.ts"));
+  let a = project.join("a.ts").display().to_string();
+  assert_eq!(
+    entries.first().map(|entry| entry.0.as_str()),
+    Some(a.as_str())
+  );
   assert_eq!(
     entries.first().map(|entry| entry.1.source.as_str()),
     Some("ts-quality-hook")
@@ -208,10 +212,13 @@ fn a_later_executable_edit_refreshes_the_next_paths_quality_scan() {
   let gate = project.join(".claude/tmp/quality-gate-status.json");
   let entries = failing_entries(&gate);
   assert_eq!(entries.len(), 2);
-  assert_eq!(entries[0].0, "b.ts");
+  assert_eq!(entries[0].0, project.join("b.ts").display().to_string());
   assert_eq!(entries[0].1.source, "ts-quality-hook");
   assert!(entries[0].1.violations.contains("b.ts:1:throw \"later\";"));
-  assert_eq!(entries[1].0, "test_c.py");
+  assert_eq!(
+    entries[1].0,
+    project.join("test_c.py").display().to_string()
+  );
   assert_eq!(entries[1].1.source, "python-quality-hook");
   assert!(entries[1].1.violations.contains("mocker"));
   let unchanged = toolu_engine::dispatch::dispatch(Phase::Post, &payload, &options);

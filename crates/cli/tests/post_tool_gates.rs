@@ -45,12 +45,12 @@ impl Sandbox {
     self.tool_at(
       &self.root.join("project"),
       "Bash",
-      serde_json::json!({"command": command}),
+      &serde_json::json!({"command": command}),
       code,
     )
   }
 
-  fn tool_at(&self, cwd: &Path, name: &str, input: serde_json::Value, code: i64) -> Res<Output> {
+  fn tool_at(&self, cwd: &Path, name: &str, input: &serde_json::Value, code: i64) -> Res<Output> {
     let stdin = serde_json::json!({
       "session_id": "s1",
       "hook_event_name": "PostToolUse",
@@ -85,7 +85,7 @@ impl Sandbox {
     if !ran.status.success() {
       return Err(format!("{command}: {ran:?}").into());
     }
-    self.tool_at(cwd, "Bash", serde_json::json!({"command": command}), 0)
+    self.tool_at(cwd, "Bash", &serde_json::json!({"command": command}), 0)
   }
 
   /// The gate file's `status`, `None` when there is no file.
@@ -282,7 +282,7 @@ fn subdirectory_edit_gate_survives_unrelated_shell_event() {
   let src = sb.root.join("project/src");
   std::fs::write(src.join("lib.rs"), "#[allow(dead_code)]\nfn demo() {}\n").unwrap();
   let edit = sb
-    .tool_at(&src, "Edit", serde_json::json!({"file_path":"lib.rs"}), 0)
+    .tool_at(&src, "Edit", &serde_json::json!({"file_path":"lib.rs"}), 0)
     .unwrap();
   assert!(
     String::from_utf8_lossy(&edit.stdout).contains("QUALITY VIOLATION"),
@@ -292,7 +292,7 @@ fn subdirectory_edit_gate_survives_unrelated_shell_event() {
     .tool_at(
       &src,
       "Bash",
-      serde_json::json!({"command":"touch marker"}),
+      &serde_json::json!({"command":"touch marker"}),
       0,
     )
     .unwrap();
@@ -317,7 +317,7 @@ fn subdirectory_edit_clears_shell_gate_for_the_same_file() {
   );
   std::fs::write(src.join("lib.rs"), "//! Demo.\nfn demo() {}\n").unwrap();
   let fixed = sb
-    .tool_at(&src, "Edit", serde_json::json!({"file_path":"lib.rs"}), 0)
+    .tool_at(&src, "Edit", &serde_json::json!({"file_path":"lib.rs"}), 0)
     .unwrap();
   assert!(fixed.status.success(), "{fixed:?}");
   let gate: serde_json::Value =
