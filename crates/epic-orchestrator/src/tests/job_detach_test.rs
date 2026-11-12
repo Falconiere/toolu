@@ -76,5 +76,7 @@ fn an_unknown_result_and_an_unbound_detach_run_nothing() {
   std::fs::create_dir_all(&unbound).expect("unbound");
   let detached = run_detached(&argv(&["true"]), &unbound, Duration::ZERO, Duration::ZERO);
   assert_eq!(detached.exit, Exit::Failure);
-  assert!(!root.join("jobs/results").exists() || job_results::pending(&root, &work).unwrap().is_empty());
+  assert!(
+    !root.join("jobs/results").exists() || job_results::pending(&root, &work).unwrap().is_empty()
+  );
 }

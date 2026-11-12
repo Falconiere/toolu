@@ -172,7 +172,11 @@ fn all(root: &Path) -> Result<Vec<Record>, String> {
       records.push(parse(&value, &file)?);
     }
   }
-  records.sort_by(|a, b| a.started_at.cmp(&b.started_at).then_with(|| a.id.cmp(&b.id)));
+  records.sort_by(|a, b| {
+    a.started_at
+      .cmp(&b.started_at)
+      .then_with(|| a.id.cmp(&b.id))
+  });
   Ok(records)
 }
 
@@ -216,7 +220,10 @@ pub fn line(record: &Record) -> String {
     .exit_code
     .map_or_else(|| "?".to_owned(), |code| code.to_string());
   let stale = if record.stale { ", stale" } else { "" };
-  format!("job {} finished: exit {code}{stale}: {}", record.id, record.label)
+  format!(
+    "job {} finished: exit {code}{stale}: {}",
+    record.id, record.label
+  )
 }
 
 /// Tell the engine `job-done` for `key`, best effort: connect to its socket,

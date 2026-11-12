@@ -24,13 +24,18 @@ fn a_record_runs_waiting_running_done_and_reads_back() {
     (record.state.as_str(), record.exit_code, record.stale),
     ("waiting", None, false)
   );
-  let path = root.join("jobs/results").join(format!("{}.json", record.id));
+  let path = root
+    .join("jobs/results")
+    .join(format!("{}.json", record.id));
   let text = std::fs::read_to_string(path).unwrap();
   assert!(text.contains("\"schema\":1"), "{text}");
   record.state = "running".to_owned();
   update(&root, &record).unwrap();
   let done = finish(&root, &record.id, 3);
-  assert_eq!(line(&done), format!("job {} finished: exit 3: cargo test", done.id));
+  assert_eq!(
+    line(&done),
+    format!("job {} finished: exit 3: cargo test", done.id)
+  );
   assert_eq!(get(&root, &done.id).unwrap(), Some(done));
   assert_eq!(get(&root, "missing").unwrap(), None);
 }

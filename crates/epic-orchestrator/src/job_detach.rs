@@ -25,7 +25,12 @@ fn fail_early(root: &Path, record: &mut job_results::Record, message: String) ->
 }
 
 /// Create the `waiting` record, relaunch this verb as its copy, print the id.
-pub(crate) fn run_detached(argv: &[String], cwd: &Path, bound: Duration, poll: Duration) -> Outcome {
+pub(crate) fn run_detached(
+  argv: &[String],
+  cwd: &Path,
+  bound: Duration,
+  poll: Duration,
+) -> Outcome {
   let binding = match binding_of(cwd) {
     Ok(binding) => binding,
     Err(outcome) => return outcome,
