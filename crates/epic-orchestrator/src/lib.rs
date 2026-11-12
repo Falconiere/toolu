@@ -92,6 +92,9 @@ mod http_stream;
 mod jira_cli;
 mod job;
 mod job_detach;
+#[cfg(test)]
+#[path = "tests/job_fixture_test.rs"]
+mod job_fixture;
 mod journal;
 mod launch;
 #[cfg(test)]
@@ -189,9 +192,9 @@ mod waiting_jobs;
 mod watch;
 mod workload;
 
-/// Control-socket greeting. A client on another number spools and sends `replace`.
 // Protocol 3 fences resident engines that could still select retired workers.
 // Clients validate local state before an explicitly requested replacement.
+/// Control-socket greeting. A client on another number spools and sends `replace`.
 pub(crate) const PROTOCOL: u64 = 3;
 
 /// Idle wake. Waiters sleep until this or their own deadline.

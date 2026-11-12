@@ -1,31 +1,13 @@
 //! The detached copy path over a real bound worktree.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
-use toolu_engine::resources::binding::bind_worktree;
 use toolu_engine::resources::job_results;
-use toolu_engine::resources::leases::{LeaseKind, LeaseRequest, acquire_lease, release_lease};
+use toolu_engine::resources::leases::release_lease;
 use toolu_protocol::exit::Exit;
-use toolu_runtime::json::ordered::Ordered;
 
 use super::{run_detached, run_result};
-
-fn bound(tmp: &Path) -> (PathBuf, PathBuf) {
-  let work = tmp.join("work");
-  std::fs::create_dir_all(&work).expect("work");
-  let init = Command::new("git")
-    .args(["init", "-q"])
-    .current_dir(&work)
-    .status()
-    .expect("git init");
-  assert!(init.success());
-  let root = tmp.join("resources");
-  std::fs::create_dir_all(&root).expect("root");
-  bind_worktree(&root, &work, "detached", &work.display().to_string()).expect("bind");
-  (work, root)
-}
+use crate::job_fixture::{bound, hold};
 
 fn argv(words: &[&str]) -> Vec<String> {
   words.iter().map(|word| (*word).to_owned()).collect()
@@ -34,7 +16,7 @@ fn argv(words: &[&str]) -> Vec<String> {
 #[test]
 fn the_copy_records_done_with_the_exit_code_and_the_failure_tail() {
   let tmp = tempfile::tempdir().expect("temp");
-  let (work, root) = bound(tmp.path());
+  let (work, root) = bound(tmp.path(), "detached");
   let record = job_results::create(&root, "detached", &work, "sh -c echo hi; exit 3").unwrap();
   let outcome = run_result(
     &record.id,
@@ -58,21 +40,9 @@ fn the_copy_records_done_with_the_exit_code_and_the_failure_tail() {
 #[test]
 fn a_refused_copy_stays_waiting_until_it_acquires_the_lease() {
   let tmp = tempfile::tempdir().expect("temp");
-  let (work, root) = bound(tmp.path());
+  let (work, root) = bound(tmp.path(), "detached");
   std::fs::write(root.join("policy.json"), r#"{"maxAgents":1,"maxJobs":1}"#).unwrap();
-  let occupied = LeaseRequest {
-    kind: LeaseKind::Job,
-    key: "occupied".to_owned(),
-    state_dir: "other".to_owned(),
-    host: None,
-    host_cap: None,
-    epic_cap: None,
-    worktree: None,
-  };
-  let lease = acquire_lease(&root, &occupied, SystemTime::now()).unwrap();
-  let Some(Ordered::String(token)) = lease.get("token") else {
-    panic!("lease without token: {lease:?}");
-  };
+  let token = hold(&root);
   let record = job_results::create(&root, "detached", &work, "true").unwrap();
   let copy_work = work.clone();
   let id = record.id.clone();
@@ -95,7 +65,7 @@ fn a_refused_copy_stays_waiting_until_it_acquires_the_lease() {
     job_results::get(&root, &record.id).unwrap().unwrap().state,
     "waiting"
   );
-  release_lease(&root, token).unwrap();
+  release_lease(&root, &token).unwrap();
   assert_eq!(copy.join().unwrap().exit, Exit::Success);
   assert_eq!(
     job_results::get(&root, &record.id).unwrap().unwrap().state,
@@ -106,7 +76,7 @@ fn a_refused_copy_stays_waiting_until_it_acquires_the_lease() {
 #[test]
 fn an_unknown_result_and_an_unbound_detach_run_nothing() {
   let tmp = tempfile::tempdir().expect("temp");
-  let (work, root) = bound(tmp.path());
+  let (work, root) = bound(tmp.path(), "detached");
   let unknown = run_result(
     "no-such-id",
     &argv(&["true"]),
