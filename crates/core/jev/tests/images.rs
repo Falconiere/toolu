@@ -19,8 +19,8 @@ fn answer() -> Value {
 /// One Noul question under `q`.
 const NOUL: &str = r#"{"q":{"type":"noul","instructions":"Urgent?"}}"#;
 
-/// The 16x16 PNG of `TypeSafe`'s Box example, as its API reference encodes it.
-const PNG: &str = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAHElEQVR4nGP4TyJgoKcGBgbsaFQDfTUQB4aDBgDAen2fpitsVAAAAABJRU5ErkJggg==";
+/// The 16x16 PNG of `TypeSafe`'s Box example.
+const PNG: &[u8] = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x10\x00\x00\x00\x10\x08\x02\x00\x00\x00\x90\x91\x68\x36\x00\x00\x00\x1c\x49\x44\x41\x54\x78\x9c\x63\xf8\x4f\x22\x60\xa0\xa7\x06\x06\x06\xec\x68\x54\x03\x7d\x35\x10\x07\x86\x83\x06\x00\xc0\x7a\x7d\x9f\xa6\x2b\x6c\x54\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82";
 
 /// The value of `TypeSafe` opt-in header `name` on each request received.
 fn opted(endpoint: &Endpoint, name: &str) -> Vec<Option<String>> {
@@ -39,9 +39,7 @@ fn ask_with_sends_images_under_assets_and_opts_in_by_header() {
     .route(PATH, Reply::new(200, answer().to_string()))
     .expect("route");
   let mut assets = Assets::default();
-  assets
-    .image("shot-7f3a", &STANDARD.decode(PNG).expect("png"))
-    .expect("image");
+  assets.image("shot-7f3a", PNG).expect("image");
   let extras = Extras {
     assets,
     long_context: true,
@@ -59,7 +57,8 @@ fn ask_with_sends_images_under_assets_and_opts_in_by_header() {
   assert_eq!(
     endpoint.bodies(),
     [format!(
-      r#"{{"state":"shot-7f3a","model":"jev-latest","questions":{{"q":{{"type":"noul","instructions":"Urgent?"}}}},"assets":{{"shot-7f3a":{{"type":"image","format":"png","data_base64":"{PNG}"}}}}}}"#
+      r#"{{"state":"shot-7f3a","model":"jev-latest","questions":{{"q":{{"type":"noul","instructions":"Urgent?"}}}},"assets":{{"shot-7f3a":{{"type":"image","format":"png","data_base64":"{}"}}}}}}"#,
+      STANDARD.encode(PNG)
     )]
   );
   let on = [Some("true".to_owned())];

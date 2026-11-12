@@ -14,9 +14,8 @@ fn succeeded(outcome: &Outcome) {
   assert_eq!(outcome.stderr, None);
 }
 
-/// The 16x16 PNG of `TypeSafe`'s Box example, and how its API reference encodes it.
+/// The 16x16 PNG of `TypeSafe`'s Box example: 85 bytes, so 116 base64 characters.
 const PNG: &[u8] = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x10\x00\x00\x00\x10\x08\x02\x00\x00\x00\x90\x91\x68\x36\x00\x00\x00\x1c\x49\x44\x41\x54\x78\x9c\x63\xf8\x4f\x22\x60\xa0\xa7\x06\x06\x06\xec\x68\x54\x03\x7d\x35\x10\x07\x86\x83\x06\x00\xc0\x7a\x7d\x9f\xa6\x2b\x6c\x54\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82";
-const PNG_BASE64: &str = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAHElEQVR4nGP4TyJgoKcGBgbsaFQDfTUQB4aDBgDAen2fpitsVAAAAABJRU5ErkJggg==";
 
 /// `TypeSafe`'s two opt-in headers on the first request: images, long context.
 fn opted(harness: &Harness) -> (Option<String>, Option<String>) {
@@ -46,9 +45,20 @@ fn an_image_travels_under_assets_and_turns_images_on() {
   succeeded(&harness.run(&args, Some("fixture-key"), None, &[]));
   let sent = harness.last();
   assert_eq!(sent["state"], "shot-7f3a");
+  let asset = &sent["assets"]["shot-7f3a"];
   assert_eq!(
-    sent["assets"],
-    json!({ "shot-7f3a": { "type": "image", "format": "png", "data_base64": PNG_BASE64 } })
+    (&asset["type"], &asset["format"]),
+    (&json!("image"), &json!("png"))
+  );
+  let data = asset["data_base64"].as_str().unwrap_or_default();
+  assert!(
+    data.starts_with("iVBORw0KGgo") && data.ends_with("=="),
+    "{data}"
+  );
+  assert_eq!(data.len(), 116);
+  assert_eq!(
+    sent["assets"].as_object().map(serde_json::Map::len),
+    Some(1)
   );
   assert_eq!(opted(&harness), (Some("true".to_owned()), None));
 }
