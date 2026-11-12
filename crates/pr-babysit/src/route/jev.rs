@@ -89,7 +89,7 @@ fn ask(
       Answer::Score {
         score, confidence, ..
       } => Some((id, json!({"score": score, "confidence": confidence}))),
-      Answer::Noul { .. } | Answer::Choice { .. } => None,
+      Answer::Noul { .. } | Answer::Choice { .. } | Answer::Box { .. } => None,
     });
   Ok(scores.collect())
 }

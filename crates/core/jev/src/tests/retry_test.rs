@@ -71,7 +71,7 @@ fn a_jev_connection_refusal_remains_a_transport_failure() {
   };
   let env = Env::from_pairs([("TYPESAFE_API_KEY", "test-key")]);
   let client = Jev::from_env(&env, config).expect("client");
-  let outcome = client.post(b"{}", None);
+  let outcome = client.post(b"{}", &[], None);
   assert!(
     matches!(
       outcome,

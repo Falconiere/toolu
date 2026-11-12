@@ -64,3 +64,27 @@ fn usage_errors_are_clap_errors() {
   );
   assert_eq!(kind(&["wat"]), ErrorKind::InvalidSubcommand);
 }
+
+#[test]
+fn images_repeat_and_long_context_is_off_until_asked_for() {
+  let matches = parse(&["noul", "-s", "x", "Urgent?"]).unwrap();
+  let (_, sub) = matches.subcommand().unwrap();
+  assert!(sub.get_many::<String>("image").is_none());
+  assert!(!sub.get_flag("long-context"));
+  let matches = parse(&[
+    "ask",
+    "q.json",
+    "-s",
+    "x",
+    "-i",
+    "a=a.png",
+    "--image",
+    "b=b.jpg",
+    "--long-context",
+  ])
+  .unwrap();
+  let (_, sub) = matches.subcommand().unwrap();
+  let images: Vec<&String> = sub.get_many::<String>("image").unwrap().collect();
+  assert_eq!(images, ["a=a.png", "b=b.jpg"]);
+  assert!(sub.get_flag("long-context"));
+}

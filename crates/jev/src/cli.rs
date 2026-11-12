@@ -51,7 +51,8 @@ pub(crate) fn command() -> Command {
     )
 }
 
-/// `--state`, `--model` and `--raw`, which every verb takes.
+/// `--state`, `--model`, `--image`, `--long-context` and `--raw`, which every
+/// verb takes.
 fn shared(verb: Command) -> Command {
   verb
     .arg(
@@ -70,6 +71,20 @@ fn shared(verb: Command) -> Command {
         .value_name("MODEL")
         .default_value(toolu_jev_client::DEFAULT_MODEL)
         .help("The Jev model"),
+    )
+    .arg(
+      Arg::new("image")
+        .short('i')
+        .long("image")
+        .value_name("REF=PATH")
+        .action(ArgAction::Append)
+        .help("A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image"),
+    )
+    .arg(
+      Arg::new("long-context")
+        .long("long-context")
+        .action(ArgAction::SetTrue)
+        .help("Raise the context limit to 262k tokens (slower, less accurate)"),
     )
     .arg(
       Arg::new("raw")

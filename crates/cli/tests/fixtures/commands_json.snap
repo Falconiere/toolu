@@ -1978,6 +1978,28 @@ source: crates/cli/tests/helpers/schema.rs
             },
             {
               "global": false,
+              "help": "A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image",
+              "hidden": false,
+              "long": "image",
+              "possibleValues": [],
+              "required": false,
+              "short": "i",
+              "takesValue": true,
+              "valueName": "REF=PATH"
+            },
+            {
+              "global": false,
+              "help": "Raise the context limit to 262k tokens (slower, less accurate)",
+              "hidden": false,
+              "long": "long-context",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
               "help": "Print the whole response body instead of its answers",
               "hidden": false,
               "long": "raw",
@@ -2068,6 +2090,28 @@ source: crates/cli/tests/helpers/schema.rs
             },
             {
               "global": false,
+              "help": "A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image",
+              "hidden": false,
+              "long": "image",
+              "possibleValues": [],
+              "required": false,
+              "short": "i",
+              "takesValue": true,
+              "valueName": "REF=PATH"
+            },
+            {
+              "global": false,
+              "help": "Raise the context limit to 262k tokens (slower, less accurate)",
+              "hidden": false,
+              "long": "long-context",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
               "help": "Print the whole response body instead of its answers",
               "hidden": false,
               "long": "raw",
@@ -2147,6 +2191,28 @@ source: crates/cli/tests/helpers/schema.rs
             },
             {
               "global": false,
+              "help": "A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image",
+              "hidden": false,
+              "long": "image",
+              "possibleValues": [],
+              "required": false,
+              "short": "i",
+              "takesValue": true,
+              "valueName": "REF=PATH"
+            },
+            {
+              "global": false,
+              "help": "Raise the context limit to 262k tokens (slower, less accurate)",
+              "hidden": false,
+              "long": "long-context",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
               "help": "Print the whole response body instead of its answers",
               "hidden": false,
               "long": "raw",
@@ -2223,6 +2289,28 @@ source: crates/cli/tests/helpers/schema.rs
               "short": "m",
               "takesValue": true,
               "valueName": "MODEL"
+            },
+            {
+              "global": false,
+              "help": "A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image",
+              "hidden": false,
+              "long": "image",
+              "possibleValues": [],
+              "required": false,
+              "short": "i",
+              "takesValue": true,
+              "valueName": "REF=PATH"
+            },
+            {
+              "global": false,
+              "help": "Raise the context limit to 262k tokens (slower, less accurate)",
+              "hidden": false,
+              "long": "long-context",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
             },
             {
               "global": false,

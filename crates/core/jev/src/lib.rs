@@ -6,6 +6,8 @@
 //! - `JEV_TIMEOUT` is the per-attempt deadline in seconds (60 by default).
 //! - A call makes up to three attempts, as `plugins/jev/hooks/src/jev.ts` does;
 //!   `ask_until` also bounds every attempt and pause by one wall deadline.
+//! - `ask_with` adds what `Extras` holds: images under `assets`, and long
+//!   context. Images and Box questions turn on the images header.
 //! - State and questions keep their JSON key order, so a request carries the
 //!   text `jev.ts` sends. The reply is checked into typed answers.
 
@@ -15,11 +17,13 @@ use std::time::{Duration, Instant};
 use toolu_runtime::env::Env;
 use toolu_runtime::json::ordered::Ordered;
 
+mod asset;
 mod error;
 mod question;
 mod reply;
 mod retry;
 
+pub use asset::Assets;
 pub use error::Error;
 pub use question::{Question, Questions, State};
 pub use reply::{Answer, Reply, Usage, parse as parse_reply};
@@ -64,6 +68,15 @@ impl Default for Config {
       test_root_ca_der: None,
     }
   }
+}
+
+/// What a request carries beyond its state and questions.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Extras {
+  /// The images the state or the questions refer to.
+  pub assets: Assets,
+  /// Raise both context limits to 262k tokens; slower and less accurate.
+  pub long_context: bool,
 }
 
 /// The API key. It has no `Debug`, so nothing can print it.
@@ -135,7 +148,22 @@ impl Jev {
   /// `Http`, `Timeout` or `Transport` after the attempts, and
   /// `InvalidResponse` when the reply is not a typed answer for every question.
   pub fn ask(&self, state: &State, model: &str, questions: &Questions) -> Result<Reply, Error> {
-    let text = self.post(request_body(state, model, questions).as_bytes(), None)?;
+    self.ask_with(state, model, questions, &Extras::default())
+  }
+
+  /// `ask` with the images and long context of `extras`.
+  ///
+  /// # Errors
+  /// As `ask`.
+  pub fn ask_with(
+    &self,
+    state: &State,
+    model: &str,
+    questions: &Questions,
+    extras: &Extras,
+  ) -> Result<Reply, Error> {
+    let body = body(state, model, questions, &extras.assets);
+    let text = self.post(body.as_bytes(), &headers(questions, extras), None)?;
     reply::parse(&text, questions)
   }
 
@@ -152,10 +180,10 @@ impl Jev {
     questions: &Questions,
     deadline: Instant,
   ) -> Result<Reply, Error> {
-    let text = self.post(
-      request_body(state, model, questions).as_bytes(),
-      Some(deadline),
-    )?;
+    let extras = Extras::default();
+    let headers = headers(questions, &extras);
+    let body = request_body(state, model, questions);
+    let text = self.post(body.as_bytes(), &headers, Some(deadline))?;
     reply::parse(&text, questions)
   }
 }
@@ -163,12 +191,36 @@ impl Jev {
 /// The exact request body `ask` sends, so callers can hold a request cap, or
 /// record the request, before any network call.
 pub fn request_body(state: &State, model: &str, questions: &Questions) -> String {
-  Ordered::Object(vec![
+  body(state, model, questions, &Assets::default())
+}
+
+/// `request_body`, with `assets` after the questions when there are any.
+fn body(state: &State, model: &str, questions: &Questions, assets: &Assets) -> String {
+  let mut fields = vec![
     ("state".to_owned(), state.value().clone()),
     ("model".to_owned(), Ordered::String(model.to_owned())),
     ("questions".to_owned(), questions.value()),
-  ])
-  .to_text(false)
+  ];
+  if !assets.is_empty() {
+    fields.push(("assets".to_owned(), assets.value()));
+  }
+  Ordered::Object(fields).to_text(false)
+}
+
+/// The JSON headers, plus the endpoint's opt-in ones: images for a request with
+/// an image or a Box question, and long context when asked for.
+fn headers(questions: &Questions, extras: &Extras) -> Vec<(&'static str, &'static str)> {
+  let mut headers = vec![
+    ("content-type", "application/json"),
+    ("accept", "application/json"),
+  ];
+  if !extras.assets.is_empty() || questions.has_box() {
+    headers.push(("typesafe-danger-zone-images", "true"));
+  }
+  if extras.long_context {
+    headers.push(("typesafe-danger-zone-long-context", "true"));
+  }
+  headers
 }
 
 /// An HTTP client with `timeout` per attempt and no redirects.

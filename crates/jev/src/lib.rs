@@ -1,6 +1,6 @@
 //! The jev plugin's crate: `toolu jev noul|choice|score|ask`, typed judgments
 //! from the Jev client of `toolu-jev-client` (#430). `cli` is the clap tree,
-//! `call` turns its matches into a state and questions, and `present` turns the
+//! `call` turns its matches into a state, questions and images, and `present` turns the
 //! reply or the error into an `Outcome`. `session`, `prompt` and `check` are the three hooks.
 //! This crate never reads stdin: the binary hands it over when `needs_stdin` says a verb
 //! wants it.
@@ -66,7 +66,7 @@ pub fn execute(
     Ok(call) => call,
     Err(err) => return present::call_error(&err),
   };
-  match jev.ask(&call.state, &call.model, &call.questions) {
+  match jev.ask_with(&call.state, &call.model, &call.questions, &call.extras) {
     Ok(reply) => present::reply(&reply, call.raw),
     Err(err) => present::error(&err),
   }

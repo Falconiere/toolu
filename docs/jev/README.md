@@ -81,6 +81,8 @@ Shared options:
   -s, --state VALUE   State to judge: literal text, @FILE, or - for stdin  [required]
   -m, --model NAME    Model (default: jev-latest)
       --id NAME       Question id in the answer map (noul/choice/score; default: q)
+  -i, --image REF=PATH  A PNG or JPEG for REF, written in the state or a question (repeatable)
+      --long-context  Raise the context limit to 262k tokens (slower, less accurate)
       --raw           Print the whole response body instead of just .answers
 
 noul:    --true DESC / --false DESC   what a yes / a no means
@@ -90,7 +92,8 @@ score:   -l, --level DESC             repeatable, 2..10, lowest level first
 
 Structured `instructions` and `criteria` (objects, arrays, `null`), which the
 API accepts on every question type, go through `ask`; the single-question
-commands take strings.
+commands take strings. Box questions (`"type": "box"`, Jev 1.14), which locate
+one target in an image, also go through `ask`.
 
 ## Problem-solving examples
 
@@ -104,11 +107,13 @@ search (rank + existence), debugging (hypotheses + new evidence), planning
 | Concern | Detail |
 |---|---|
 | State | Literal text stays a string. `@FILE` and `-` are sent as structured JSON only when they parse as an object or array; anything else, including a bare scalar, is sent as a string. |
-| Input | Text only — string, JSON object, or array. Pre-process anything else. English is the primary training language. |
+| Input | Text — string, JSON object, or array — and PNG or JPEG images. Pre-process anything else. English is the primary training language. |
+| Images | `--image REF=PATH` sends the file base64-encoded under `assets`; `REF` must appear in the state, instructions, or criteria. Each side 280–1568 px, at most 16 MiB per file and 32 MiB per request body; images are rejected, never resized, and EXIF orientation is ignored. A request with an image or a Box question carries the `TypeSafe-Danger-Zone-Images` header. Upstream calls both "dreamer-ready": format and accuracy may change. |
+| Box | Answers `box` edges (`top`, `bottom`, `left`, `right`) as fractions from the image's top-left, with a `confidence` that may be null. It always returns a box; pair it with a Noul that asks whether the target is present. |
 | Limits | Choice: 2–255 options. Score: 2–10 levels. Checked locally before any request (the API rejects 11 levels with `Too many score levels`). |
-| Context | 64k tokens per request; 32k for `state` plus the longest question. Slice large files first. |
+| Context | 64k tokens per request; 32k for `state` plus the longest question. `--long-context` raises both to 262k (slower, less accurate). Slice large files first. |
 | Output | Default prints `.answers` compactly. `--raw` adds `model` and token `usage`. Missing or invalid typed answers fail explicitly, including with `--raw`. |
-| Errors | Up to three attempts for timeouts, connection failures, and HTTP `408`, `429`, and any `5xx` — the SDK's default retry set — with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `401`/`422` and other 4xx are not retried. |
+| Errors | Up to three attempts for timeouts, connection failures, and HTTP `408`, `429`, and any `5xx` — the SDK's default retry set — with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `400`, `401`, `413`, `415`, `422` and other 4xx are not retried. |
 | Exit codes | `1` failure (an HTTP error prints the API's body on stderr), `64` usage, `75` timeout. |
 | Confidence | For `choice`/`score`, `confidence` describes how concentrated the distribution is — not whether the answer is right. Tune thresholds against your own data. |
 

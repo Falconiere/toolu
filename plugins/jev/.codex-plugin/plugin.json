@@ -2,7 +2,7 @@
   "name": "jev",
   "version": "9.0.0",
   "hookProtocol": 3,
-  "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on. Standalone, no dependencies.",
+  "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores over text and images that a script can branch on. Standalone, no dependencies.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"
 }

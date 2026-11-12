@@ -1,13 +1,14 @@
 //! A verb's matches as the state and the questions Jev is asked.
 
 use clap::ArgMatches;
-use toolu_jev_client::{Error, Question, Questions, State};
+use toolu_jev_client::{Assets, Error, Extras, Question, Questions, State};
 
 /// What `execute` asks Jev.
 pub(crate) struct Call {
   pub(crate) state: State,
   pub(crate) model: String,
   pub(crate) questions: Questions,
+  pub(crate) extras: Extras,
   pub(crate) raw: bool,
 }
 
@@ -50,7 +51,8 @@ pub(crate) fn build(matches: &ArgMatches, stdin: Option<&str>) -> Result<Call, C
       .unwrap_or(toolu_jev_client::DEFAULT_MODEL)
       .to_owned(),
     questions: questions(name, sub, stdin)?,
-    raw: sub.try_get_one::<bool>("raw").ok().flatten() == Some(&true),
+    extras: extras(sub)?,
+    raw: flag(sub, "raw"),
   })
 }
 
@@ -60,6 +62,10 @@ fn text<'a>(sub: &'a ArgMatches, id: &str) -> Option<&'a str> {
     .ok()
     .flatten()
     .map(String::as_str)
+}
+
+fn flag(sub: &ArgMatches, id: &str) -> bool {
+  sub.try_get_one::<bool>(id).ok().flatten() == Some(&true)
 }
 
 fn many<'a>(sub: &'a ArgMatches, id: &str) -> Vec<&'a str> {
@@ -112,6 +118,23 @@ fn choice(sub: &ArgMatches, instructions: &str) -> Result<Question, Error> {
     })
     .collect();
   Question::choice(instructions, &options)
+}
+
+/// Each `--image REF=PATH`, split at the first `=`, and `--long-context`.
+fn extras(sub: &ArgMatches) -> Result<Extras, CallError> {
+  let mut assets = Assets::default();
+  for image in many(sub, "image") {
+    let Some((reference, path)) = image.split_once('=') else {
+      return Err(CallError::Input("--image needs REF=PATH".to_owned()));
+    };
+    let bytes =
+      std::fs::read(path).map_err(|_err| CallError::Input(format!("cannot read {path}")))?;
+    assets.image(reference, &bytes)?;
+  }
+  Ok(Extras {
+    assets,
+    long_context: flag(sub, "long-context"),
+  })
 }
 
 fn read_stdin(stdin: Option<&str>) -> Result<String, CallError> {

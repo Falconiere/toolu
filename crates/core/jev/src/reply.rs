@@ -47,6 +47,19 @@ pub enum Answer {
     /// How concentrated the distribution is, in [0, 1].
     confidence: f64,
   },
+  /// Where the target is in the image, as fractions from its top-left corner.
+  Box {
+    /// The top edge, as a fraction of the height.
+    top: f64,
+    /// The bottom edge, as a fraction of the height.
+    bottom: f64,
+    /// The left edge, as a fraction of the width.
+    left: f64,
+    /// The right edge, as a fraction of the width.
+    right: f64,
+    /// In [0, 1]; `None` when the model reports none.
+    confidence: Option<f64>,
+  },
 }
 
 /// A checked reply.
@@ -116,6 +129,7 @@ fn answer(question: &Ordered, answer: Option<&Value>) -> Result<Answer, Error> {
     }),
     "choice" => choice(question, answer),
     "score" => score(question, answer),
+    "box" => located(answer),
     _ => Err(Error::InvalidResponse),
   }
 }
@@ -162,6 +176,21 @@ fn score(question: &Ordered, answer: &Map<String, Value>) -> Result<Answer, Erro
       .collect(),
     probabilities: distribution(answer.get("probabilities"), &keys)?,
     confidence: probability(answer.get("confidence"))?,
+  })
+}
+
+fn located(answer: &Map<String, Value>) -> Result<Answer, Error> {
+  let edges = object(answer.get("box"))?;
+  let confidence = match answer.get("confidence") {
+    Some(Value::Null) => None,
+    value => Some(probability(value)?),
+  };
+  Ok(Answer::Box {
+    top: probability(edges.get("top"))?,
+    bottom: probability(edges.get("bottom"))?,
+    left: probability(edges.get("left"))?,
+    right: probability(edges.get("right"))?,
+    confidence,
   })
 }
 

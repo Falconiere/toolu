@@ -1,6 +1,6 @@
 ---
 name: jev
-description: Mandatory for semantic decisions during search, debugging, planning, execution, and review — classify, rank, rate, route, or assess supplied evidence.
+description: Mandatory for semantic decisions during search, debugging, planning, execution, and review — classify, rank, rate, route, or assess supplied evidence, text or images.
 ---
 
 # Jev: typed judgments
@@ -33,20 +33,40 @@ toolu jev noul   "question" -s STATE [--true DESC] [--false DESC]
 toolu jev choice "question" -s STATE -o KEY=DESC -o KEY=DESC
 toolu jev score  "question" -s STATE -l "lowest situation" -l "highest situation"
 toolu jev ask questions.json -s STATE
+toolu jev <any verb> … -i REF=shot.png [-i REF2=photo.jpg] [--long-context]
 ```
 
 - `-s/--state`: literal text, `@FILE`, or `-` (stdin). Required.
 - `ask`: question-map JSON file or `-` (stdin); keys become answer IDs. Each
   question needs `type` and `instructions`; `criteria` is required for Choice/Score,
-  optional for Noul.
+  optional for Noul, absent for Box (`"type": "box"`, `ask` only).
   Structured instructions/criteria use `ask`; other commands take strings.
 - Options: `-m/--model` (default `jev-latest`), `--raw` (model/usage),
-  `--id` (default `q`; single-question commands only).
+  `--id` (default `q`; single-question commands only), `--long-context` (262k
+  tokens instead of 64k; slower and less accurate, so slice first).
 - Choice: `-o/--option`, 2–255 options; bare `-o KEY` omits description.
   Score: `-l/--level`, 2–10 levels,
   lowest first. Read returned legend; fractional Scores are not exact quantities.
-- Output: answer map (`noul`, or `choice`/`score` plus probabilities/confidence).
-  Nonzero exit → fallback, never interpret absent output as a judgment.
+- Output: answer map (`noul`, `choice`/`score` plus probabilities/confidence, or
+  `box` edges). Nonzero exit → fallback, never interpret absent output as a judgment.
+
+## Images
+
+Upstream calls images and Box "dreamer-ready": format and accuracy may change.
+Confirm a decisive visual judgment another way.
+
+- `-i/--image REF=PATH`, repeatable, any verb; PNG or JPEG. Write `REF` where the
+  image belongs: in the state, instructions, or criteria. An unwritten `REF`
+  fails (`Invalid image request`). Use a `REF` no other text contains, e.g. `shot-7f3a`.
+- Each side 280–1568 px, file ≤16 MiB; nothing is resized for you (`Invalid image
+  dimensions`). Resize first (a Retina screenshot is too large) and rotate
+  upright: EXIF orientation is ignored.
+- Image shared by questions → in the state once, referenced by path. Image for
+  one question → in its instructions or criteria. Each use sends it again
+  (about 1.7k tokens at 512×512).
+- Box: one target per question; `top`/`bottom`/`left`/`right` are fractions from
+  the top-left; `confidence` may be null. It always returns a box, so ask a
+  Noul for presence in the same `ask` and ignore the box when that Noul is low.
 
 ## Question contract
 
@@ -57,11 +77,15 @@ toolu jev ask questions.json -s STATE
   such as claim/source support. High Noul = stated condition holds.
 - Score levels: self-contained situations, e.g. “Feature broken; workaround
   exists”. Avoid bare numbers or “worse than previous”.
-- Include no-match/insufficient-evidence outcomes when candidates may not fit.
+- Choice always picks. When no option may fit, add a Noul in the same `ask`
+  (“Does any candidate fit?”); as of Jev 1.14 it beats a none-of-the-above option.
 - Choice probabilities are relative alternatives; graded relevance needs
   comparable per-candidate Scores. Check answer existence separately from rank.
 - Noul near 0.5 = uncertainty. Choice/Score confidence = concentration, not
   correctness. Inspect uncertain/conflicting results; gather missing evidence.
+- Act on the Noul value or `probabilities[choice]`, not `confidence`. Start at
+  Noul ≥0.7 yes, ≤0.3 no, and give the band between its own outcome.
+- Close Choice → reorder the options and ask again; the first option is favoured.
 - Calibrate thresholds on representative data, separately per question/type;
   `P(yes)` need not equal `1-P(not yes)`. Pin model when thresholds depend on it.
 - Record useful evidence → question → answer → next action. Use `--raw` for
@@ -72,5 +96,7 @@ toolu jev ask questions.json -s STATE
 - Need a pattern: read Setup + the matching section in
   [problem-solving](references/problem-solving.md), not all examples.
 - Need transport limits/errors: [CLI reference](../../README.md#cli-reference).
+- Image placement or Box details: live [images](https://docs.typesafe.ai/images.md)
+  and [Box](https://docs.typesafe.ai/primitives/box.md).
 - Designing new question formats: check relevant [live docs](https://docs.typesafe.ai/llms.txt).
 - Evaluation only: [record and scenarios](evals/README.md).

@@ -7,7 +7,8 @@ Synthetic scenarios; replace observations with actual evidence in real work.
 Sources: TypeSafe [semantic search](https://docs.typesafe.ai/cookbooks/semantic_find.md)
 (separate ranking/existence), [citation checking](https://docs.typesafe.ai/cookbooks/citation_check.md)
 (exact quote check before context judgment), [batching](https://docs.typesafe.ai/patterns/fan-out.md)
-(independent questions, shared state). Evaluation only: [record](../evals/README.md).
+(independent questions, shared state), [images](https://docs.typesafe.ai/images.md)
+and [Box](https://docs.typesafe.ai/primitives/box.md) (presence before location). Evaluation only: [record](../evals/README.md).
 
 ## Setup and failure handling
 
@@ -185,6 +186,46 @@ retrieve evidence, qualify, or drop claim; unsupported does not mean false.
 `supports` concerns this excerpt, not source truth/currency. Next: verify provenance
 and product behavior with tools. Uncertain/API failure → read full passage and
 record explicit reasoning; never fabricate a Jev verdict.
+
+## Visual evidence: judge a screenshot
+
+One screenshot shared by two questions: presence (Noul) and location (Box).
+Set `SCREENSHOT` to a PNG or JPEG with each side 280–1568 px; resize first, for
+example `sips -Z 1568 shot.png --out shot-ready.png` on macOS. The image goes
+in the state once, under a reference no other text contains.
+
+```bash
+cat > "$JEV_EXAMPLES/visual.state.json" <<'JSON'
+{"screenshot": "shot-7f3a"}
+JSON
+cat > "$JEV_EXAMPLES/visual.questions.json" <<'JSON'
+{
+  "banner_visible": {
+    "type": "noul",
+    "instructions": "Does `screenshot` show an error banner?",
+    "criteria": {"true": "A banner or alert with error styling or error wording is visible.", "false": "No banner or alert is visible, or the visible one reports success or neutral information."}
+  },
+  "banner": {"type": "box", "instructions": "the error banner in `screenshot`"}
+}
+JSON
+if toolu jev ask "$JEV_EXAMPLES/visual.questions.json" \
+    -s "@$JEV_EXAMPLES/visual.state.json" \
+    --image "shot-7f3a=$SCREENSHOT" --raw >"$JEV_EXAMPLES/visual.result.json"; then
+  jq '.answers' "$JEV_EXAMPLES/visual.result.json"
+else
+  rm -f "$JEV_EXAMPLES/visual.result.json"
+  printf '%s\n' 'Jev unavailable for visual; inspect the screenshot and apply the rubric manually.' >&2
+fi
+```
+
+Interpret: decide on `banner_visible`. High → `banner` edges are fractions of
+the image from its top-left; multiply by pixel width/height to crop, and ask
+again on the crop when detail matters. Low → ignore `banner`: a Box is returned
+even when the target is absent. In between → send a larger or cropped image and
+ask again. `Invalid image dimensions` → resize into 280–1568 px;
+`Invalid image request` → the reference is missing from the state and questions.
+Images are dreamer-ready upstream: confirm a decisive visual judgment another
+way. API failure → inspect the image directly and say so.
 
 Clean up after retaining evaluation notes:
 
