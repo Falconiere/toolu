@@ -1,15 +1,14 @@
 //! Item fields from the file text: the range over doc and attribute lines, the
 //! one-line signature, the first doc sentence and visibility.
 
-use super::Item;
 use super::parse::Match;
 use super::rules::Language;
+use super::{Item, doc};
 
 const SIGNATURE_CHARS: usize = 160;
-const DOC_CHARS: usize = 100;
 
 /// Where a signature stopped: the line index and the byte offset of its body opener.
-type Cut = Option<(usize, usize)>;
+pub(super) type Cut = Option<(usize, usize)>;
 
 /// The item for one match over `lines`; `depth` is set by the caller.
 pub(super) fn item(lines: &[&str], found: &Match, language: Language) -> Item {
@@ -18,9 +17,9 @@ pub(super) fn item(lines: &[&str], found: &Match, language: Language) -> Item {
   let top = extend(lines, start, language);
   let (signature, cut) = signature(lines, start, end, language);
   let doc = if language == Language::Python {
-    docstring(lines, cut, end)
+    doc::docstring(lines, cut, end)
   } else {
-    doc_above(lines.get(top..start).unwrap_or_default())
+    doc::above(lines.get(top..start).unwrap_or_default())
   };
   let public = match language {
     Language::Rust => signature.starts_with("pub ") || signature.starts_with("pub("),
@@ -30,7 +29,7 @@ pub(super) fn item(lines: &[&str], found: &Match, language: Language) -> Item {
   Item {
     name: found.name.clone(),
     signature: cap(&signature, SIGNATURE_CHARS),
-    doc: doc.as_deref().and_then(sentence),
+    doc: doc.as_deref().and_then(doc::sentence),
     start: top + 1,
     end: end + 1,
     depth: 0,
@@ -270,68 +269,8 @@ fn scan_line(line: &str, language: Language, state: &mut Scan, out: &mut String)
   None
 }
 
-/// The text of the `///` lines and `/** */` blocks among `above`.
-fn doc_above(above: &[&str]) -> Option<String> {
-  let mut text = Vec::new();
-  let mut in_block = false;
-  for line in above.iter().map(|line| line.trim()) {
-    let content = if let Some(rest) = line.strip_prefix("/**") {
-      in_block = !rest.ends_with("*/");
-      rest.trim_end_matches("*/")
-    } else if in_block {
-      in_block = !line.ends_with("*/");
-      line.trim_end_matches("*/").trim_start_matches('*')
-    } else if let Some(rest) = line.strip_prefix("///") {
-      rest
-    } else {
-      continue;
-    };
-    text.push(content.trim());
-  }
-  paragraph(&text)
-}
-
-/// The docstring opening a Python body after the signature's `:` at `cut`.
-fn docstring(lines: &[&str], cut: Cut, end: usize) -> Option<String> {
-  let (index, pos) = cut?;
-  let mut body = lines.get(index)?.trim().get(pos + 1..)?.to_owned();
-  for line in lines.get(index + 1..=end).unwrap_or_default() {
-    body.push('\n');
-    body.push_str(line);
-  }
-  let body = body.trim_start().trim_start_matches(['r', 'u', 'R', 'U']);
-  let quote = ["\"\"\"", "'''", "\"", "'"]
-    .into_iter()
-    .find(|quote| body.starts_with(quote))?;
-  let inner = body.get(quote.len()..)?;
-  let inner = inner
-    .find(quote)
-    .and_then(|close| inner.get(..close))
-    .unwrap_or(inner);
-  paragraph(&inner.lines().map(str::trim).collect::<Vec<_>>())
-}
-
-/// The first paragraph of `text`, without `@` tag lines.
-fn paragraph(text: &[&str]) -> Option<String> {
-  let words: Vec<&str> = text
-    .iter()
-    .skip_while(|line| line.is_empty())
-    .take_while(|line| !line.is_empty() && !line.starts_with('@'))
-    .copied()
-    .collect();
-  (!words.is_empty()).then(|| words.join(" "))
-}
-
-fn sentence(text: &str) -> Option<String> {
-  let first = text
-    .find(". ")
-    .and_then(|end| text.get(..=end))
-    .unwrap_or(text);
-  let first = first.trim();
-  (!first.is_empty()).then(|| cap(first, DOC_CHARS))
-}
-
-fn cap(text: &str, limit: usize) -> String {
+/// `text` cut to `limit` characters, ending in `...` when cut.
+pub(super) fn cap(text: &str, limit: usize) -> String {
   if text.chars().count() <= limit {
     return text.to_owned();
   }

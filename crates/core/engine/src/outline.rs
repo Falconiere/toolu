@@ -5,6 +5,7 @@
 //! rule document per parser (`rules`); `parse` reads its JSON and `text`
 //! derives each item's fields from the file text.
 
+mod doc;
 mod parse;
 mod rules;
 mod text;

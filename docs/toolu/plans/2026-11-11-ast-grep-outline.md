@@ -75,6 +75,7 @@ scan runner split → outline core module → CLI verb and map → agent text an
 
 ## Deviations
 - Added s5 (full gate) as the final step, as execution requires.
+- Split doc extraction into `crates/core/engine/src/outline/doc.rs` (with `tests/doc_test.rs`) to keep `text.rs` under the 300-line limit; s2's `paths` already cover the `outline` folder.
 
 ## Plan review
 - AC coverage checked by hand: AC-1, AC-2, AC-6 → s2; AC-3 → s3; AC-4 → s1; AC-5 → s4. No dangling refs.
