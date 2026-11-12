@@ -38,7 +38,7 @@ fn external(name: &'static str, about: &'static str) -> Command {
     )
 }
 
-/// Search, list matching files, scan a rule, debug a pattern, outline files, or report bytes.
+/// Search, list matching files, scan a rule, debug a pattern, outline files, look up a symbol, or report bytes.
 pub fn command() -> Command {
   Command::new("ast-grep")
     .about("Structural code search and rewrite with ast-grep")
@@ -64,6 +64,20 @@ ast-grep fails, 69 without ast-grep.",
             .num_args(1..)
             .required(true),
         ),
+    )
+    .subcommand(
+      Command::new("symbol")
+        .about("Look up a name's definitions and references")
+        .long_about(
+          "Print where a name is defined (line range and signature) and every reference grouped by \
+file, each with the item that encloses it. References come from `git grep -w -F` over tracked and \
+untracked files in the working tree, in the languages outline reads unless paths are given. Caps: \
+256 KiB of grep output, 150 outlined files, 10 definitions, 40 references (8 per file), 120 \
+characters per line; past a cap it prints a Narrow line. Without ast-grep the references still \
+print, with one note. Exits 1 when nothing matches, 64 for an empty name.",
+        )
+        .arg(Arg::new("name").value_name("NAME").required(true))
+        .arg(Arg::new("paths").value_name("PATH").num_args(0..)),
     )
     .subcommand(
       Command::new("savings")
@@ -238,6 +252,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   match matches.subcommand() {
     Some((verb @ ("search" | "files" | "scan" | "debug"), args)) => execute(verb, args, ctx),
     Some(("outline", args)) => crate::map::run(args, ctx),
+    Some(("symbol", args)) => crate::symbol::run(args, ctx),
     Some(("savings", args)) => savings(args, ctx),
     _ => Outcome::failed(Exit::Usage, "toolu ast-grep: unknown verb".to_owned()),
   }

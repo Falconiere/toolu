@@ -6,7 +6,7 @@ description: "ALWAYS ACTIVE — Structural code search and rewrite protocol. You
 # ast-grep Structural Search & Rewrite Protocol
 
 You have ast-grep (tree-sitter AST pattern matcher + rewriter) via the `ast-grep` / `sg` CLI.
-`toolu ast-grep search|files|scan|debug` wraps the external binary when you need inferred language or a fixed no-color output; `toolu ast-grep outline <path>...` lists a file's items with line ranges or maps a directory; `toolu ast-grep savings <ledger.jsonl>` summarizes session accounting.
+`toolu ast-grep search|files|scan|debug` wraps the external binary when you need inferred language or a fixed no-color output; `toolu ast-grep outline <path>...` lists a file's items with line ranges or maps a directory; `toolu ast-grep symbol <name> [<path>...]` prints a name's definitions and references with their enclosing items; `toolu ast-grep savings <ledger.jsonl>` summarizes session accounting.
 This protocol is **MANDATORY and ALWAYS ACTIVE**.
 
 ## Hard Constraints
@@ -95,6 +95,12 @@ Examples:
 1. Outline first: `toolu ast-grep outline src/lib.rs src/parser/` prints each item's `start-end` range, one-line signature and first doc sentence (Rust, TypeScript, JavaScript, Python); a directory prints one line per file with its public names.
 2. Then read only the printed ranges (Read with offset/limit, or `sed -n 'START,ENDp'`), not the whole file.
 3. `--json` prints one document for scripts. Without ast-grep on PATH it exits 69 and prints the install command.
+
+## Workflow — Where Is a Name Defined and Used
+
+1. `toolu ast-grep symbol parse_config` prints `def <path>:<start>-<end> <signature>` for each definition, then each reference under its file as `<line> in <item> <start>-<end>: <text>`. It searches tracked and untracked files in the outlined languages; add paths (`toolu ast-grep symbol parse_config crates/core`) to narrow the search or to include other files.
+2. Read only the printed ranges. Past its caps (10 definitions, 40 references, 8 per file) it ends with a `Narrow:` line: rerun with a path.
+3. It matches the whole word as text, not by type, so two items with one name both appear. It exits 1 when nothing matches. Without ast-grep it still prints the references and one note.
 
 ## Workflow — Search
 

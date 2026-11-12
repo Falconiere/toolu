@@ -9,6 +9,7 @@ mod register;
 mod report;
 mod retention;
 mod savings;
+mod symbol;
 
 /// The search nudge rule enabled by its manifest.
 pub use nudge::SEARCH_NUDGE;
