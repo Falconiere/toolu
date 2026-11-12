@@ -20,7 +20,10 @@ fn fail_early(root: &Path, record: &mut job_results::Record, message: String) ->
   record.exit_code = Some(1);
   record.finished_at = Some(iso_millis(SystemTime::now()));
   record.output.clone_from(&message);
-  let _recorded = job_results::update(root, record);
+  let message = match job_results::update(root, record) {
+    Ok(()) => message,
+    Err(err) => format!("{message}; job result {} not recorded: {err}", record.id),
+  };
   Outcome::failed(Exit::Failure, message)
 }
 

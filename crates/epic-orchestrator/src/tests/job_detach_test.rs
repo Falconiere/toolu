@@ -6,11 +6,28 @@ use toolu_engine::resources::job_results;
 use toolu_engine::resources::leases::release_lease;
 use toolu_protocol::exit::Exit;
 
-use super::{run_detached, run_result};
+use super::{fail_early, run_detached, run_result};
 use crate::job_fixture::{bound, hold};
 
 fn argv(words: &[&str]) -> Vec<String> {
   words.iter().map(|word| (*word).to_owned()).collect()
+}
+
+#[test]
+fn an_early_failure_names_a_result_write_error() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let root = tmp.path().join("resources");
+  let mut record = job_results::create(&root, "detached", tmp.path(), "true").unwrap();
+  let path = root
+    .join("jobs/results")
+    .join(format!("{}.json", record.id));
+  std::fs::remove_file(&path).unwrap();
+  std::fs::create_dir(path).unwrap();
+  let failed = fail_early(&root, &mut record, "spawn failed".to_owned());
+  assert_eq!(failed.exit, Exit::Failure);
+  let error = failed.stderr.unwrap();
+  assert!(error.contains("spawn failed"), "{error}");
+  assert!(error.contains("not recorded"), "{error}");
 }
 
 #[test]

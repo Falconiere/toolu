@@ -50,8 +50,12 @@ fn pending_is_oldest_first_per_worktree_and_claim_takes_a_done_record_once() {
   let root = dir.path().join("resources");
   let tree: PathBuf = dir.path().join("tree");
   let other: PathBuf = dir.path().join("other");
-  let first = create(&root, "k", &tree, "first").unwrap();
-  let second = create(&root, "k", &tree, "second").unwrap();
+  let mut first = create(&root, "k", &tree, "first").unwrap();
+  let mut second = create(&root, "k", &tree, "second").unwrap();
+  first.started_at = "2020-01-01T00:00:00.000Z".to_owned();
+  second.started_at = "2021-01-01T00:00:00.000Z".to_owned();
+  update(&root, &first).unwrap();
+  update(&root, &second).unwrap();
   create(&root, "k", &other, "elsewhere").unwrap();
   let running = pending(&root, &tree).unwrap();
   assert_eq!(
