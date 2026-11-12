@@ -31,7 +31,7 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | State gate-file bytes | `state/gate-bytes.json` | 16 | `crates/core/state/tests/gate_bytes.rs` |
 | State edit records | `state/edit-records.json` | 42 | `crates/core/state/tests/edit_records.rs` |
 | Dispatch walk | `dispatch/cases.json` | 50 | `crates/core/engine/tests/dispatch_fixture.rs` |
-| Plan ledger and verdict | `ledger/cases.json` | 27 | `crates/cli/tests/ledger_cases.rs` |
+| Plan ledger and verdict | `ledger/cases.json` | 29 | `crates/cli/tests/ledger_cases.rs` |
 | Statusline states | `statusline/cases.json` | 75 | `crates/cli/tests/golden_statusline.rs` |
 | Epic hosts | `epic/hosts.json` | 75 | `crates/epic-orchestrator/src/tests/hosts_test.rs` |
 | Muse plugin CLI output | `plugins/muse.json` | 10 | `crates/plugins/src/{host,verbs}/tests/`, `crates/cli/tests/plugins_muse.rs` |

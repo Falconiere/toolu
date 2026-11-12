@@ -182,7 +182,7 @@ fn replay(case: &Case) -> Result<(), String> {
 fn every_case_of_the_shared_golden_replays_byte_for_byte() {
   let text = std::fs::read_to_string(FIXTURE).unwrap();
   let cases = serde_json::from_str::<Fixture>(&text).unwrap().cases;
-  assert!(cases.len() >= 27, "the golden lost cases: {}", cases.len());
+  assert!(cases.len() >= 29, "the golden lost cases: {}", cases.len());
   let failures: Vec<String> = std::thread::scope(|scope| {
     let handles: Vec<_> = cases
       .iter()

@@ -51,7 +51,7 @@ Options:
       --force             Re-run steps that are already fresh-green
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-      --verify            Judge every step on the whole branch diff, and stamp the verified hash
+      --verify            Re-run steps without paths and steps whose paths changed, and stamp the verified hash
   -h, --help              Print help
 ```
 

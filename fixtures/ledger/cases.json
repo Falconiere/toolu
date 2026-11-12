@@ -277,7 +277,7 @@
       ]
     },
     {
-      "name": "ledger: a scoped step stays fresh after an edit outside its paths until --verify",
+      "name": "ledger: a scoped step stays fresh after an edit outside its paths, under --verify too",
       "steps": [
         {
           "op": "write",
@@ -327,8 +327,116 @@
           "expect": {
             "exitCode": 0,
             "stdout": "plan-ledger feat_x: 2/2 fresh-green, next=none\n",
-            "stderr": "plan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: fresh-green, skipped (--force re-runs)\n",
+            "stderr": "plan-ledger: [1/2] s1: fresh-green, skipped (--force re-runs)\nplan-ledger: [2/2] s2: fresh-green, skipped (--force re-runs)\n",
             "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 2,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: --verify carries a scoped step whose paths did not change while a step without paths re-runs",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\",\n    \"paths\": [\n      \"docs\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"true\",\n    \"paths\": [\n      \"a.ts\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"title\": \"step s3\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--verify"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 3/3 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/3] s1: running check\nplan-ledger: [1/3] s1: green (<N>s)\nplan-ledger: [2/3] s2: running check\nplan-ledger: [2/3] s2: green (<N>s)\nplan-ledger: [3/3] s3: running check\nplan-ledger: [3/3] s3: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 3,\n    \"green\": 3,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 3,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s3\",\n      \"title\": \"step s3\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        },
+        {
+          "op": "sh",
+          "script": "echo more >> a.ts && git commit -qam edit"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--verify"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 3/3 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/3] s1: fresh-green, skipped (--force re-runs)\nplan-ledger: [2/3] s2: running check\nplan-ledger: [2/3] s2: green (<N>s)\nplan-ledger: [3/3] s3: running check\nplan-ledger: [3/3] s3: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 3,\n    \"green\": 3,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 3,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s3\",\n      \"title\": \"step s3\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        },
+        {
+          "op": "sh",
+          "script": "l=.claude/tmp/plan-ledger/feat_x.json && test \"$(jq -r '[.steps[].diff_sha] | unique | join(\" \")' $l)\" = \"$(jq -r .verified_sha $l)\""
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--verify",
+            "--force"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 3/3 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/3] s1: running check\nplan-ledger: [1/3] s1: green (<N>s)\nplan-ledger: [2/3] s2: running check\nplan-ledger: [2/3] s2: green (<N>s)\nplan-ledger: [3/3] s3: running check\nplan-ledger: [3/3] s3: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 3,\n    \"green\": 3,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 3,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s3\",\n      \"title\": \"step s3\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: --verify re-runs every step when every step declares paths",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\",\n    \"paths\": [\n      \"docs\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"true\",\n    \"paths\": [\n      \"a.ts\"\n    ]\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--verify"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 2/2 fresh-green, next=none\n",
+            "stderr": "plan-ledger: every step declares paths, so --verify re-runs them all; give the final full-gate step no paths\nplan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 2,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        },
+        {
+          "op": "sh",
+          "script": "echo more >> a.ts && git commit -qam edit"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--verify"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 2/2 fresh-green, next=none\n",
+            "stderr": "plan-ledger: every step declares paths, so --verify re-runs them all; give the final full-gate step no paths\nplan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 2,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
           }
         }
       ]

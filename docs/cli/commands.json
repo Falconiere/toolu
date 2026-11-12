@@ -99,7 +99,7 @@
             },
             {
               "global": false,
-              "help": "Judge every step on the whole branch diff, and stamp the verified hash",
+              "help": "Re-run steps without paths and steps whose paths changed, and stamp the verified hash",
               "hidden": false,
               "long": "verify",
               "possibleValues": [],
