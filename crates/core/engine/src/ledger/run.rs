@@ -105,7 +105,7 @@ fn is_carried(
 /// check that last ran, so `--verify` re-runs a step whose check was edited.
 fn carried(prior: &Ordered, step: &Ordered) -> Result<Ordered, JqError> {
   let mut entry = carry_forward(prior, step)?;
-  if let Some(check @ Ordered::String(_)) = prior.get("check") {
+  if let Some(check) = prior.get("check") {
     entry.set("check", check.clone());
   }
   Ok(entry)
