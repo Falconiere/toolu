@@ -18,7 +18,7 @@ use crate::shape::git_io::git_process;
 use crate::shape::{Shaped, ShapedFile};
 
 /// A definition keyword followed by the name it defines.
-const DEFINITION: &str =
+pub(crate) const DEFINITION: &str =
   r"\b(?:fn|def|function|func|class|struct|enum|trait|interface|type)\s+([A-Za-z_][A-Za-z0-9_]*)";
 /// The most `git grep` output read for one name; more is too many hits anyway.
 const GREP_MAX_BYTES: usize = 64 * 1024;

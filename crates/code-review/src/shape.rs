@@ -160,7 +160,7 @@ pub fn shape(env: &Env, root: &Path, requested_base: Option<&str>) -> Result<Sha
   Ok(shaped)
 }
 
-fn resolve_base(
+pub(crate) fn resolve_base(
   env: &Env,
   root: &Path,
   requested_base: Option<&str>,
