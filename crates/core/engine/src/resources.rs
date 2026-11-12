@@ -9,6 +9,8 @@ pub mod agents;
 pub mod binding;
 /// Persistent output for managed jobs.
 pub mod job_logs;
+/// Detached job result records.
+pub mod job_results;
 /// A command under a job lease.
 pub mod jobs;
 /// Admission, patches, release and reconciliation.
