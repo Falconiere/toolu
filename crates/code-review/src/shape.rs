@@ -336,7 +336,7 @@ fn omit(omitted: &mut Vec<Omitted>, paths: &[String], reason: &str) {
 
 #[cfg(test)]
 #[path = "tests/shape_test.rs"]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(test)]
 #[path = "tests/shape_edge_test.rs"]

@@ -1,37 +1,12 @@
 use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 
 use tempfile::TempDir;
-use toolu_runtime::env::Env;
 
 use super::{build, render};
 use crate::shape::shape;
-
-fn git(root: &Path, args: &[&str]) {
-  let out = Command::new("git")
-    .arg("-C")
-    .arg(root)
-    .args(args)
-    .env("GIT_CONFIG_NOSYSTEM", "1")
-    .env("GIT_CONFIG_GLOBAL", "/dev/null")
-    .env("XDG_CONFIG_HOME", "/dev/null")
-    .output()
-    .expect("git starts");
-  assert!(
-    out.status.success(),
-    "git {args:?}: {}",
-    String::from_utf8_lossy(&out.stderr)
-  );
-}
-
-fn env() -> Env {
-  Env::process()
-    .with("GIT_CONFIG_NOSYSTEM", "1")
-    .with("GIT_CONFIG_GLOBAL", "/dev/null")
-    .with("XDG_CONFIG_HOME", "/dev/null")
-}
+use crate::shape::tests::{commit, git, isolated_env as env};
 
 fn write(root: &Path, path: &str, text: &str) {
   let path = root.join(path);
@@ -39,26 +14,12 @@ fn write(root: &Path, path: &str, text: &str) {
   fs::write(path, text).expect("write");
 }
 
-fn commit(root: &Path) {
-  git(root, &["add", "-A"]);
-  git(
-    root,
-    &[
-      "-c",
-      "user.name=T",
-      "-c",
-      "user.email=t@e",
-      "commit",
-      "-qm",
-      "c",
-    ],
-  );
-}
-
 /// A repository on `feature` whose base commit on `main` holds `files`.
 fn repo(files: &[(&str, &str)]) -> TempDir {
   let dir = tempfile::tempdir().expect("temp repo");
   git(dir.path(), &["init", "-q", "-b", "main"]);
+  git(dir.path(), &["config", "user.name", "Test"]);
+  git(dir.path(), &["config", "user.email", "test@example.com"]);
   for (path, text) in files {
     write(dir.path(), path, text);
   }

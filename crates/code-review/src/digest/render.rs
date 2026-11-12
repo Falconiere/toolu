@@ -109,3 +109,7 @@ fn file_text(file: &FileDigest, unavailable: bool) -> String {
   }
   out
 }
+
+#[cfg(test)]
+#[path = "tests/render_test.rs"]
+mod tests;

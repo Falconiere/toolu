@@ -7,7 +7,7 @@ use toolu_runtime::env::Env;
 
 use super::{ShapeError, resolve_merge_base, shape};
 
-pub(super) fn git(root: &Path, args: &[&str]) -> String {
+pub(crate) fn git(root: &Path, args: &[&str]) -> String {
   let out = Command::new("git")
     .arg("-C")
     .arg(root)
@@ -26,7 +26,7 @@ pub(super) fn git(root: &Path, args: &[&str]) -> String {
   String::from_utf8(out.stdout).expect("git text")
 }
 
-pub(super) fn isolated_env() -> Env {
+pub(crate) fn isolated_env() -> Env {
   Env::process()
     .with("GIT_CONFIG_NOSYSTEM", "1")
     .with("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -53,7 +53,7 @@ pub(super) fn repo() -> TempDir {
   dir
 }
 
-pub(super) fn commit(root: &Path) {
+pub(crate) fn commit(root: &Path) {
   git(root, &["add", "-A"]);
   git(root, &["commit", "-m", "fixture"]);
 }
