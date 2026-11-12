@@ -34,7 +34,7 @@ Add content IDs and cache with real Git tests, then large and outside-Git maps, 
     "depends_on": ["content-cache", "large-map"],
     "ac_refs": ["AC-3"],
     "paths": ["crates/ast-grep/src/retention.rs", "crates/ast-grep/src/retention/outline.rs", "crates/ast-grep/src/register.rs", "crates/ast-grep/src/tests/retention_test.rs", "docs/ast-grep/README.md"],
-    "input": "Real cache files with pinned mtimes around 14 days and 20,000-entry capacity",
+    "input": "Real cache files with pinned mtimes around 14 days and a reduced test capacity; production uses 20,000",
     "check": "cargo test -p toolu-ast-grep retention && cargo xtask check-markdown-cli"
   },
   {

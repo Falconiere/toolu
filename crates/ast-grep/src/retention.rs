@@ -1,7 +1,7 @@
 //! Whole-file retention for completed byte-savings session ledgers and outlines.
 
 mod outline;
-pub(crate) use outline::{sweep_outline_dir, sweep_outlines};
+pub(crate) use outline::sweep_outlines;
 
 use std::fs;
 use std::path::{Path, PathBuf};

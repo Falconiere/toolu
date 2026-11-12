@@ -7,9 +7,10 @@ use std::time::{Duration, SystemTime};
 
 use toolu_runtime::env::Env;
 
+use super::outline::sweep_outline_dir;
 use super::{
   BYTE_SAVINGS_MAX_COMPLETED, BYTE_SAVINGS_RETENTION, active_session_from_payload,
-  sweep_byte_savings, sweep_dir, sweep_outline_dir,
+  sweep_byte_savings, sweep_dir,
 };
 use crate::report::{parse, read_ledger, render};
 use crate::savings::byte_savings_dir;
