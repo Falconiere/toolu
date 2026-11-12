@@ -208,3 +208,28 @@ fn outside_git_directory_outlines_without_cache() {
   assert!(!dir.path().join(".git").exists());
   assert!(!dir.path().join("toolu").exists());
 }
+
+#[test]
+fn large_map_labels_root_level_files_with_dot() {
+  let dir = repo().unwrap();
+  for i in 0..160 {
+    fs::write(dir.path().join(format!("top{i}.rs")), format!("pub fn top{i}() {{}}\n")).unwrap();
+  }
+  let out = outline(dir.path(), &["."], None).unwrap();
+  assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+  assert!(text(&out.stdout).lines().any(|line| line.starts_with(".: 160 files,")));
+}
+
+#[test]
+fn large_map_reads_module_doc_after_empty_opening_line() {
+  let dir = repo().unwrap();
+  let folder = dir.path().join("pkg");
+  fs::create_dir(&folder).unwrap();
+  for i in 0..160 {
+    fs::write(folder.join(format!("f{i}.rs")), format!("pub fn f{i}() {{}}\n")).unwrap();
+  }
+  fs::write(folder.join("lib.rs"), "//!\n//! Module overview. More.\npub fn entry() {}\n").unwrap();
+  let out = outline(dir.path(), &["."], None).unwrap();
+  assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+  assert!(text(&out.stdout).contains("pkg: 161 files, 163 lines // Module overview."));
+}
