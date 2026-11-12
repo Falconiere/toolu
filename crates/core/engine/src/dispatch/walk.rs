@@ -13,10 +13,12 @@ use super::output::substituted;
 use super::session::Session;
 use super::{ModuleResult, Phase};
 use std::cell::RefCell;
+use std::path::Path;
 use toolu_runtime::registry::rule::RuleContext;
 
 use crate::gate::Gate;
-use crate::quality::QualityBatch;
+use crate::quality::shell;
+use crate::quality::{QualityBatch, QualityBinding};
 use crate::registry::phase::{RegistryPlan, RegistryWalk, run_registry};
 use crate::trace::{Step, StepKind, StepStatus};
 
@@ -89,6 +91,95 @@ fn run_gate(
   }
 }
 
+fn shell_decisions(
+  selected: &mut shell::Selection,
+  (active, bindings, rooted, host): (&[usize], &[QualityBinding<'_>], &RuleContext<'_>, Host),
+  (state, trace): (&mut WalkState, &mut Vec<Step>),
+) -> Option<ModuleResult> {
+  let mut batch = QualityBatch::new(&selected.records);
+  for (record, edit) in selected.records.iter().enumerate() {
+    let extension = Path::new(&edit.path)
+      .extension()
+      .and_then(|name| name.to_str());
+    for &index in active {
+      let Some(binding) = bindings.get(index) else {
+        continue;
+      };
+      if !extension.is_some_and(|name| binding.rule.extensions().contains(&name)) {
+        continue;
+      }
+      let (decision, warnings) = batch.decide(record, (index, active, bindings), rooted);
+      selected.warnings.extend(warnings);
+      trace.push(Step {
+        module: format!("{}__{}.json", binding.spec, binding.name),
+        kind: StepKind::Rule,
+        status: StepStatus::Decided,
+      });
+      let folded = Folded {
+        name: binding.name.to_owned(),
+        result: ModuleResult {
+          stdout: encoded(host, HostEvent::ToolPost, &decision),
+          ..ModuleResult::default()
+        },
+        truncated: false,
+      };
+      if let Some(done) = state.consume(&folded) {
+        return Some(done);
+      }
+    }
+  }
+  None
+}
+
+fn shell_quality(
+  (payload, ctx, session): (&Payload<'_>, &RuleContext<'_>, &Session<'_>),
+  plan: &RegistryPlan<'_>,
+  (state, trace): (&mut WalkState, &mut Vec<Step>),
+) -> Option<ModuleResult> {
+  if session.phase != Phase::Post || !matches!(payload.tool_name, "Bash" | "Shell") {
+    return None;
+  }
+  let active = plan.active_quality();
+  let bindings = session.options.quality_rules;
+  let mut selected = shell::collect(ctx, active, bindings)?;
+  let rooted = RuleContext {
+    cwd: Some(&session.project_root),
+    ..*ctx
+  };
+  let mut stopped = shell_decisions(
+    &mut selected,
+    (active, bindings, &rooted, session.host),
+    (state, trace),
+  );
+  if let Some(advisory) = selected.advisory
+    && let Ok(message) = toolu_protocol::text::Text::new(advisory)
+  {
+    let folded = Folded {
+      name: "quality-shell".to_owned(),
+      result: ModuleResult {
+        stdout: encoded(
+          session.host,
+          HostEvent::ToolPost,
+          &Decision::Advisory { message },
+        ),
+        ..ModuleResult::default()
+      },
+      truncated: false,
+    };
+    stopped = state.consume(&folded).or(stopped);
+  }
+  shell::touch_marker(
+    &selected.gate,
+    Some(&selected.marker_value),
+    &mut selected.warnings,
+  );
+  for warning in selected.warnings {
+    state.stderr.push_str(&warning);
+    state.stderr.push('\n');
+  }
+  stopped
+}
+
 /// Walk `payload`: built-ins, then the registry.
 pub(crate) fn walk(
   payload: &Payload<'_>,
@@ -143,6 +234,9 @@ pub(crate) fn walk_with_view<'a>(
     if let Some(done) = state.consume(&folded) {
       return done;
     }
+  }
+  if let Some(done) = shell_quality((payload, &ctx, session), plan, (&mut state, trace)) {
+    return done;
   }
   state.settle()
 }

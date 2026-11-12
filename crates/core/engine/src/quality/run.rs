@@ -81,7 +81,8 @@ struct FileFacts<'a> {
   gate: PathBuf,
 }
 
-fn gate_path(root: &Path, roots: &Roots) -> PathBuf {
+/// The project quality gate file shared by edit and shell checks.
+pub(super) fn gate_path(root: &Path, roots: &Roots) -> PathBuf {
   roots
     .project_state_root(None, Some(root))
     .unwrap_or_else(|| root.join(roots.project_dirname()).join("tmp"))
@@ -181,8 +182,9 @@ fn settle(
   state: &mut StateCtx,
   findings: QualityFindings,
 ) -> Decision {
+  super::shell::touch_marker(gate, None, &mut state.warnings);
   if findings.errors.is_empty() {
-    clear_gate_file(state, gate, &file.path, rule.source());
+    clear_file_gate(state, gate, file, rule.source());
     let advice = findings
       .advisories
       .into_iter()
@@ -211,7 +213,7 @@ fn settle(
     state,
     gate,
     &GateFailure {
-      file: &file.path,
+      file: &file.absolute.to_string_lossy(),
       source: rule.source(),
       reason: rule.reason(),
       violations: &violations,
@@ -219,6 +221,14 @@ fn settle(
   );
   let message = format!("QUALITY VIOLATION — fix before proceeding:\n{violations}");
   Text::new(message).map_or(Decision::Allow, |message| Decision::Advisory { message })
+}
+
+fn clear_file_gate(state: &mut StateCtx, gate: &Path, file: &EditedFile, source: &str) {
+  let absolute = file.absolute.to_string_lossy();
+  clear_gate_file(state, gate, &absolute, source);
+  if file.path != absolute {
+    clear_gate_file(state, gate, &file.path, source);
+  }
 }
 
 fn file_scan(
@@ -261,7 +271,7 @@ fn run_files(
         continue;
       }
       if file.removed {
-        clear_gate_file(&mut state, &facts.gate, &file.path, rule.source());
+        clear_file_gate(&mut state, &facts.gate, file, rule.source());
       } else if !(rule.skip_linked_worktrees() && facts.linked) {
         let scanned = fallback
           .get(&file.path)

@@ -21,7 +21,7 @@ mod tests {
   use toolu_runtime::registry::rule::RuleContext;
   use toolu_state::edit_records::{EditRecords, normalize_edit_records};
 
-  use super::quality_run_gate::gate_entries;
+  use super::quality_run_gate::{expected_entries, gate_entries};
 
   struct Project {
     _temp: tempfile::TempDir,
@@ -198,7 +198,8 @@ mod tests {
     }
     let gate = Project::gate(&project.repo);
     if !step["entries"].is_null() {
-      assert_eq!(gate_entries(&gate), step["entries"], "{name}");
+      let expected = expected_entries(&project.repo, &step["entries"]);
+      assert_eq!(gate_entries(&gate), expected, "{name}");
     }
     if let Some(status) = step["gateStatus"].as_str() {
       let observed = if gate.exists() {
@@ -269,7 +270,10 @@ mod tests {
     assert_eq!(result.decisions.len(), 1);
     assert!(result.warnings.is_empty(), "{:?}", result.warnings);
     let entries = gate_entries(&Project::gate(&project.repo));
-    assert_eq!(entries, json!({"a.py":"new error\n"}));
+    assert_eq!(
+      entries,
+      expected_entries(&project.repo, &json!({"a.py":"new error\n"}))
+    );
   }
 
   #[test]
@@ -308,7 +312,7 @@ mod tests {
     assert!(result.warnings.is_empty(), "{:?}", result.warnings);
     assert_eq!(
       gate_entries(&Project::gate(&linked)),
-      json!({"../linked/a.py":"py error\n"})
+      expected_entries(&linked, &json!({"a.py":"py error\n"}))
     );
     assert!(!Project::gate(&project.repo).exists());
   }

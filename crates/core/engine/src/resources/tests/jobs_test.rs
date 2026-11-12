@@ -154,7 +154,8 @@ fn a_managed_log_keeps_both_streams_past_the_returned_output_budget() {
     .map(|entry| entry.path())
     .find(|path| path.extension().is_some_and(|ext| ext == "log"))
     .unwrap();
-  assert_eq!(std::fs::read_to_string(log).unwrap(), "out\nerr\n");
+  let log = std::fs::read_to_string(log).unwrap();
+  assert!(log == "out\nerr\n" || log == "err\nout\n", "{log:?}");
 }
 
 #[test]

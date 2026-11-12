@@ -2,7 +2,7 @@
 
 **Type:** Quality Gate | **Depends on:** `toolu`
 
-Python `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Every Python file the agent edits is checked on the spot. Static-only — the gate never invokes `ruff`, `pylint`, `mypy`, or any other linter/type-checker.
+Python `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Supported Python edits are checked on the spot. Static-only — the gate never invokes `ruff`, `pylint`, `mypy`, or any other linter/type-checker.
 
 ## Install
 
@@ -14,7 +14,9 @@ Python `PostToolUse` quality checks compiled into `toolu` and enabled by a regis
 
 ### Post-Edit Quality Checks
 
-Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-python-quality` crate (`crates/python-quality`), compiled into the native [`toolu` binary](../install.md) (#427), and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.** The `SessionStart` register hook publishes the rule's manifest (`python-quality@toolu__python-quality.json`) into toolu's registry. It registers only that `.json` manifest, and removes the `.js` module and `.sh` bridge of earlier releases once, with a notice. The `toolu python-quality` namespace has no verbs; its help lists the checks, and `toolu doctor` reports whether the rule is registered.
+Supported Python edits contribute to toolu's quality gate. The checks are the `toolu-python-quality` crate (`crates/python-quality`), compiled into the native [`toolu` binary](../install.md) (#427), and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.** The `SessionStart` register hook publishes the rule's manifest (`python-quality@toolu__python-quality.json`) into toolu's registry. It registers only that `.json` manifest, and removes the `.js` module and `.sh` bridge of earlier releases once, with a notice. The `toolu python-quality` namespace has no verbs; its help lists the checks, and `toolu doctor` reports whether the rule is registered.
+
+Shell changes are checked after an edit quality settlement or the first non-quiet shell event establishes a baseline. Each shell event checks at most 20 changed source files and advises about the rest; see [shell quality checks](../registry.md#language-quality-rules).
 
 ## Checks Enforced
 

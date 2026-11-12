@@ -2,7 +2,7 @@
 
 **Type:** Quality Gate | **Depends on:** `toolu`
 
-Rust `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Every Rust file the agent edits is checked on the spot.
+Rust `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Supported Rust edits are checked on the spot.
 
 ## Install
 
@@ -14,9 +14,11 @@ Rust `PostToolUse` quality checks compiled into `toolu` and enabled by a registr
 
 ### Post-Edit Quality Checks
 
-Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into the native [`toolu` binary](../install.md) (#428). The `SessionStart` register hook publishes the rule's manifest (`rust-quality@toolu__rust-quality.json`) into toolu's registry, and the rule runs only while this plugin is installed — **uninstall it and the Rust rules vanish, fail-closed.** The register hook registers only that `.json` manifest. It removes the `.js` module and `.sh` bridge of earlier releases once, with a notice.
+Supported Rust edits contribute to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into the native [`toolu` binary](../install.md) (#428). The `SessionStart` register hook publishes the rule's manifest (`rust-quality@toolu__rust-quality.json`) into toolu's registry, and the rule runs only while this plugin is installed — **uninstall it and the Rust rules vanish, fail-closed.** The register hook registers only that `.json` manifest. It removes the `.js` module and `.sh` bridge of earlier releases once, with a notice.
 
 `toolu rust-quality check [<path>...]` runs the same rules over the git-listed `.rs` files under each path (the whole repository by default) and exits 1 with one line per finding, or prints them as JSON under `--json`. This repository's gate runs `toolu rust-quality check crates` at its own limits.
+
+Shell changes are checked after an edit quality settlement or the first non-quiet shell event establishes a baseline. Each shell event checks at most 20 changed source files and advises about the rest; see [shell quality checks](../registry.md#language-quality-rules).
 
 ## Checks Enforced
 

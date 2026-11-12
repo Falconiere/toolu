@@ -65,6 +65,11 @@ impl<'r> RegistryPlan<'r> {
     plan
   }
 
+  /// Quality bindings admitted by installed manifests for this walk.
+  pub(crate) fn active_quality(&self) -> &[usize] {
+    &self.active_quality
+  }
+
   fn select_quality(&self, bindings: &[QualityBinding<'_>], tool_name: &str) -> Vec<usize> {
     self
       .listing

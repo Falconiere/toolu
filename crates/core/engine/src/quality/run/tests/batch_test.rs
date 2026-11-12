@@ -66,6 +66,8 @@ fn gate_entries_are_written_only_when_each_path_is_reached() {
   let binding = binding(&inline);
   let mut batch = QualityBatch::new(&records);
   let gate = root.join(".claude/tmp/quality-gate-status.json");
+  let a = root.join("a.ts").display().to_string();
+  let b = root.join("b.ts").display().to_string();
   assert!(!gate.exists());
   let (first, warnings) = batch.decide(0, (0, &[0], &binding), &ctx);
   assert_eq!(warnings, Vec::<String>::new());
@@ -73,7 +75,7 @@ fn gate_entries_are_written_only_when_each_path_is_reached() {
     first,
     toolu_protocol::decision::Decision::Advisory { .. }
   ));
-  assert_eq!(gate_paths(&gate), ["./a.ts"]);
+  assert_eq!(gate_paths(&gate).as_slice(), std::slice::from_ref(&a));
   std::fs::write(root.join("b.ts"), "throw \"b\";\n").unwrap();
   batch.invalidate();
   let (second, warnings) = batch.decide(1, (0, &[0], &binding), &ctx);
@@ -82,7 +84,7 @@ fn gate_entries_are_written_only_when_each_path_is_reached() {
     second,
     toolu_protocol::decision::Decision::Advisory { .. }
   ));
-  assert_eq!(gate_paths(&gate), ["./a.ts", "b.ts"]);
+  assert_eq!(gate_paths(&gate), [a, b]);
 }
 
 #[test]
@@ -116,7 +118,7 @@ fn a_changed_file_is_rescanned_for_each_reached_path_spelling() {
     toolu_protocol::decision::Decision::Advisory { .. }
   ));
   let gate = root.join(".claude/tmp/quality-gate-status.json");
-  assert_eq!(gate_paths(&gate), ["same.ts", absolute.as_str()]);
+  assert_eq!(gate_paths(&gate), [absolute]);
 }
 
 #[test]

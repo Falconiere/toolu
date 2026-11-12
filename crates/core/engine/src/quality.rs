@@ -5,6 +5,8 @@ mod manifest_rule;
 mod plugin;
 mod run;
 mod scan;
+/// Shell post-event file selection for the shared quality batch.
+pub(crate) mod shell;
 
 pub use edit::{EditedFile, edited_file, in_linked_worktree, is_regular_file};
 pub use manifest_rule::ManifestRule;

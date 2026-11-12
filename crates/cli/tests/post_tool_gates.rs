@@ -42,11 +42,20 @@ impl Sandbox {
 
   /// `toolu hook post-tools` for a Bash call of `command` that exited `code`.
   fn ran(&self, command: &str, code: i64) -> Res<Output> {
+    self.tool_at(
+      &self.root.join("project"),
+      "Bash",
+      &serde_json::json!({"command": command}),
+      code,
+    )
+  }
+
+  fn tool_at(&self, cwd: &Path, name: &str, input: &serde_json::Value, code: i64) -> Res<Output> {
     let stdin = serde_json::json!({
       "session_id": "s1",
       "hook_event_name": "PostToolUse",
-      "tool_name": "Bash",
-      "tool_input": {"command": command},
+      "tool_name": name,
+      "tool_input": input,
       "tool_response": {"metadata": {"exit_code": code}, "stdout": "", "stderr": ""},
     });
     Ok(
@@ -56,10 +65,27 @@ impl Sandbox {
         .env("PATH", std::env::var("PATH")?)
         .env("HOME", self.root.join("home"))
         .env("CLAUDE_PROJECT_DIR", self.root.join("project"))
-        .current_dir(self.root.join("project"))
+        .env("TOOLU_HOST_OVERRIDE", "claude")
+        .current_dir(cwd)
         .write_stdin(stdin.to_string())
         .output()?,
     )
+  }
+
+  /// Run a real shell command, then deliver its post-tool event.
+  fn shell_call(&self, command: &str) -> Res<Output> {
+    self.shell_call_at(&self.root.join("project"), command)
+  }
+
+  fn shell_call_at(&self, cwd: &Path, command: &str) -> Res<Output> {
+    let ran = Command::new("bash")
+      .args(["-c", command])
+      .current_dir(cwd)
+      .output()?;
+    if !ran.status.success() {
+      return Err(format!("{command}: {ran:?}").into());
+    }
+    self.tool_at(cwd, "Bash", &serde_json::json!({"command": command}), 0)
   }
 
   /// The gate file's `status`, `None` when there is no file.
@@ -161,4 +187,148 @@ fn an_unrecognized_gate_file_warns_on_stderr_and_is_replaced() {
     )
   );
   assert_eq!(sb.status().unwrap().as_deref(), Some("failing"));
+}
+
+/// A committed Rust project with its quality rule registered in the real hook.
+fn rust_quality_sandbox() -> Res<Sandbox> {
+  let sb = Sandbox::new()?;
+  let project = sb.root.join("project");
+  std::fs::create_dir_all(project.join("src"))?;
+  std::fs::write(
+    project.join("Cargo.toml"),
+    "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+  )?;
+  std::fs::write(project.join("src/lib.rs"), "//! Demo.\nfn demo() {}\n")?;
+  for args in [
+    &["add", "."][..],
+    &[
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "-qm",
+      "baseline",
+    ][..],
+  ] {
+    if !Command::new("git")
+      .args(args)
+      .current_dir(&project)
+      .status()?
+      .success()
+    {
+      return Err("git baseline failed".into());
+    }
+  }
+  let plugin = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/rust-quality");
+  let registered = assert_cmd::Command::new(TOOLU)
+    .args(["rust-quality", "hook", "register"])
+    .args(["--event", "SessionStart", "--plugin-root"])
+    .arg(plugin)
+    .env_clear()
+    .env("PATH", std::env::var("PATH")?)
+    .env("HOME", sb.root.join("home"))
+    .env("CLAUDE_PROJECT_DIR", &project)
+    .env("TOOLU_HOST_OVERRIDE", "claude")
+    .current_dir(&project)
+    .write_stdin("{}")
+    .output()?;
+  if !registered.status.success() {
+    return Err(format!("rust-quality register failed: {registered:?}").into());
+  }
+  Ok(sb)
+}
+
+#[test]
+fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
+  let sb = rust_quality_sandbox().unwrap();
+  let baseline = "touch baseline";
+  let output = sb.shell_call(baseline).unwrap();
+  assert!(output.status.success(), "{output:?}");
+
+  let edit = concat!(
+    "perl -pi -e 's/^fn demo/#[",
+    "allow(dead_code)]\\nfn demo/' src/lib.rs"
+  );
+  let output = sb.shell_call(edit).unwrap();
+  let stdout = String::from_utf8(output.stdout).unwrap();
+  assert!(stdout.contains("QUALITY VIOLATION"), "{stdout}");
+  let gate: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
+  let entries = gate["entries"].as_object().unwrap();
+  let file = entries
+    .keys()
+    .find(|key| key.ends_with("src/lib.rs"))
+    .unwrap();
+  assert_eq!(
+    file,
+    &sb.root.join("project/src/lib.rs").display().to_string()
+  );
+  assert_eq!(entries[file]["source"], "rust-quality-hook");
+  let file = file.clone();
+  assert_eq!(gate["status"], "failing");
+
+  let remove = "rm src/lib.rs";
+  let output = sb.shell_call(remove).unwrap();
+  assert!(output.status.success(), "{output:?}");
+  let gate: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
+  assert!(gate["entries"].get(&file).is_none(), "{gate}");
+}
+
+#[test]
+fn subdirectory_edit_gate_survives_unrelated_shell_event() {
+  let sb = rust_quality_sandbox().unwrap();
+  let src = sb.root.join("project/src");
+  std::fs::write(
+    src.join("lib.rs"),
+    concat!("#[", "allow(dead_code)]\nfn demo() {}\n"),
+  )
+  .unwrap();
+  let edit = sb
+    .tool_at(&src, "Edit", &serde_json::json!({"file_path":"lib.rs"}), 0)
+    .unwrap();
+  assert!(
+    String::from_utf8_lossy(&edit.stdout).contains("QUALITY VIOLATION"),
+    "{edit:?}"
+  );
+  let shell = sb
+    .tool_at(
+      &src,
+      "Bash",
+      &serde_json::json!({"command":"touch marker"}),
+      0,
+    )
+    .unwrap();
+  assert!(shell.status.success(), "{shell:?}");
+  let gate: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
+  let key = src.join("lib.rs").display().to_string();
+  assert_eq!(gate["status"], "failing", "{gate}");
+  assert!(gate["entries"].get(&key).is_some(), "{gate}");
+}
+
+#[test]
+fn subdirectory_edit_clears_shell_gate_for_the_same_file() {
+  let sb = rust_quality_sandbox().unwrap();
+  let src = sb.root.join("project/src");
+  sb.shell_call_at(&src, "touch baseline").unwrap();
+  let edit = concat!(
+    "perl -pi -e 's/^fn demo/#[",
+    "allow(dead_code)]\\nfn demo/' lib.rs"
+  );
+  let shell = sb.shell_call_at(&src, edit).unwrap();
+  assert!(
+    String::from_utf8_lossy(&shell.stdout).contains("QUALITY VIOLATION"),
+    "{shell:?}"
+  );
+  std::fs::write(src.join("lib.rs"), "//! Demo.\nfn demo() {}\n").unwrap();
+  let fixed = sb
+    .tool_at(&src, "Edit", &serde_json::json!({"file_path":"lib.rs"}), 0)
+    .unwrap();
+  assert!(fixed.status.success(), "{fixed:?}");
+  let gate: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
+  let key = src.join("lib.rs").display().to_string();
+  assert!(gate["entries"].get(&key).is_none(), "{gate}");
 }

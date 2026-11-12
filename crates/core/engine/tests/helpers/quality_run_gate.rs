@@ -21,3 +21,14 @@ pub(crate) fn gate_entries(gate: &Path) -> Value {
       .collect(),
   )
 }
+
+pub(crate) fn expected_entries(root: &Path, entries: &Value) -> Value {
+  Value::Object(
+    entries
+      .as_object()
+      .unwrap()
+      .iter()
+      .map(|(path, violation)| (root.join(path).display().to_string(), violation.clone()))
+      .collect(),
+  )
+}

@@ -32,7 +32,7 @@ It's a personal bundle, built in the open, MIT-licensed. Take the whole thing or
 
 ## The quality gate
 
-The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality` is installed, every Rust/TypeScript/Python file the agent edits is checked on the spot. Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
+The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality` is installed, supported edits are checked on the spot. Shell changes are checked after a quality baseline exists, with a limit of 20 changed source files per event; see [shell quality checks](docs/registry.md#language-quality-rules). Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
 
 <table>
 <tr><th align="left">TypeScript</th><th align="left">Rust</th><th align="left">Python</th></tr>
