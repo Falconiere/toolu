@@ -59,8 +59,9 @@ fn listed(env: &Env, cwd: &Path, dir: &str) -> Result<Vec<String>, String> {
     .filter(|path| !path.is_empty() && supported(path) && cwd.join(path).is_file())
     .map(str::to_owned)
     .collect();
-  // git lists untracked files after tracked ones.
+  // git lists untracked files after tracked ones, and an unmerged path once per stage.
   files.sort();
+  files.dedup();
   Ok(files)
 }
 

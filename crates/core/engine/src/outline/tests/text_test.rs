@@ -117,3 +117,15 @@ fn outline_text_reads_the_docstring_of_an_indented_method() {
     Some("Area of it.")
   );
 }
+
+#[test]
+fn outline_text_ignores_a_trailing_comment_on_a_code_line() {
+  let lines = [
+    "/** Max retries. */",
+    "export const RETRIES = 3;",
+    "const WAIT = 50; /* ms */",
+    "export function go() {}",
+  ];
+  let found = at(&lines, 3, 3, "go", Language::Script);
+  assert_eq!((found.start, found.doc), (4, None));
+}

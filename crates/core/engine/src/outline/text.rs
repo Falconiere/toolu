@@ -91,14 +91,15 @@ fn extend(lines: &[&str], start: usize, language: Language) -> usize {
   top
 }
 
-/// The `/**` line opening the comment that ends on `from`, if it is a doc comment.
+/// The `/**` line opening the doc comment that ends on `from`, walking only
+/// over its `*` continuation lines.
 fn block_opener(lines: &[&str], from: usize) -> Option<usize> {
   for index in (0..=from).rev() {
     let line = lines.get(index)?.trim();
     if line.starts_with("/**") {
       return Some(index);
     }
-    if line.starts_with("/*") || (index != from && line.contains("*/")) {
+    if !line.starts_with('*') {
       return None;
     }
   }
