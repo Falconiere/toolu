@@ -71,4 +71,4 @@ visibility of reused helpers → digest data and caps with unit tests → CLI ve
 **Status:** Approved
 
 ## Deviations
-- Code review round 1: names an added line still defines are not reported as removed (no-outline case), and printed lines are cut at 200 characters so one long line cannot spend the 6 KB hunk budget. Both covered by s1 tests.
+- Code review round 1: names an added line still defines are not reported as removed (no-outline case), and printed lines are cut at 200 bytes (at a character boundary) so one long line cannot spend the 6 KB hunk budget. Both covered by s1 tests.

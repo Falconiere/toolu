@@ -29,11 +29,12 @@ fn a_file_past_the_budget_and_every_later_one_print_no_hunks() {
 
 #[test]
 fn a_long_line_is_cut_so_one_file_cannot_spend_the_budget() {
-  let patch = format!("@@ -0,0 +1 @@\n+{}\n", "é".repeat(7000));
+  let patch = format!("@@ -0,0 +1 @@\n+{}\n", "\u{1F600}".repeat(7000));
   let mut budget = Budget::default();
   let (hunks, _) = budget.take(&patch);
   let line = &hunks[0].lines[0];
-  assert_eq!(line.chars().count(), 203);
+  // `+` and 49 four-byte characters fit in 200 bytes.
+  assert_eq!(line.len(), 1 + 49 * 4 + 3);
   assert!(line.ends_with("..."));
   assert_eq!(budget.dropped, 0);
 }
