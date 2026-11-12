@@ -77,6 +77,17 @@ toolu git-better pr             # draft PR title and body
 toolu git-better pr --squash    # squash message with every commit's trailers merged
 ```
 
+Read why from the commits and what from the digest. `toolu code-review digest`
+lists each changed file with its `+N -M` counts, the items its changes sit in
+(with line ranges) and a few bounded hunks, branch and uncommitted changes
+together, with no model call. Read only the ranges it prints:
+
+```bash
+toolu code-review digest                      # this branch and local changes against its base
+toolu code-review digest --since HEAD         # uncommitted and untracked changes only
+toolu code-review digest --path src/lib.rs    # one file; repeatable
+```
+
 Add `--json` for one machine-readable document. A session that starts on a
 feature branch gets the same summary as `context`. Edit the `pr` draft before
 using it: it keeps each `Intent:` and `Refs:`, so a squash merge keeps them too.
