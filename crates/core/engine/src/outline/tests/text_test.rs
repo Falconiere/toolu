@@ -103,3 +103,17 @@ fn outline_text_does_not_climb_past_a_call_into_an_earlier_decorator() {
   let multi = ["@route(", "    \"/x\",", ")", "def c():", "    pass"];
   assert_eq!(at(&multi, 3, 4, "c", Language::Python).start, 1);
 }
+
+#[test]
+fn outline_text_reads_the_docstring_of_an_indented_method() {
+  let lines = [
+    "class Shape:",
+    "    def area(self):",
+    "        \"\"\"Area of it.\"\"\"",
+    "        return 0",
+  ];
+  assert_eq!(
+    at(&lines, 1, 3, "area", Language::Python).doc.as_deref(),
+    Some("Area of it.")
+  );
+}

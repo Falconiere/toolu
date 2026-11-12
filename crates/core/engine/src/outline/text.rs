@@ -241,7 +241,7 @@ fn doc_above(above: &[&str]) -> Option<String> {
 /// The docstring opening a Python body after the signature's `:` at `cut`.
 fn docstring(lines: &[&str], cut: Cut, end: usize) -> Option<String> {
   let (index, pos) = cut?;
-  let mut body = lines.get(index)?.get(pos + 1..)?.to_owned();
+  let mut body = lines.get(index)?.trim().get(pos + 1..)?.to_owned();
   for line in lines.get(index + 1..=end).unwrap_or_default() {
     body.push('\n');
     body.push_str(line);
