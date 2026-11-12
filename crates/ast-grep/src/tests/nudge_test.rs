@@ -1,4 +1,4 @@
-use super::{Kind, grep_tool, shell, structural};
+use super::{Kind, State, grep_tool, message, shell, structural};
 
 #[test]
 fn nudge_real_shell_file_search_but_not_pipe_filter() {
@@ -28,4 +28,34 @@ fn nudge_structural_grep_only_for_code_targets() {
   assert!(!structural("pub fn run"));
   assert!(structural("impl Foo for Bar"));
   assert!(structural("-> Result"));
+}
+
+#[test]
+fn nudge_points_declaration_greps_at_outline_and_symbol() {
+  let kind = |command: &str| shell(&toolu_shell::analyze(command));
+  assert!(matches!(
+    kind(r#"grep -n "pub fn \|pub(crate) fn " crates/x/src/a.rs"#),
+    Some(Kind::Outline)
+  ));
+  assert!(matches!(kind(r#"rg -n "^\s*(pub )?fn " src"#), Some(Kind::Outline)));
+  assert!(matches!(kind(r#"rg "fn hunk_start""#), Some(Kind::Symbol)));
+  assert!(matches!(kind(r#"rg "class Foo\(" src"#), Some(Kind::Symbol)));
+  assert!(matches!(kind("rg TODO docs/"), Some(Kind::BashGeneric)));
+  assert!(matches!(kind(r#"rg "fn x" docs/"#), Some(Kind::BashGeneric)));
+  assert!(matches!(kind(r#"grep -rn "fn x" --include=*.md ."#), Some(Kind::BashGeneric)));
+  assert!(matches!(kind(r#"grep -r "impl Foo" src"#), Some(Kind::BashStructural)));
+  assert!(kind(r#"cat a.rs | grep "pub fn main""#).is_none());
+}
+
+#[test]
+fn nudge_read_advisories_only_when_ast_grep_is_available() {
+  let outline = message(Kind::Outline, State::Available).expect("outline text");
+  assert!(outline.starts_with("Listing definitions? `toolu ast-grep outline <path>`"));
+  let symbol = message(Kind::Symbol, State::Available).expect("symbol text");
+  assert!(symbol.starts_with("Looking for a definition? `toolu ast-grep symbol <name>`"));
+  for kind in [Kind::Outline, Kind::Symbol] {
+    for state in [State::Missing, State::OptOut] {
+      assert_eq!(message(kind, state), message(Kind::BashGeneric, state));
+    }
+  }
 }

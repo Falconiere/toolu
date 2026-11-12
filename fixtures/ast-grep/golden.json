@@ -210,6 +210,31 @@
       "stdout": "",
       "stderr": "",
       "exitCode": 0
+    },
+    "Bash grep listing declarations points at outline [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Listing definitions? `toolu ast-grep outline <path>` prints every item's signature, first doc line and line range in one call; then read only the range you need.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash rg for a declared name points at symbol [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Looking for a definition? `toolu ast-grep symbol <name>` prints it with every reference and its enclosing item.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash rg in docs gets no read advisory [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash grep listing declarations, ast-grep missing [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output. (ast-grep not installed — structural matching unavailable.)\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash rg for a declared name, ast-grep opted out [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
     }
   },
   "savings": {
