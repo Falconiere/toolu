@@ -5,17 +5,15 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
+use super::{
+  AstGrepHit, AstGrepScan, EditedFile, QualityBinding, QualityRule, clear_file_gate, edited_record,
+  file_scan, owns, selected_facts, settle,
+};
 use toolu_protocol::decision::Decision;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::rule::RuleContext;
 use toolu_state::ctx::StateCtx;
 use toolu_state::edit_records::EditRecord;
-use toolu_state::gate_file::clear_gate_file;
-
-use super::{
-  AstGrepHit, AstGrepScan, EditedFile, QualityBinding, QualityRule, edited_record, file_scan, owns,
-  selected_facts, settle,
-};
 
 use super::batch_scan::retry_file;
 pub(super) use super::batch_scan::scan_batch_with_fallback;
@@ -149,12 +147,7 @@ impl Prepared {
     if !owns(rule, &facts.file) {
       Decision::Allow
     } else if facts.file.removed {
-      clear_gate_file(
-        &mut self.state,
-        &facts.gate,
-        &facts.file.path,
-        rule.source(),
-      );
+      clear_file_gate(&mut self.state, &facts.gate, &facts.file, rule.source());
       Decision::Allow
     } else if rule.skip_linked_worktrees() && facts.linked {
       Decision::Allow

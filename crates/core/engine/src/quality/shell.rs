@@ -113,7 +113,6 @@ fn record(path: String, operation: EditOperation) -> EditRecord {
 
 fn missing_gate_paths(
   gate: &Path,
-  root: &Path,
   active: &[usize],
   bindings: &[QualityBinding<'_>],
   warnings: &mut Vec<String>,
@@ -148,7 +147,9 @@ fn missing_gate_paths(
             .get(*index)
             .is_some_and(|binding| binding.rule.source() == source)
         })
-        && !root.join(file).exists()
+        // Legacy relative Edit keys have no saved cwd, so absence is ambiguous.
+        && Path::new(file).is_absolute()
+        && !Path::new(file).exists()
     })
     .map(|(file, _)| record(file, EditOperation::Delete))
     .collect()
@@ -184,7 +185,6 @@ fn live_paths(
 fn selected_records(
   live: Vec<String>,
   gate: &Path,
-  root: &Path,
   (active, bindings): (&[usize], &[QualityBinding<'_>]),
   warnings: &mut Vec<String>,
 ) -> (Vec<EditRecord>, Option<String>) {
@@ -203,7 +203,7 @@ fn selected_records(
     .map(|path| record(path, EditOperation::Write))
     .collect();
   let mut seen: HashSet<String> = records.iter().map(|record| record.path.clone()).collect();
-  for removed in missing_gate_paths(gate, root, active, bindings, warnings) {
+  for removed in missing_gate_paths(gate, active, bindings, warnings) {
     if seen.insert(removed.path.clone()) {
       records.push(removed);
     }
@@ -272,13 +272,7 @@ pub(crate) fn collect(
     &mut warnings,
   );
   let live = host_paths(live, ctx);
-  let (records, advisory) = selected_records(
-    live,
-    &gate,
-    ctx.project_root,
-    (active, bindings),
-    &mut warnings,
-  );
+  let (records, advisory) = selected_records(live, &gate, (active, bindings), &mut warnings);
   Some(Selection {
     records,
     advisory,
