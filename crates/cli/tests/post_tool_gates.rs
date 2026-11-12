@@ -42,11 +42,20 @@ impl Sandbox {
 
   /// `toolu hook post-tools` for a Bash call of `command` that exited `code`.
   fn ran(&self, command: &str, code: i64) -> Res<Output> {
+    self.tool_at(
+      &self.root.join("project"),
+      "Bash",
+      serde_json::json!({"command": command}),
+      code,
+    )
+  }
+
+  fn tool_at(&self, cwd: &Path, name: &str, input: serde_json::Value, code: i64) -> Res<Output> {
     let stdin = serde_json::json!({
       "session_id": "s1",
       "hook_event_name": "PostToolUse",
-      "tool_name": "Bash",
-      "tool_input": {"command": command},
+      "tool_name": name,
+      "tool_input": input,
       "tool_response": {"metadata": {"exit_code": code}, "stdout": "", "stderr": ""},
     });
     Ok(
@@ -57,7 +66,7 @@ impl Sandbox {
         .env("HOME", self.root.join("home"))
         .env("CLAUDE_PROJECT_DIR", self.root.join("project"))
         .env("TOOLU_HOST_OVERRIDE", "claude")
-        .current_dir(self.root.join("project"))
+        .current_dir(cwd)
         .write_stdin(stdin.to_string())
         .output()?,
     )
@@ -65,14 +74,18 @@ impl Sandbox {
 
   /// Run a real shell command, then deliver its post-tool event.
   fn shell_call(&self, command: &str) -> Res<Output> {
+    self.shell_call_at(&self.root.join("project"), command)
+  }
+
+  fn shell_call_at(&self, cwd: &Path, command: &str) -> Res<Output> {
     let ran = Command::new("bash")
       .args(["-c", command])
-      .current_dir(self.root.join("project"))
+      .current_dir(cwd)
       .output()?;
     if !ran.status.success() {
       return Err(format!("{command}: {ran:?}").into());
     }
-    self.ran(command, 0)
+    self.tool_at(cwd, "Bash", serde_json::json!({"command": command}), 0)
   }
 
   /// The gate file's `status`, `None` when there is no file.
@@ -261,4 +274,54 @@ fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
   let gate: serde_json::Value =
     serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
   assert!(gate["entries"].get(&file).is_none(), "{gate}");
+}
+
+#[test]
+fn subdirectory_edit_gate_survives_unrelated_shell_event() {
+  let sb = rust_quality_sandbox().unwrap();
+  let src = sb.root.join("project/src");
+  std::fs::write(src.join("lib.rs"), "#[allow(dead_code)]\nfn demo() {}\n").unwrap();
+  let edit = sb
+    .tool_at(&src, "Edit", serde_json::json!({"file_path":"lib.rs"}), 0)
+    .unwrap();
+  assert!(
+    String::from_utf8_lossy(&edit.stdout).contains("QUALITY VIOLATION"),
+    "{edit:?}"
+  );
+  let shell = sb
+    .tool_at(
+      &src,
+      "Bash",
+      serde_json::json!({"command":"touch marker"}),
+      0,
+    )
+    .unwrap();
+  assert!(shell.status.success(), "{shell:?}");
+  let gate: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
+  let key = src.join("lib.rs").display().to_string();
+  assert_eq!(gate["status"], "failing", "{gate}");
+  assert!(gate["entries"].get(&key).is_some(), "{gate}");
+}
+
+#[test]
+fn subdirectory_edit_clears_shell_gate_for_the_same_file() {
+  let sb = rust_quality_sandbox().unwrap();
+  let src = sb.root.join("project/src");
+  sb.shell_call_at(&src, "touch baseline").unwrap();
+  let edit = "perl -pi -e 's/^fn demo/#[allow(dead_code)]\\nfn demo/' lib.rs";
+  let shell = sb.shell_call_at(&src, edit).unwrap();
+  assert!(
+    String::from_utf8_lossy(&shell.stdout).contains("QUALITY VIOLATION"),
+    "{shell:?}"
+  );
+  std::fs::write(src.join("lib.rs"), "//! Demo.\nfn demo() {}\n").unwrap();
+  let fixed = sb
+    .tool_at(&src, "Edit", serde_json::json!({"file_path":"lib.rs"}), 0)
+    .unwrap();
+  assert!(fixed.status.success(), "{fixed:?}");
+  let gate: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
+  let key = src.join("lib.rs").display().to_string();
+  assert!(gate["entries"].get(&key).is_none(), "{gate}");
 }
