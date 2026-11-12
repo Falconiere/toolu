@@ -48,6 +48,8 @@ plan. Keep checks runnable and order dependent work explicitly.
 Every user-facing behavior, interface, CLI, command, or config change needs an
 explicit documentation step and check. Keep files focused, use colocated tests,
 and include the real inputs and failure propagation that prove the behavior.
+When the repository's instructions name a scoped pre-check, make it each code
+step's `check`, with the step's own `paths`; keep the full gate as the final step.
 
 ## Handoff
 

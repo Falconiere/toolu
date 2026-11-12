@@ -25,7 +25,10 @@ fn protocol_change_includes_linked_reverse_dependents() {
   )
   .unwrap();
   for name in ["toolu-protocol", "toolu-cli", "xtask"] {
-    assert!(selected.contains(&name.to_owned()), "{name} missing: {selected:?}");
+    assert!(
+      selected.contains(&name.to_owned()),
+      "{name} missing: {selected:?}"
+    );
   }
 }
 
@@ -37,5 +40,8 @@ fn invalid_base_is_a_setup_error() {
     ..Options::default()
   };
   let err = run(&options).unwrap_err();
-  assert!(err.starts_with("git merge-base no-such-ref HEAD failed"), "{err}");
+  assert!(
+    err.starts_with("git merge-base no-such-ref HEAD failed"),
+    "{err}"
+  );
 }
