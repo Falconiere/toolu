@@ -265,7 +265,7 @@ fn execution_uses_private_routing_and_host_neutral_delivery_invocations() -> Res
 
 #[test]
 fn plan_emits_a_machine_readable_steps_block() -> Res {
-  has("plan", "Steps (machine-readable)")
+  has("plan", "Steps (machine-readable)|scoped pre-check|step's own `paths`")
 }
 
 #[test]
