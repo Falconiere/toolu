@@ -160,7 +160,7 @@ pub fn shape(env: &Env, root: &Path, requested_base: Option<&str>) -> Result<Sha
   Ok(shaped)
 }
 
-fn resolve_base(
+pub(crate) fn resolve_base(
   env: &Env,
   root: &Path,
   requested_base: Option<&str>,
@@ -334,9 +334,10 @@ fn omit(omitted: &mut Vec<Omitted>, paths: &[String], reason: &str) {
   }));
 }
 
+/// Shape tests; their Git fixtures are shared with the digest tests.
 #[cfg(test)]
 #[path = "tests/shape_test.rs"]
-mod tests;
+pub mod tests;
 
 #[cfg(test)]
 #[path = "tests/shape_edge_test.rs"]

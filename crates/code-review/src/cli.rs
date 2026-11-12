@@ -5,7 +5,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::budget::Effort;
 
-/// The namespace and its `run` verb.
+/// The namespace and its verbs.
 pub(crate) fn command() -> Command {
   Command::new("code-review")
     .about("Native review of branch and local changes: anchored findings, coverage and a computed verdict")
@@ -39,11 +39,31 @@ pub(crate) fn command() -> Command {
             ),
         ),
     )
+    .subcommand(digest())
     .subcommand(crate::eval::cli::command())
     .subcommand(Command::new("dismiss")
       .about("Settle a branch finding by exact ID without a model call")
       .arg(Arg::new("finding-id").required(true))
       .arg(Arg::new("reason").long("reason").required(true).value_name("TEXT")))
+}
+
+/// The `digest` verb: changes by file and item, without a model call.
+fn digest() -> Command {
+  Command::new("digest")
+    .about("Summarize branch and uncommitted changes by file and item, without a model call")
+    .arg(
+      Arg::new("since")
+        .long("since")
+        .value_name("REF")
+        .help("Digest changes since the merge-base of REF and HEAD; default: the push-review base"),
+    )
+    .arg(
+      Arg::new("path")
+        .long("path")
+        .value_name("PATH")
+        .action(ArgAction::Append)
+        .help("Digest only this path; repeatable"),
+    )
 }
 
 /// The `--effort` of a `run`, when given.

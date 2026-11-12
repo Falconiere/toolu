@@ -1517,6 +1517,45 @@
           "placeholder": false
         },
         {
+          "about": "Summarize branch and uncommitted changes by file and item, without a model call",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Digest changes since the merge-base of REF and HEAD; default: the push-review base",
+              "hidden": false,
+              "long": "since",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
+            },
+            {
+              "global": false,
+              "help": "Digest only this path; repeatable",
+              "hidden": false,
+              "long": "path",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "digest",
+          "owner": "code-review",
+          "path": [
+            "code-review",
+            "digest"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Compare a baseline and a Jev-enhanced review against committed expectations; replays recorded responses unless --live",
           "aliases": [],
           "args": [],

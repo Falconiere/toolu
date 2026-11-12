@@ -6,7 +6,7 @@
 
 mod calls;
 mod chunks;
-mod context;
+pub(crate) mod context;
 mod effort;
 mod host;
 mod judge;
@@ -16,7 +16,7 @@ mod prompt;
 mod recheck;
 mod replayed;
 mod source;
-mod window;
+pub(crate) mod window;
 
 use std::time::{Duration, Instant};
 

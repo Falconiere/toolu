@@ -102,7 +102,7 @@ fn review_shape(
   shape::review(env, root, base, &state_root).map_err(|err| format!("shape: {err:?}"))
 }
 
-fn project_root(roots: &Roots) -> Result<std::path::PathBuf, String> {
+pub(crate) fn project_root(roots: &Roots) -> Result<std::path::PathBuf, String> {
   roots
     .project_root(None)
     .ok_or_else(|| "not inside a Git repository".to_owned())
@@ -149,7 +149,7 @@ fn review_and_persist(
 }
 
 /// A path-scoped run sends only selected file chunks to the model.
-fn scope(shaped: &mut Shaped, requested: &[&str]) {
+pub(crate) fn scope(shaped: &mut Shaped, requested: &[&str]) {
   let selected: BTreeSet<&str> = requested.iter().copied().collect();
   let files = &shaped.files;
   let wanted = |index: &usize| {

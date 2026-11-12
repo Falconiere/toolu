@@ -4,7 +4,8 @@
 //! the effort levels. Each pipeline stage owns one module (`shape`, `rules`,
 //! `prepass`, `review`, `validate`, `report`); `model` is the structured call's
 //! output contract that `review` consumes. `run` is enabled by default and sends nothing when
-//! disabled by configuration (`not-enabled`).
+//! disabled by configuration (`not-enabled`). `digest` summarizes the same
+//! changes by file and item without a model call.
 
 use clap::ArgMatches;
 use toolu_protocol::exit::Exit;
@@ -16,6 +17,7 @@ pub mod budget;
 mod cli;
 /// The JSON report contract.
 pub mod contract;
+mod digest;
 /// The expectation-based eval harness: schema, matcher and report.
 pub mod eval;
 /// Review-memory records.
@@ -53,6 +55,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
       Ok(report) => report::present(&report, ctx),
       Err(message) => Outcome::failed(Exit::Failure, format!("code-review: {message}")),
     },
+    Some(("digest", verb)) => digest::run(&env(ctx), ctx, verb),
     Some(("eval", verb)) => eval::cli::run(verb, ctx, &env(ctx)),
     Some(("dismiss", verb)) => dismiss(verb, ctx),
     _ => Outcome::failed(Exit::Usage, "code-review: a verb is required".to_owned()),
