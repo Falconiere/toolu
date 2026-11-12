@@ -280,7 +280,11 @@ fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
 fn subdirectory_edit_gate_survives_unrelated_shell_event() {
   let sb = rust_quality_sandbox().unwrap();
   let src = sb.root.join("project/src");
-  std::fs::write(src.join("lib.rs"), "#[allow(dead_code)]\nfn demo() {}\n").unwrap();
+  std::fs::write(
+    src.join("lib.rs"),
+    concat!("#[", "allow(dead_code)]\nfn demo() {}\n"),
+  )
+  .unwrap();
   let edit = sb
     .tool_at(&src, "Edit", &serde_json::json!({"file_path":"lib.rs"}), 0)
     .unwrap();
@@ -309,7 +313,10 @@ fn subdirectory_edit_clears_shell_gate_for_the_same_file() {
   let sb = rust_quality_sandbox().unwrap();
   let src = sb.root.join("project/src");
   sb.shell_call_at(&src, "touch baseline").unwrap();
-  let edit = "perl -pi -e 's/^fn demo/#[allow(dead_code)]\\nfn demo/' lib.rs";
+  let edit = concat!(
+    "perl -pi -e 's/^fn demo/#[",
+    "allow(dead_code)]\\nfn demo/' lib.rs"
+  );
   let shell = sb.shell_call_at(&src, edit).unwrap();
   assert!(
     String::from_utf8_lossy(&shell.stdout).contains("QUALITY VIOLATION"),
