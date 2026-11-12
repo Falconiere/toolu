@@ -19,6 +19,7 @@ Commands:
   scan     Scan with inline YAML or a rule file
   debug    Print a pattern's syntax tree
   outline  Outline files and map directories
+  symbol   Look up a name's definitions and references
   savings  Summarize a byte-savings JSONL ledger
   help     Print this message or the help of the given subcommand(s)
 
@@ -115,6 +116,39 @@ Usage: toolu ast-grep outline [OPTIONS] <PATH>...
 
 Arguments:
   <PATH>...
+
+
+Options:
+      --json
+          Print exactly one JSON document on stdout
+
+  -q, --quiet
+          Drop the diagnostics of a successful run
+
+      --host <HOST>
+          The host to act for, instead of the detected one
+
+          [possible values: claude, codex, cursor, hermes, muse, opencode]
+
+      --config-dir <DIR>
+          Read the toolu config from DIR instead of the host's default
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `toolu ast-grep symbol`
+
+```text
+Print where a name is defined (line range and signature) and every reference grouped by file, each with the item that encloses it. References come from `git grep -w -F` over tracked and untracked files in the working tree, in the languages outline reads unless paths are given. Caps: 256 KiB of grep output, 150 outlined files, 10 definitions, 40 references (8 per file), 120 characters per line; past a cap it prints a Narrow line. Without ast-grep the references still print, with one note. Exits 1 when nothing matches, 64 for an empty name.
+
+Usage: toolu ast-grep symbol [OPTIONS] <NAME> [PATH]...
+
+Arguments:
+  <NAME>
+
+
+  [PATH]...
 
 
 Options:

@@ -13,6 +13,8 @@ memory requirements, then locate the owning files.
 - Unfamiliar file or directory: `toolu ast-grep outline <path>...` first. It
   prints each item's line range and signature (a directory prints one line per
   file); then read only the printed ranges instead of paging through files.
+- Where a name is defined and used: `toolu ast-grep symbol <name> [<path>...]`
+  prints definitions and each reference with its enclosing item and range.
 - Code shape (calls, signatures, impls): `ast-grep run --pattern … --lang <lang>`
   first. Inspect the AST or broaden a failed pattern before concluding absence.
 - Exact literals: Grep; filenames: Glob.
