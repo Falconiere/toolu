@@ -25,10 +25,10 @@ Add recovery and flush-count tests, make the minimal journal flush change, updat
   {
     "id": "s2",
     "title": "Check affected crates and journal documentation",
-    "check": "cargo xtask check-changed --base origin/main",
+    "check": "cargo xtask check-changed --base origin/main && cargo xtask check-markdown-cli",
     "depends_on": ["s1"],
     "ac_refs": ["AC-1", "AC-2", "AC-3"],
-    "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/journal/index.rs", "crates/epic-orchestrator/src/journal/index", "crates/epic-orchestrator/src/journal/tests", "docs/toolu/specs/2026-11-12-epic-journal-flush-design.md", "docs/toolu/plans/2026-11-12-epic-journal-flush.md"],
+    "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/journal/index.rs", "crates/epic-orchestrator/src/journal/index", "crates/epic-orchestrator/src/journal/tests", "docs/epic-orchestrator/README.md", "docs/toolu/specs/2026-11-12-epic-journal-flush-design.md", "docs/toolu/plans/2026-11-12-epic-journal-flush.md"],
     "input": "the branch diff against origin/main after the journal code and comments change"
   },
   {
@@ -47,8 +47,13 @@ Add recovery and flush-count tests, make the minimal journal flush change, updat
 
 - `crates/epic-orchestrator/src/journal/index/write.rs` and its sibling tests
 - `crates/epic-orchestrator/src/journal/index.rs`, `journal/index/scan.rs`, and module comments in `journal.rs`
+- `docs/epic-orchestrator/README.md` for the user-facing durability explanation
 - This plan and its approved design spec
 
 ## Verification
 
 The `journal::` target proves the flush count and both truncation recovery paths with real files, alongside existing journal behavior. `check-changed` covers affected crates and docs. The complete `cargo xtask gate` must pass before push. No CLI reference regeneration is needed because there is no command change. Delivery requires a scoped commit, `toolu ledger run <plan> --verify`, a complete version 2 code-review state, `toolu ledger verdict status` reporting ready, and a PR targeting `main` with the issue and epic links. The epic engine owns babysitting and merge after `report babysit`.
+
+## Deviations
+
+The committed-diff documentation audit found that the owning epic guide did not explain journal durability. Added its concise cache-recovery paragraph, extended s2 to check that guide, and synchronized the spec's documentation impact. No behavior or acceptance criterion changed.

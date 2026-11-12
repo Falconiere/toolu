@@ -37,7 +37,7 @@ JSONL write or flush failure still propagates before cache publication. Cache wr
 
 ## Documentation impact
 
-Update the journal module comments to state that only the JSONL record is flushed and the cache is rebuildable. No CLI or user-facing command changes.
+Update the journal module comments and `docs/epic-orchestrator/README.md` to explain that the daily JSONL file is synced after each record and the sequence caches are rebuildable. No CLI or command changes.
 
 ## Open Questions
 
