@@ -64,7 +64,7 @@ fn unchanged_tree_is_stable() {
   fixture(dir.path());
   let first = tree_sha(&path_env(), dir.path()).expect("hash");
   let second = tree_sha(&path_env(), dir.path()).expect("hash again");
-  assert!(!first.is_empty());
+  assert_ne!(first, "");
   assert_eq!(first, second);
 }
 
