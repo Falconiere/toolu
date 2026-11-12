@@ -148,3 +148,13 @@ fn outline_text_keeps_a_declaration_after_an_inline_decorator() {
     ("function* worker()", false)
   );
 }
+
+#[test]
+fn outline_text_skips_a_leading_multi_line_decorator() {
+  let lines = ["@Component({", "  selector: 'x',", "})", "class Host {}"];
+  let found = at(&lines, 0, 3, "Host", Language::Script);
+  assert_eq!(
+    (found.signature.as_str(), found.public),
+    ("class Host", false)
+  );
+}

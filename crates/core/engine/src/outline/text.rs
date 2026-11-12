@@ -139,11 +139,18 @@ fn signature(lines: &[&str], start: usize, end: usize, language: Language) -> (S
   let mut out = String::new();
   let mut state = Scan::default();
   let mut leading = true;
+  // Brackets a leading multi-line decorator such as `@Component({` leaves open.
+  let mut open = 0_i64;
   for index in start..=end {
     let mut line = lines.get(index).map_or("", |line| line.trim());
+    if leading && open > 0 {
+      open += unclosed(line);
+      continue;
+    }
     if leading && decorator(language, line) {
       line = strip_decorators(line);
       if line.is_empty() {
+        open = unclosed(lines.get(index).unwrap_or(&"")).max(0);
         continue;
       }
     }
@@ -156,6 +163,18 @@ fn signature(lines: &[&str], start: usize, end: usize, language: Language) -> (S
     }
   }
   (finish(&out), None)
+}
+
+/// Opening minus closing brackets in `line`.
+fn unclosed(line: &str) -> i64 {
+  line
+    .chars()
+    .map(|ch| match ch {
+      '(' | '[' | '{' => 1,
+      ')' | ']' | '}' => -1,
+      _ => 0,
+    })
+    .sum()
 }
 
 /// `line` without its leading `@name` and `@name(...)` decorators.
