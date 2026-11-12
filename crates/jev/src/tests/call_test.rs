@@ -131,3 +131,40 @@ fn ask_reads_a_file_or_stdin_and_refuses_two_stdin_readers() {
 fn needs_stdin_ignores_a_missing_verb() {
   assert!(!needs_stdin(&ArgMatches::default()));
 }
+
+#[test]
+fn an_image_is_read_from_the_path_after_the_first_equals() {
+  let dir = tempfile::tempdir().unwrap();
+  let file = dir.path().join("a=b.png");
+  fs::write(&file, b"\x89PNG\r\n\x1a\npixels").unwrap();
+  let image = format!("shot={}", file.display());
+  let extras = |args: &[&str]| {
+    let mut words = vec!["noul", "-s", "shot", "Urgent?"];
+    words.extend_from_slice(args);
+    build(&matches(&words), None).map(|call| call.extras)
+  };
+  let plain = extras(&[]).unwrap();
+  assert_eq!(plain, toolu_jev_client::Extras::default());
+  let with = extras(&["-i", &image, "--long-context"]).unwrap();
+  assert!(with.long_context);
+  let shown = format!("{:?}", with.assets);
+  assert!(
+    shown.contains("\"shot\"") && shown.contains("\"png\""),
+    "{shown}"
+  );
+  assert_eq!(
+    extras(&["-i", "shot"]),
+    Err(CallError::Input("--image needs REF=PATH".into()))
+  );
+  let missing = format!("{}/nope.png", dir.path().display());
+  assert_eq!(
+    extras(&["-i", &format!("shot={missing}")]),
+    Err(CallError::Input(format!("cannot read {missing}")))
+  );
+  let text = dir.path().join("notes.txt");
+  fs::write(&text, "not an image").unwrap();
+  assert!(matches!(
+    extras(&["-i", &format!("shot={}", text.display())]),
+    Err(CallError::Client(_))
+  ));
+}

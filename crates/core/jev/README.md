@@ -1,7 +1,7 @@
 # toolu-jev-client
 
 `toolu-jev-client` is the Jev HTTP client that `toolu jev` (#430), pr-babysit
-(#433) and the epic engine (#435) share. It sits at the `engine` layer and
+(#433) and the epic engine (#435) share. It sits at the `jev` layer and
 depends on `toolu-runtime` and `toolu-http` only. The package is not
 `toolu-jev`, because that name belongs to the jev plugin's crate.
 
@@ -39,6 +39,17 @@ in its first place with its last value.
   stdin text as `jev.ts` did: it removes trailing line feeds, keeps a JSON
   object or array, and sends any other text as a string.
 
+- **Images and long context:** `ask_with` takes an `Extras`.
+  - `Assets::image(reference, bytes)` adds a PNG or JPEG, told apart by its
+    first bytes, as a base64 entry of the request's `assets` object. The
+    endpoint puts the image wherever `reference` appears in the state or a
+    question. A blank, repeated or over-long reference, a file of another
+    format, and a file over 16 MiB are `Error::InvalidQuestion` before any request.
+  - `long_context` sends `TypeSafe-Danger-Zone-Long-Context: true`.
+  - A request with an asset or a `box` question sends
+    `TypeSafe-Danger-Zone-Images: true`, from `ask` and `ask_until` too.
+  - Without assets the body is the same text `request_body` returns.
+
 One difference from the removed TypeScript client: a choice option whose key looks like an integer
 (`"1"`) keeps its place, where JavaScript would move it first.
 
@@ -70,7 +81,8 @@ The reply is checked the way the removed TypeScript client checked it, and anyth
 - choice and score distributions over exactly the options or levels, summing
   to 1 within 1e-6;
 - a choice among the options;
-- a score within the levels, with their legend.
+- a score within the levels, with their legend;
+- a box with four edges in [0, 1] and a confidence that is in [0, 1] or null.
 
 `Reply` holds the typed answers in question order, plus the raw body, which
 the CLI prints unchanged.

@@ -161,6 +161,14 @@ impl Questions {
     }
   }
 
+  /// Whether any question is a Box, which the endpoint answers only with
+  /// images turned on.
+  pub(crate) fn has_box(&self) -> bool {
+    self.0.iter().any(
+      |(_, question)| matches!(question.get("type"), Some(Ordered::String(kind)) if kind == "box"),
+    )
+  }
+
   /// The questions by id, in order.
   pub(crate) fn entries(&self) -> &[(String, Ordered)] {
     &self.0

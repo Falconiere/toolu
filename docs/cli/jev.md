@@ -44,8 +44,10 @@ Options:
   -m, --model <MODEL>     The Jev model [default: jev-latest]
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --raw               Print the whole response body instead of its answers
+  -i, --image <REF=PATH>  A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --long-context      Raise the context limit to 262k tokens (slower, less accurate)
+      --raw               Print the whole response body instead of its answers
       --true <DESC>       What a yes means
       --false <DESC>      What a no means
       --id <ID>           The question id in the answer map [default: q]
@@ -68,8 +70,10 @@ Options:
   -m, --model <MODEL>        The Jev model [default: jev-latest]
   -q, --quiet                Drop the diagnostics of a successful run
       --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --raw                  Print the whole response body instead of its answers
+  -i, --image <REF=PATH>     A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image
       --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
+      --long-context         Raise the context limit to 262k tokens (slower, less accurate)
+      --raw                  Print the whole response body instead of its answers
   -o, --option <KEY[=DESC]>  An option and what it means; repeat 2 to 255 times
       --id <ID>              The question id in the answer map [default: q]
   -h, --help                 Print help
@@ -91,8 +95,10 @@ Options:
   -m, --model <MODEL>     The Jev model [default: jev-latest]
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --raw               Print the whole response body instead of its answers
+  -i, --image <REF=PATH>  A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --long-context      Raise the context limit to 262k tokens (slower, less accurate)
+      --raw               Print the whole response body instead of its answers
   -l, --level <DESC>      A level, lowest first; repeat 2 to 10 times
       --id <ID>           The question id in the answer map [default: q]
   -h, --help              Print help
@@ -114,7 +120,9 @@ Options:
   -m, --model <MODEL>     The Jev model [default: jev-latest]
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --raw               Print the whole response body instead of its answers
+  -i, --image <REF=PATH>  A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --long-context      Raise the context limit to 262k tokens (slower, less accurate)
+      --raw               Print the whole response body instead of its answers
   -h, --help              Print help
 ```

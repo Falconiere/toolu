@@ -146,7 +146,7 @@ pub(crate) fn jev_pairs(
           .map(|(_, answer)| answer)
         {
           Some(Answer::Noul { noul }) => Some((member.key.clone(), *noul)),
-          Some(Answer::Choice { .. } | Answer::Score { .. }) | None => None,
+          Some(Answer::Choice { .. } | Answer::Score { .. } | Answer::Box { .. }) | None => None,
         }
       })
       .collect(),

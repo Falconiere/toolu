@@ -1,6 +1,6 @@
 # jev
 
-Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on.
+Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores over text and images that a script can branch on.
 
 ## Install
 
@@ -33,7 +33,7 @@ Standalone, no plugin dependencies.
 ## What it provides
 
 - **`jev` skill** — mandatory when semantic decisions exist: gather evidence, call before the decision it informs, and reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions and reuse unchanged results.
-- **Jev CLI** — `toolu jev` provides `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call).
+- **Jev CLI** — `toolu jev` provides `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call, including Box questions that locate a target in an image). Every verb takes `--image REF=PATH` for PNG or JPEG input.
 - **SessionStart hook** — removes the `<config-dir>/jev/jev.sh` link older versions published (a file of your own stays) and injects the mandate to run `toolu jev` on startup, resume, clear, and compaction. It makes no API call.
 - **UserPromptSubmit hook** — restates that mandate on substantive prompts so it survives long sessions; silent for trivial confirmations. An absent hook key prompts command-environment verification. No API call.
 
@@ -52,8 +52,18 @@ Plugin page: [`docs/jev/README.md`](../../docs/jev/README.md).
 
 ## CLI reference
 
-Text input only; preprocess other formats. Context: 64k tokens/request, 32k for
-state + longest question. Slice large inputs. English is the primary training language.
+Input is text, plus PNG or JPEG images given as `--image REF=PATH`: the file is
+sent base64-encoded under `assets`, and `REF` must appear in the state or a
+question. Each side must be 280–1568 px and each file at most 16 MiB; the whole
+request body is capped at 32 MiB. Images are rejected, never resized. Images and
+Box questions (Jev 1.14, through `ask`) are "dreamer-ready" upstream, so their
+format and accuracy may change; `toolu jev` sends the
+`TypeSafe-Danger-Zone-Images` header whenever a request has either. Preprocess
+other formats.
+
+Context: 64k tokens/request, 32k for state + longest question. `--long-context`
+sends `TypeSafe-Danger-Zone-Long-Context` and raises both to 262k, slower and
+less accurate. Slice large inputs first. English is the primary training language.
 
 `@FILE`/stdin become structured state only for a JSON object/array; other values
 stay strings. Default output is `.answers`; `--raw` includes model/token usage.
@@ -61,7 +71,7 @@ Missing/invalid answers fail explicitly.
 
 Retries: at most three attempts for timeout, connection failure, HTTP 408/429/5xx;
 1s then 2s backoff. `Retry-After` seconds or `retry-after-ms` up to 60s is honored;
-longer waits surface the error. Other 4xx, including 401/422, are not retried.
+longer waits surface the error. Other 4xx, including 400/401/413/415/422, are not retried.
 
 Exit codes: `1` failure (including an HTTP body on stderr); `64` usage;
 `75` timeout. `JEV_TIMEOUT` sets the timeout per attempt (default 60s).

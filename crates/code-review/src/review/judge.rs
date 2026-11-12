@@ -138,7 +138,7 @@ fn ask(judged: &mut [Judged], state: &State, batch: &Map<String, Value>, ctx: &m
           _ => Assessment::Insufficient,
         }
       }
-      Answer::Choice { .. } | Answer::Noul { .. } | Answer::Score { .. } => {
+      Answer::Choice { .. } | Answer::Noul { .. } | Answer::Score { .. } | Answer::Box { .. } => {
         Assessment::Insufficient
       }
     };

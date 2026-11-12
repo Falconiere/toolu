@@ -48,11 +48,16 @@ pub(crate) fn delay(response: &Response, attempt: u32) -> Option<u32> {
 impl Jev {
   /// POST `body` with up to three attempts: the 2xx body, or the last failure.
   /// With a `deadline`, no attempt outlives it and no pause runs past it.
-  pub(crate) fn post(&self, body: &[u8], deadline: Option<Instant>) -> Result<String, Error> {
+  pub(crate) fn post(
+    &self,
+    body: &[u8],
+    headers: &[(&str, &str)],
+    deadline: Option<Instant>,
+  ) -> Result<String, Error> {
     let auth = Auth::Bearer(self.key.0.clone());
     let mut attempt = 1;
     loop {
-      let (units, last) = match self.send(body, &auth, deadline) {
+      let (units, last) = match self.send(body, headers, &auth, deadline) {
         Ok(response) if (200..300).contains(&response.status) => {
           return Ok(String::from_utf8_lossy(&response.body).into_owned());
         }
@@ -81,6 +86,7 @@ impl Jev {
   fn send(
     &self,
     body: &[u8],
+    headers: &[(&str, &str)],
     auth: &Auth,
     deadline: Option<Instant>,
   ) -> Result<Response, toolu_http::Error> {
@@ -95,7 +101,7 @@ impl Jev {
       method: Method::Post,
       url: &self.endpoint,
       auth,
-      headers: &HEADERS,
+      headers,
       body: Some(body),
     };
     match remaining.filter(|left| *left < self.timeout) {
@@ -123,11 +129,6 @@ impl Jev {
     }
   }
 }
-
-const HEADERS: [(&str, &str); 2] = [
-  ("content-type", "application/json"),
-  ("accept", "application/json"),
-];
 
 fn failure(err: toolu_http::Error) -> Error {
   match err {

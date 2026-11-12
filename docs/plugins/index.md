@@ -16,7 +16,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 8 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
 | 9 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
 | 10 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
-| 11 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
+| 11 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev over text and images — probability, choice, and score answers code can branch on |
 | 12 | [**brainstorm**](../../plugins/brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
 | 13 | [**code-review**](../../plugins/code-review/README.md) | Workflow | — | Native review of branch and local changes through host CLIs and direct TypeSafe Jev, anchored findings and push-review state |
 | 14 | [**sandbox**](../../plugins/sandbox/README.md) | Environment | — | A Linux place for builds, gates and agent CLIs: a Lima VM on macOS, the host on Linux; `toolu sandbox run` runs a command there |

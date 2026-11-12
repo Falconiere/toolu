@@ -132,3 +132,14 @@ fn an_ask_payload_is_a_non_empty_object_sent_as_given() {
     );
   }
 }
+
+#[test]
+fn only_a_box_question_needs_images_turned_on() {
+  let with = Questions::parse(
+    r#"{"seen":{"type":"noul","instructions":"Mug?"},"mug":{"type":"box","instructions":"the mug"}}"#,
+  )
+  .unwrap();
+  assert!(with.has_box());
+  let without = Questions::parse(r#"{"box":{"type":"noul","instructions":"A box?"}}"#).unwrap();
+  assert!(!without.has_box());
+}

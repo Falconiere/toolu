@@ -147,3 +147,51 @@ fn an_ask_question_of_unknown_type_or_shape_gets_no_judgment() {
   );
   assert_eq!(parse(&reply, &levelless), Err(Error::InvalidResponse));
 }
+
+#[test]
+fn a_box_answer_keeps_its_edges_and_may_have_no_confidence() {
+  let question =
+    Questions::parse(r#"{"q":{"type":"box","instructions":"the mug in `photo`"}}"#).expect("box");
+  let edges = json!({ "top": 0.25, "bottom": 0.82, "left": 0.44, "right": 0.84 });
+  let answer = |edges: &Value, confidence: Value| {
+    envelope(&json!({ "q": { "type": "box", "box": edges, "confidence": confidence } }))
+  };
+  let sure = parse(&answer(&edges, json!(0.92)), &question).expect("sure");
+  assert_eq!(
+    sure.answers,
+    [(
+      "q".to_owned(),
+      Answer::Box {
+        top: 0.25,
+        bottom: 0.82,
+        left: 0.44,
+        right: 0.84,
+        confidence: Some(0.92)
+      }
+    )]
+  );
+  let unsure = parse(&answer(&edges, Value::Null), &question).expect("unsure");
+  assert!(matches!(
+    unsure.answers[0].1,
+    Answer::Box {
+      confidence: None,
+      ..
+    }
+  ));
+  for bad in [
+    answer(
+      &json!({ "top": 0.25, "bottom": 1.2, "left": 0.44, "right": 0.84 }),
+      json!(0.9),
+    ),
+    answer(
+      &json!({ "top": 0.25, "bottom": 0.82, "right": 0.84 }),
+      json!(0.9),
+    ),
+    answer(&json!([0.25, 0.82, 0.44, 0.84]), json!(0.9)),
+    answer(&edges, json!(1.5)),
+    envelope(&json!({ "q": { "type": "box", "box": edges } })),
+    envelope(&json!({ "q": { "type": "noul", "noul": 0.5 } })),
+  ] {
+    assert_eq!(parse(&bad, &question), Err(Error::InvalidResponse), "{bad}");
+  }
+}
