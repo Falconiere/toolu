@@ -13,6 +13,7 @@ mod bench_statusline;
 mod bench_statusline_repo;
 mod bench_statusline_report;
 mod check_hooks;
+mod check_changed;
 mod check_workflows;
 mod ci_aggregate;
 mod ci_changes;
