@@ -2,11 +2,13 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant, SystemTime};
 
 use toolu_engine::resources::binding::bind_worktree;
 use toolu_engine::resources::job_results;
+use toolu_engine::resources::leases::{LeaseKind, LeaseRequest, acquire_lease, release_lease};
 use toolu_protocol::exit::Exit;
+use toolu_runtime::json::ordered::Ordered;
 
 use super::{run_detached, run_result};
 
@@ -51,6 +53,54 @@ fn the_copy_records_done_with_the_exit_code_and_the_failure_tail() {
   assert!(done.output.contains("command exited 3"), "{}", done.output);
   assert!(done.finished_at.is_some() && done.delivered_at.is_none());
   assert_eq!(job_results::claim_finished(&root, &work).unwrap().len(), 1);
+}
+
+#[test]
+fn a_refused_copy_stays_waiting_until_it_acquires_the_lease() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let (work, root) = bound(tmp.path());
+  std::fs::write(root.join("policy.json"), r#"{"maxAgents":1,"maxJobs":1}"#).unwrap();
+  let occupied = LeaseRequest {
+    kind: LeaseKind::Job,
+    key: "occupied".to_owned(),
+    state_dir: "other".to_owned(),
+    host: None,
+    host_cap: None,
+    epic_cap: None,
+    worktree: None,
+  };
+  let lease = acquire_lease(&root, &occupied, SystemTime::now()).unwrap();
+  let Some(Ordered::String(token)) = lease.get("token") else {
+    panic!("lease without token: {lease:?}");
+  };
+  let record = job_results::create(&root, "detached", &work, "true").unwrap();
+  let copy_work = work.clone();
+  let id = record.id.clone();
+  let copy = std::thread::spawn(move || {
+    run_result(
+      &id,
+      &argv(&["true"]),
+      &copy_work,
+      Duration::from_secs(5),
+      Duration::from_millis(20),
+    )
+  });
+  let marker = root.join("waiting-jobs/detached.json");
+  let deadline = Instant::now() + Duration::from_secs(2);
+  while !marker.exists() {
+    assert!(Instant::now() < deadline, "copy never attempted admission");
+    std::thread::sleep(Duration::from_millis(20));
+  }
+  assert_eq!(
+    job_results::get(&root, &record.id).unwrap().unwrap().state,
+    "waiting"
+  );
+  release_lease(&root, token).unwrap();
+  assert_eq!(copy.join().unwrap().exit, Exit::Success);
+  assert_eq!(
+    job_results::get(&root, &record.id).unwrap().unwrap().state,
+    "done"
+  );
 }
 
 #[test]
