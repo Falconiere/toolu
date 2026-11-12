@@ -32,19 +32,31 @@ fn nudge_structural_grep_only_for_code_targets() {
 
 #[test]
 fn nudge_points_declaration_greps_at_outline_and_symbol() {
-  let kind = |command: &str| shell(&toolu_shell::analyze(command));
-  assert!(matches!(
-    kind(r#"grep -n "pub fn \|pub(crate) fn " crates/x/src/a.rs"#),
-    Some(Kind::Outline)
-  ));
-  assert!(matches!(kind(r#"rg -n "^\s*(pub )?fn " src"#), Some(Kind::Outline)));
-  assert!(matches!(kind(r#"rg "fn hunk_start""#), Some(Kind::Symbol)));
-  assert!(matches!(kind(r#"rg "class Foo\(" src"#), Some(Kind::Symbol)));
-  assert!(matches!(kind("rg TODO docs/"), Some(Kind::BashGeneric)));
-  assert!(matches!(kind(r#"rg "fn x" docs/"#), Some(Kind::BashGeneric)));
-  assert!(matches!(kind(r#"grep -rn "fn x" --include=*.md ."#), Some(Kind::BashGeneric)));
-  assert!(matches!(kind(r#"grep -r "impl Foo" src"#), Some(Kind::BashStructural)));
-  assert!(kind(r#"cat a.rs | grep "pub fn main""#).is_none());
+  let cases = [
+    (
+      r#"grep -n "pub fn \|pub(crate) fn " crates/x/src/a.rs"#,
+      "outline",
+    ),
+    (r#"rg -n "^\s*(pub )?fn " src"#, "outline"),
+    (r#"rg "fn hunk_start""#, "symbol"),
+    (r#"rg "class Foo\(" src"#, "symbol"),
+    ("rg TODO docs/", "generic"),
+    (r#"rg "fn x" docs/"#, "generic"),
+    (r#"grep -rn "fn x" --include=*.md ."#, "generic"),
+    (r#"grep -r "impl Foo" src"#, "structural"),
+    (r#"cat a.rs | grep "pub fn main""#, "none"),
+  ];
+  for (command, expected) in cases {
+    let actual = match shell(&toolu_shell::analyze(command)) {
+      Some(Kind::Outline) => "outline",
+      Some(Kind::Symbol) => "symbol",
+      Some(Kind::BashGeneric) => "generic",
+      Some(Kind::BashStructural) => "structural",
+      Some(Kind::GrepStructural) => "grep",
+      None => "none",
+    };
+    assert_eq!(actual, expected, "{command}");
+  }
 }
 
 #[test]

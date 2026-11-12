@@ -25,7 +25,16 @@ const NON_CODE_PATH: &str = r"(?i)(\.claude/|docs/|\.github/|infra/|scripts/|\.c
 /// Regex syntax a hand-written declaration pattern carries around its words.
 const REGEX_SYNTAX: &str = r"\\[sSbBwWd]|[\\^$()?*+\[\]{}.|]";
 const DECLARATION: &[&str] = &[
-  "fn", "struct", "enum", "trait", "type", "const", "class", "interface", "def", "function",
+  "fn",
+  "struct",
+  "enum",
+  "trait",
+  "type",
+  "const",
+  "class",
+  "interface",
+  "def",
+  "function",
   "func",
 ];
 const MODIFIER: &[&str] = &[

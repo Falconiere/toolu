@@ -61,3 +61,29 @@ fn savings_sanitizes_session_and_ignores_empty_result() {
   );
   assert_eq!(returned_bytes(Some(&serde_json::json!(""))), None);
 }
+
+#[test]
+fn savings_records_outline_and_digest_calls_only() {
+  let kind_of = |command: &str| {
+    kind(
+      "Bash",
+      serde_json::json!({ "command": command }).as_object()?,
+    )
+  };
+  assert_eq!(
+    kind_of("toolu ast-grep outline crates/x/src/a.rs"),
+    Some("outline")
+  );
+  assert_eq!(
+    kind_of("cd crates && toolu ast-grep outline src"),
+    Some("outline")
+  );
+  assert_eq!(kind_of("toolu code-review digest --json"), Some("digest"));
+  assert_eq!(
+    kind_of("/usr/local/bin/toolu code-review digest"),
+    Some("digest")
+  );
+  assert_eq!(kind_of("toolu ast-grep symbol hunk_start"), None);
+  assert_eq!(kind_of("toolu ast-grep savings ledger.jsonl"), None);
+  assert_eq!(kind_of("echo toolu ast-grep outline"), None);
+}
