@@ -50,7 +50,7 @@ module + export → real-git unit tests → scoped check → full gate.
   {
     "id": "s4",
     "title": "Full quality gate before push",
-    "check": "toolu epic job -- cargo xtask gate",
+    "check": "cargo xtask gate",
     "depends_on": ["s3"],
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6"],
     "paths": ["crates", "docs", "tooling", "Cargo.toml", "Cargo.lock"],
@@ -59,6 +59,10 @@ module + export → real-git unit tests → scoped check → full gate.
   }
 ]
 ```
+
+## Deviations
+- s4 `check` is `cargo xtask gate` (not wrapped in `toolu epic job`) because
+  `toolu ledger run` already holds the expensive-job lease for step checks.
 
 ## Critical files
 - `crates/core/state/src/tree_sha.rs` (create)
