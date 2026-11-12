@@ -11,7 +11,7 @@ use toolu_state::git::branch_slug;
 use super::context::{CommandFail, RunContext, RunFlags, or_fail, prepare};
 use super::entries::{carry_forward, pending_entry, refresh_authored, running_entry};
 use super::io::{CommandResult, LedgerOptions, Output};
-use super::jq::{NULL, alt, equals, get, raw, string};
+use super::jq::{JqError, NULL, alt, equals, get, raw, string};
 use super::model::{all_fresh, recompute, steps_with_id, summary_line};
 use super::scope::scope_map;
 use super::step::{Target, prior_of, run_step};
@@ -101,6 +101,16 @@ fn is_carried(
     && prior_key == now_key
 }
 
+/// `carry_forward`, keeping the prior entry's `check`: the entry records the
+/// check that last ran, so `--verify` re-runs a step whose check was edited.
+fn carried(prior: &Ordered, step: &Ordered) -> Result<Ordered, JqError> {
+  let mut entry = carry_forward(prior, step)?;
+  if let Some(check @ Ordered::String(_)) = prior.get("check") {
+    entry.set("check", check.clone());
+  }
+  Ok(entry)
+}
+
 /// The carried entries; under `--verify` their `diff_sha` moves to the current branch hash.
 fn carry(
   ctx: &RunContext<'_>,
@@ -116,7 +126,7 @@ fn carry(
   };
   let carried = matches
     .iter()
-    .map(|m| carry_forward(prior, m).map(stamp))
+    .map(|m| carried(prior, m).map(stamp))
     .collect();
   or_fail(
     carried,
@@ -166,7 +176,7 @@ fn run_steps(ctx: &RunContext<'_>, out: &mut Output) -> Result<Vec<Ordered>, Com
       let prior = ctx.existing.get(&id);
       let assembled = matches
         .iter()
-        .map(|m| prior.map_or_else(|| pending_entry(m), |prior| carry_forward(prior, m)))
+        .map(|m| prior.map_or_else(|| pending_entry(m), |prior| carried(prior, m)))
         .collect();
       or_fail(
         assembled,

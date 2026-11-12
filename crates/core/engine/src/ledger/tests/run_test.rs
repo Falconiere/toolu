@@ -261,6 +261,14 @@ fn verify_carries_an_unchanged_scoped_step_until_its_check_text_changes() {
     "plan-ledger: [1/2] s1: fresh-green, skipped (--force re-runs)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: green (Ns)\n"
   );
   plan(&repo, &steps("echo edited"));
+  let normal = run(&opts, &flags(None, false));
+  assert!(
+    normal
+      .stderr
+      .starts_with("plan-ledger: [1/2] s1: fresh-green, skipped"),
+    "{}",
+    normal.stderr
+  );
   let edited = run(&opts, &flags(None, true));
   assert_eq!(edited.exit, 0, "{}", edited.stderr);
   assert!(
