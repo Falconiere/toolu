@@ -93,6 +93,7 @@ pub fn outline(env: &Env, cwd: &Path, paths: &[String]) -> Result<Vec<FileOutlin
     scan.batch(batch)?;
   }
   let mut outlines = Vec::with_capacity(paths.len());
+  let mut pending = Vec::new();
   for (index, path) in paths
     .iter()
     .enumerate()
@@ -102,14 +103,41 @@ pub fn outline(env: &Env, cwd: &Path, paths: &[String]) -> Result<Vec<FileOutlin
       outlines.push(hit);
       continue;
     }
-    outlines.push(scanned_file(
-      &scan,
-      path,
-      cache_dir.as_deref(),
-      ids.as_deref().and_then(|ids| ids.get(index)),
-    )?);
+    pending.push((index, outlines.len()));
+    outlines.push(scanned_file(&scan, path)?);
   }
+  publish_cache(
+    &scan,
+    paths,
+    cache_dir.as_deref().zip(ids.as_deref()),
+    &outlines,
+    &pending,
+  );
   Ok(outlines)
+}
+
+fn publish_cache(
+  scan: &Scan<'_>,
+  paths: &[String],
+  cache: Option<(&Path, &[String])>,
+  outlines: &[FileOutline],
+  pending: &[(usize, usize)],
+) {
+  let Some((root, before)) = cache.filter(|_| !pending.is_empty()) else {
+    return;
+  };
+  // shortcut: an edit reverted before rehash can evade validation, snapshot inputs if concurrent edits become frequent.
+  let Some(after) = blob_ids(scan.env, scan.cwd, paths) else {
+    return;
+  };
+  for &(index, position) in pending {
+    if let (Some(old), Some(new), Some(file)) =
+      (before.get(index), after.get(index), outlines.get(position))
+      && old == new
+    {
+      cache::write(root, old, file);
+    }
+  }
 }
 
 fn cache_candidates(
@@ -132,12 +160,7 @@ fn cache_candidates(
   (cached, missing)
 }
 
-fn scanned_file(
-  scan: &Scan<'_>,
-  path: &str,
-  root: Option<&Path>,
-  id: Option<&String>,
-) -> Result<FileOutline, String> {
+fn scanned_file(scan: &Scan<'_>, path: &str) -> Result<FileOutline, String> {
   let bytes = std::fs::read(scan.cwd.join(path)).map_err(|err| format!("{path}: {err}"))?;
   let source = String::from_utf8_lossy(&bytes);
   // ast-grep prints `./a.rs` as `a.rs`.
@@ -146,11 +169,7 @@ fn scanned_file(
     .get(path)
     .or_else(|| scan.found.get(path.trim_start_matches("./")))
     .map_or(&[][..], Vec::as_slice);
-  let file = file_outline(path, &source, matches);
-  if let Some((root, id)) = root.zip(id) {
-    cache::write(root, id, &file);
-  }
-  Ok(file)
+  Ok(file_outline(path, &source, matches))
 }
 
 /// One `outline` call's scans and their matches by file.
