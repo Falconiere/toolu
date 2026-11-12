@@ -198,7 +198,7 @@ plugins.
 | Quality gate | **`ts-quality`** | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
 | Quality gate | **`python-quality`** | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
 | Code intel | **`ast-grep`** | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
+| Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores over text and images that a script can branch on. |
 | Workflow | **`documentation-gate`** | Jev-routed editing worker and committed-diff documentation review. |
 | Workflow | **`toolu-review`** | Fallback pre-push review and push-review state writer when native `code-review` cannot complete. |
 | Workflow | **`code-review`** | Native review of branch and local changes through host CLIs and direct TypeSafe Jev, with anchored findings, coverage, and push-review state. |
