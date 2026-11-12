@@ -2,8 +2,8 @@
 
 use std::error::Error;
 use std::fs;
-use std::os::unix::fs::symlink;
 use std::os::unix::fs::PermissionsExt as _;
+use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
