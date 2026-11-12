@@ -247,6 +247,10 @@ fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
     .keys()
     .find(|key| key.ends_with("src/lib.rs"))
     .unwrap();
+  assert_eq!(
+    file,
+    &sb.root.join("project/src/lib.rs").display().to_string()
+  );
   assert_eq!(entries[file]["source"], "rust-quality-hook");
   let file = file.clone();
   assert_eq!(gate["status"], "failing");

@@ -49,6 +49,14 @@ struct Project {
   log: PathBuf,
 }
 
+fn git_binary() -> String {
+  let git = Command::new("sh")
+    .args(["-c", "command -v git"])
+    .output()
+    .unwrap();
+  String::from_utf8(git.stdout).unwrap()
+}
+
 impl Project {
   fn new() -> Self {
     let temp = tempfile::tempdir().unwrap();
@@ -63,18 +71,17 @@ impl Project {
     );
     let bin = root.join("bin");
     std::fs::create_dir(&bin).unwrap();
-    let git = Command::new("sh")
-      .args(["-c", "command -v git"])
-      .output()
-      .unwrap();
-    let real_git = String::from_utf8(git.stdout).unwrap();
+    let real_git = git_binary();
     let log = root.join("git.log");
+    let fail = root.join("fail-status");
     let wrapper = bin.join("git");
     std::fs::write(
       &wrapper,
       format!(
-        "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nexec '{}' \"$@\"\n",
+        "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nif [ -f '{}' ] && [ \"$2\" = status ]; then rm '{}'; exit 1; fi\nexec '{}' \"$@\"\n",
         log.display(),
+        fail.display(),
+        fail.display(),
         real_git.trim()
       ),
     )
@@ -143,8 +150,14 @@ fn marker_excludes_preexisting_dirty_files_and_checks_later_changes() {
   project.dispatch("touch marker");
   project.write("new.rs");
   let result = project.dispatch("sed -i s/a/b/ new.rs");
-  assert!(result.stdout.contains("checked new.rs"), "{result:?}");
-  assert!(!result.stdout.contains("checked old.rs"), "{result:?}");
+  assert!(
+    result.stdout.contains(&format!(
+      "checked {}",
+      project.root.join("new.rs").display()
+    )),
+    "{result:?}"
+  );
+  assert!(!result.stdout.contains("old.rs"), "{result:?}");
 }
 
 #[test]
@@ -156,7 +169,10 @@ fn shell_checks_twenty_files_and_advises_about_the_other_five() {
   }
   let result = project.dispatch("sed -i s/a/b/ *.rs");
   assert_eq!(
-    result.stdout.matches("checked file").count(),
+    result
+      .stdout
+      .matches(&format!("checked {}/file", project.root.display()))
+      .count(),
     20,
     "{result:?}"
   );
@@ -188,4 +204,17 @@ fn read_only_shell_skips_git_status_and_mutation_runs_it_once() {
     1,
     "{log}"
   );
+}
+
+#[test]
+fn failed_status_keeps_changed_source_for_the_next_shell_event() {
+  let project = Project::new();
+  project.dispatch("touch marker");
+  project.write("changed.rs");
+  std::fs::write(project.root.join("fail-status"), "1").unwrap();
+  let failed = project.dispatch("sed -i s/a/b/ changed.rs");
+  assert!(failed.stderr.contains("git status failed"), "{failed:?}");
+  assert!(!failed.stdout.contains("checked"), "{failed:?}");
+  let retried = project.dispatch("touch another");
+  assert!(retried.stdout.contains("changed.rs"), "{retried:?}");
 }

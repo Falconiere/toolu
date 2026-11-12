@@ -6,6 +6,7 @@ use std::os::unix::fs::MetadataExt as _;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use toolu_protocol::host::Host;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::process::{Spec, run};
 use toolu_runtime::registry::rule::RuleContext;
@@ -27,6 +28,7 @@ pub(crate) struct Selection {
   pub(crate) advisory: Option<String>,
   pub(crate) warnings: Vec<String>,
   pub(crate) gate: PathBuf,
+  pub(crate) marker_value: String,
 }
 
 fn ctime(path: &Path) -> Result<Option<(i64, i64)>, std::io::Error> {
@@ -38,7 +40,7 @@ fn ctime(path: &Path) -> Result<Option<(i64, i64)>, std::io::Error> {
 }
 
 fn baseline(marker: &Path, warnings: &mut Vec<String>) -> Option<(i64, i64)> {
-  match ctime(marker) {
+  let observed = match ctime(marker) {
     Ok(before) => before,
     Err(error) => {
       warnings.push(format!(
@@ -47,7 +49,15 @@ fn baseline(marker: &Path, warnings: &mut Vec<String>) -> Option<(i64, i64)> {
       ));
       None
     }
-  }
+  };
+  // A failed status still touches the marker, so its content carries the unscanned baseline.
+  fs::read_to_string(marker)
+    .ok()
+    .and_then(|text| {
+      let (seconds, nanos) = text.strip_prefix("pending:")?.split_once(':')?;
+      Some((seconds.parse().ok()?, nanos.parse().ok()?))
+    })
+    .or(observed)
 }
 
 fn status(ctx: &RuleContext<'_>) -> Result<Vec<String>, String> {
@@ -201,6 +211,35 @@ fn selected_records(
   (records, advisory)
 }
 
+fn host_paths(paths: Vec<String>, ctx: &RuleContext<'_>) -> Vec<String> {
+  if matches!(ctx.host, Host::Codex | Host::Muse) {
+    paths
+  } else {
+    paths
+      .into_iter()
+      .map(|path| ctx.project_root.join(path).display().to_string())
+      .collect()
+  }
+}
+
+fn status_with_marker(
+  ctx: &RuleContext<'_>,
+  before: Option<(i64, i64)>,
+  warnings: &mut Vec<String>,
+) -> (Option<Vec<String>>, String) {
+  match status(ctx) {
+    Ok(paths) => (Some(paths), "1".to_owned()),
+    Err(warning) => {
+      warnings.push(warning);
+      let value = before.map_or_else(
+        || "1".to_owned(),
+        |(seconds, nanos)| format!("pending:{seconds}:{nanos}"),
+      );
+      (None, value)
+    }
+  }
+}
+
 /// Candidate records for a non-quiet shell post event; `None` means no Git or marker work.
 pub(crate) fn collect(
   ctx: &RuleContext<'_>,
@@ -215,19 +254,14 @@ pub(crate) fn collect(
   let marker = gate.with_file_name("quality-shell-mark");
   let mut warnings = Vec::new();
   let before = baseline(&marker, &mut warnings);
-  let paths = match status(ctx) {
-    Ok(paths) => Some(paths),
-    Err(warning) => {
-      warnings.push(warning);
-      None
-    }
-  };
+  let (paths, marker_value) = status_with_marker(ctx, before, &mut warnings);
   let (Some(before), Some(paths)) = (before, paths) else {
     return Some(Selection {
       records: Vec::new(),
       advisory: None,
       warnings,
       gate,
+      marker_value,
     });
   };
   let live = live_paths(
@@ -237,6 +271,7 @@ pub(crate) fn collect(
     (active, bindings),
     &mut warnings,
   );
+  let live = host_paths(live, ctx);
   let (records, advisory) = selected_records(
     live,
     &gate,
@@ -249,11 +284,12 @@ pub(crate) fn collect(
     advisory,
     warnings,
     gate,
+    marker_value,
   })
 }
 
 /// Advance the shell baseline after decisions and after each edit quality settlement.
-pub(crate) fn touch_marker(gate: &Path, warnings: &mut Vec<String>) {
+pub(crate) fn touch_marker(gate: &Path, value: Option<&str>, warnings: &mut Vec<String>) {
   let marker = gate.with_file_name("quality-shell-mark");
   if let Some(parent) = marker.parent()
     && let Err(error) = fs::create_dir_all(parent)
@@ -264,7 +300,16 @@ pub(crate) fn touch_marker(gate: &Path, warnings: &mut Vec<String>) {
     ));
     return;
   }
-  if let Err(error) = fs::write(&marker, b"1") {
+  let value = value.map_or_else(
+    || {
+      fs::read_to_string(&marker)
+        .ok()
+        .filter(|text| text.starts_with("pending:"))
+        .unwrap_or_else(|| "1".to_owned())
+    },
+    str::to_owned,
+  );
+  if let Err(error) = fs::write(&marker, value) {
     warnings.push(format!(
       "quality: cannot touch {}: {error}",
       marker.display()

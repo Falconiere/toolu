@@ -168,7 +168,11 @@ fn shell_quality(
     };
     stopped = state.consume(&folded).or(stopped);
   }
-  shell::touch_marker(&selected.gate, &mut selected.warnings);
+  shell::touch_marker(
+    &selected.gate,
+    Some(&selected.marker_value),
+    &mut selected.warnings,
+  );
   for warning in selected.warnings {
     state.stderr.push_str(&warning);
     state.stderr.push('\n');

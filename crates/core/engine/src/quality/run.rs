@@ -182,7 +182,7 @@ fn settle(
   state: &mut StateCtx,
   findings: QualityFindings,
 ) -> Decision {
-  super::shell::touch_marker(gate, &mut state.warnings);
+  super::shell::touch_marker(gate, None, &mut state.warnings);
   if findings.errors.is_empty() {
     clear_gate_file(state, gate, &file.path, rule.source());
     let advice = findings
