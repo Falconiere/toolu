@@ -79,11 +79,14 @@ fn status(ctx: &RuleContext<'_>) -> Result<Vec<String>, String> {
     .split(|byte| *byte == 0)
     .filter(|entry| !entry.is_empty())
   {
-    if entry.len() < 4 || entry[2] != b' ' {
+    if entry.len() < 4 || entry.get(2) != Some(&b' ') {
       return Err("quality: malformed git status output".to_owned());
     }
-    let path = std::str::from_utf8(&entry[3..])
-      .map_err(|_| "quality: non-UTF-8 git status path".to_owned())?;
+    let raw_path = entry
+      .get(3..)
+      .ok_or("quality: malformed git status output")?;
+    let path = std::str::from_utf8(raw_path)
+      .map_err(|error| format!("quality: non-UTF-8 git status path: {error}"))?;
     paths.push(path.to_owned());
   }
   Ok(paths)
@@ -145,8 +148,7 @@ fn live_paths(
   paths: Vec<String>,
   root: &Path,
   before: (i64, i64),
-  active: &[usize],
-  bindings: &[QualityBinding<'_>],
+  (active, bindings): (&[usize], &[QualityBinding<'_>]),
   warnings: &mut Vec<String>,
 ) -> Vec<String> {
   let mut live = Vec::new();
@@ -173,15 +175,16 @@ fn selected_records(
   live: Vec<String>,
   gate: &Path,
   root: &Path,
-  active: &[usize],
-  bindings: &[QualityBinding<'_>],
+  (active, bindings): (&[usize], &[QualityBinding<'_>]),
   warnings: &mut Vec<String>,
 ) -> (Vec<EditRecord>, Option<String>) {
   let advisory = (live.len() > MAX_FILES).then(|| {
     format!(
       "quality: {} changed source files were not checked: {}",
       live.len() - MAX_FILES,
-      live[MAX_FILES..].join(", ")
+      live
+        .get(MAX_FILES..)
+        .map_or_else(String::new, |rest| rest.join(", "))
     )
   });
   let mut records: Vec<EditRecord> = live
@@ -231,16 +234,14 @@ pub(crate) fn collect(
     paths,
     ctx.project_root,
     before,
-    active,
-    bindings,
+    (active, bindings),
     &mut warnings,
   );
   let (records, advisory) = selected_records(
     live,
     &gate,
     ctx.project_root,
-    active,
-    bindings,
+    (active, bindings),
     &mut warnings,
   );
   Some(Selection {

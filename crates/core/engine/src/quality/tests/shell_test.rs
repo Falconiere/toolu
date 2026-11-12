@@ -13,16 +13,16 @@ use crate::quality::{
 struct RustRule;
 
 impl QualityRule for RustRule {
-  fn language(&self) -> &str {
+  fn language(&self) -> &'static str {
     "rust"
   }
   fn extensions(&self) -> &[&str] {
     &["rs"]
   }
-  fn source(&self) -> &str {
+  fn source(&self) -> &'static str {
     "fixture-quality"
   }
-  fn reason(&self) -> &str {
+  fn reason(&self) -> &'static str {
     "fixture failed"
   }
   fn project_enabled(&self, _: &RuleContext<'_>) -> bool {
