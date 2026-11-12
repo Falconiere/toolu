@@ -63,6 +63,18 @@ impl Sandbox {
     )
   }
 
+  /// Run a real shell command, then deliver its post-tool event.
+  fn shell_call(&self, command: &str) -> Res<Output> {
+    let ran = Command::new("bash")
+      .args(["-c", command])
+      .current_dir(self.root.join("project"))
+      .output()?;
+    if !ran.status.success() {
+      return Err(format!("{command}: {ran:?}").into());
+    }
+    self.ran(command, 0)
+  }
+
   /// The gate file's `status`, `None` when there is no file.
   fn status(&self) -> Res<Option<String>> {
     status_of(&self.gate())
@@ -164,17 +176,16 @@ fn an_unrecognized_gate_file_warns_on_stderr_and_is_replaced() {
   assert_eq!(sb.status().unwrap().as_deref(), Some("failing"));
 }
 
-#[test]
-fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
-  let sb = Sandbox::new().unwrap();
+/// A committed Rust project with its quality rule registered in the real hook.
+fn rust_quality_sandbox() -> Res<Sandbox> {
+  let sb = Sandbox::new()?;
   let project = sb.root.join("project");
-  std::fs::create_dir_all(project.join("src")).unwrap();
+  std::fs::create_dir_all(project.join("src"))?;
   std::fs::write(
     project.join("Cargo.toml"),
     "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
-  )
-  .unwrap();
-  std::fs::write(project.join("src/lib.rs"), "//! Demo.\nfn demo() {}\n").unwrap();
+  )?;
+  std::fs::write(project.join("src/lib.rs"), "//! Demo.\nfn demo() {}\n")?;
   for args in [
     &["add", "."][..],
     &[
@@ -187,62 +198,46 @@ fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
       "baseline",
     ][..],
   ] {
-    assert!(
-      Command::new("git")
-        .args(args)
-        .current_dir(&project)
-        .status()
-        .unwrap()
-        .success()
-    );
+    if !Command::new("git")
+      .args(args)
+      .current_dir(&project)
+      .status()?
+      .success()
+    {
+      return Err("git baseline failed".into());
+    }
   }
   let plugin = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/rust-quality");
   let registered = assert_cmd::Command::new(TOOLU)
-    .args([
-      "rust-quality",
-      "hook",
-      "register",
-      "--event",
-      "SessionStart",
-      "--plugin-root",
-    ])
+    .args(["rust-quality", "hook", "register"])
+    .args(["--event", "SessionStart", "--plugin-root"])
     .arg(plugin)
     .env_clear()
-    .env("PATH", std::env::var("PATH").unwrap())
+    .env("PATH", std::env::var("PATH")?)
     .env("HOME", sb.root.join("home"))
     .env("CLAUDE_PROJECT_DIR", &project)
     .env("TOOLU_HOST_OVERRIDE", "claude")
     .current_dir(&project)
     .write_stdin("{}")
-    .output()
-    .unwrap();
-  assert!(registered.status.success(), "{registered:?}");
+    .output()?;
+  if !registered.status.success() {
+    return Err(format!("rust-quality register failed: {registered:?}").into());
+  }
+  Ok(sb)
+}
 
+#[test]
+fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
+  let sb = rust_quality_sandbox().unwrap();
   let baseline = "touch baseline";
-  assert!(
-    Command::new("bash")
-      .args(["-c", baseline])
-      .current_dir(&project)
-      .status()
-      .unwrap()
-      .success()
-  );
-  let output = sb.ran(baseline, 0).unwrap();
+  let output = sb.shell_call(baseline).unwrap();
   assert!(output.status.success(), "{output:?}");
 
   let edit = concat!(
     "perl -pi -e 's/^fn demo/#[",
     "allow(dead_code)]\\nfn demo/' src/lib.rs"
   );
-  assert!(
-    Command::new("bash")
-      .args(["-c", edit])
-      .current_dir(&project)
-      .status()
-      .unwrap()
-      .success()
-  );
-  let output = sb.ran(edit, 0).unwrap();
+  let output = sb.shell_call(edit).unwrap();
   let stdout = String::from_utf8(output.stdout).unwrap();
   assert!(stdout.contains("QUALITY VIOLATION"), "{stdout}");
   let gate: serde_json::Value =
@@ -257,15 +252,7 @@ fn bash_edits_check_rust_files_and_deletion_clears_the_gate() {
   assert_eq!(gate["status"], "failing");
 
   let remove = "rm src/lib.rs";
-  assert!(
-    Command::new("bash")
-      .args(["-c", remove])
-      .current_dir(&project)
-      .status()
-      .unwrap()
-      .success()
-  );
-  let output = sb.ran(remove, 0).unwrap();
+  let output = sb.shell_call(remove).unwrap();
   assert!(output.status.success(), "{output:?}");
   let gate: serde_json::Value =
     serde_json::from_str(&std::fs::read_to_string(sb.gate()).unwrap()).unwrap();
