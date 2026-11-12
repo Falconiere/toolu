@@ -98,14 +98,14 @@ pub(crate) fn run_result(
   };
   let mut running = false;
   let (outcome, code) = {
-    let mut on_attempt = || {
+    let mut on_admitted = || {
       if !running {
         running = true;
         record.state = "running".to_owned();
         let _recorded = job_results::update(&root, &record);
       }
     };
-    run_job_observed(argv, cwd, bound, poll, &mut on_attempt)
+    run_job_observed(argv, cwd, bound, poll, &mut on_admitted)
   };
   record.state = "done".to_owned();
   record.exit_code = Some(i64::from(code.unwrap_or(1)));

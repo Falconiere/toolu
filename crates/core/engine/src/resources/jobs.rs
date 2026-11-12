@@ -154,6 +154,8 @@ fn leased_log(
 pub enum Admission<'a> {
   /// A lease is about to be requested.
   Attempt,
+  /// The lease was granted.
+  Admitted,
   /// The request was refused for `capacity` or `pressure`; the runner retries
   /// after its poll while its bound allows.
   Refused(&'a str),
@@ -165,7 +167,7 @@ pub struct JobWait<'a> {
   pub bound: Duration,
   /// The pause between attempts.
   pub poll: Duration,
-  /// Hears every attempt and refusal.
+  /// Hears every attempt, admission and refusal.
   pub observe: Option<&'a mut dyn FnMut(Admission<'_>)>,
 }
 
@@ -284,6 +286,7 @@ pub fn run_managed_job_waiting(
     worktree: Some(binding.worktree.display().to_string()),
   };
   let lease = acquire_waiting(root, &request, wait)?;
+  wait.tell(Admission::Admitted);
   let token = lease_token(&lease)?;
   let log = leased_log(binding, &token, argv)?;
   let failures = Failures::default();

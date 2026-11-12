@@ -49,14 +49,14 @@ pub(crate) fn binding_of(cwd: &Path) -> Result<ResourceBinding, Outcome> {
   }
 }
 
-/// [`run_job_with`], calling `on_attempt` at every admission attempt and
+/// [`run_job_with`], calling `on_admitted` after lease admission and
 /// returning the command's exit code when it ran.
 pub(crate) fn run_job_observed(
   argv: &[String],
   cwd: &Path,
   bound: Duration,
   poll: Duration,
-  on_attempt: &mut dyn FnMut(),
+  on_admitted: &mut dyn FnMut(),
 ) -> (Outcome, Option<i32>) {
   let binding = match binding_of(cwd) {
     Ok(binding) => binding,
@@ -65,11 +65,12 @@ pub(crate) fn run_job_observed(
   let mut notes: Vec<String> = Vec::new();
   let mut observe = |admission: Admission<'_>| {
     let note = match admission {
-      Admission::Attempt => {
-        on_attempt();
-        admit(&binding, argv)
-          .err()
-          .map(|journal| format!("job not journaled: {journal}"))
+      Admission::Attempt => admit(&binding, argv)
+        .err()
+        .map(|journal| format!("job not journaled: {journal}")),
+      Admission::Admitted => {
+        on_admitted();
+        None
       }
       Admission::Refused(reason) => journal_refusal(&binding, reason),
     };
