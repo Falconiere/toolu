@@ -1016,7 +1016,12 @@
         "283-10d: structural pattern as one argument",
         "structural grep filtering a pipe",
         "grep as a word to echo",
-        "grep in a heredoc run by bash"
+        "grep in a heredoc run by bash",
+        "Bash grep listing declarations points at outline",
+        "Bash rg for a declared name points at symbol",
+        "Bash rg in docs gets no read advisory",
+        "Bash grep listing declarations, ast-grep missing",
+        "Bash rg for a declared name, ast-grep opted out"
       ]
     },
     {

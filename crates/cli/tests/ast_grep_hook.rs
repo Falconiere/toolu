@@ -243,3 +243,37 @@ fn post_manifest_records_real_result_and_reports_nothing() {
     "{\"kind\":\"ast-grep\",\"returned\":10,\"full\":0}\n".repeat(2)
   );
 }
+
+#[test]
+fn post_manifest_records_outline_and_digest_and_savings_lists_them() {
+  let dir = tempfile::tempdir().expect("sandbox");
+  let project = project(dir.path()).expect("project");
+  let config = dir.path().join("config");
+  register(&config, &project).expect("registration");
+  let path = std::env::var("PATH").expect("PATH");
+  for command in [
+    "toolu ast-grep outline src/a.rs",
+    "toolu code-review digest",
+    "toolu ast-grep symbol hunk_start",
+  ] {
+    let payload = json!({"session_id":"reads", "tool_name":"Bash",
+      "tool_input":{"command":command}, "tool_response":{"stdout":"fn a  1-3\n"}});
+    let done = post_output(&project, &config, "claude", &payload, &path).expect("post hook");
+    assert!(done.status.success(), "{command}: {done:?}");
+  }
+  let ledger = config.join("toolu/byte-savings/reads.jsonl");
+  assert_eq!(
+    fs::read_to_string(&ledger).expect("ledger"),
+    "{\"kind\":\"outline\",\"returned\":9,\"full\":0}\n{\"kind\":\"digest\",\"returned\":9,\"full\":0}\n"
+  );
+  let report = Command::new(TOOLU)
+    .args(["ast-grep", "savings"])
+    .arg(&ledger)
+    .output()
+    .expect("savings report");
+  assert!(report.status.success(), "{report:?}");
+  assert_eq!(
+    String::from_utf8(report.stdout).expect("utf-8"),
+    "digest: returned=9 (n=1)\noutline: returned=9 (n=1)\nTOTAL returned: 18 bytes (~4 tok)\n"
+  );
+}

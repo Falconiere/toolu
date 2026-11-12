@@ -76,16 +76,42 @@ fn runs_ast_grep(command: &str) -> bool {
     })
 }
 
+/// `outline` or `digest` when the command runs `toolu ast-grep outline` or `toolu code-review digest`.
+fn toolu_read(command: &str) -> Option<&'static str> {
+  if !command.contains("toolu") {
+    return None;
+  }
+  toolu_shell::analyze(command)
+    .commands
+    .iter()
+    .find_map(|command| {
+      program_indexes(command)
+        .into_iter()
+        .filter(|at| program_at(command, *at) == Some("toolu"))
+        .find_map(|at| {
+          let arg = |offset: usize| command.argv.get(at + offset).and_then(Option::as_deref);
+          match (arg(1), arg(2)) {
+            (Some("ast-grep"), Some("outline")) => Some("outline"),
+            (Some("code-review"), Some("digest")) => Some("digest"),
+            _ => None,
+          }
+        })
+    })
+}
+
 fn kind(tool: &str, input: &serde_json::Map<String, Value>) -> Option<&'static str> {
   match tool {
     "Read" => Some("read"),
     "Grep" => Some("grep"),
     "Glob" => Some("glob"),
-    "Bash" | "Shell" => input
-      .get("command")
-      .map(jq_raw)
-      .filter(|command| runs_ast_grep(command))
-      .map(|_| "ast-grep"),
+    "Bash" | "Shell" => {
+      let command = jq_raw(input.get("command")?);
+      if runs_ast_grep(&command) {
+        Some("ast-grep")
+      } else {
+        toolu_read(&command)
+      }
+    }
     _ => None,
   }
 }

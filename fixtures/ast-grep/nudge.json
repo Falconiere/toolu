@@ -321,6 +321,43 @@
       "deviation": {
         "contains": "grep/rg in Bash detected."
       }
+    },
+    {
+      "name": "Bash grep listing declarations points at outline",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -n \"pub fn \\|pub(crate) fn \" crates/x/src/a.rs"
+      }
+    },
+    {
+      "name": "Bash rg for a declared name points at symbol",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "rg \"fn hunk_start\""
+      }
+    },
+    {
+      "name": "Bash rg in docs gets no read advisory",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "rg TODO docs/"
+      }
+    },
+    {
+      "name": "Bash grep listing declarations, ast-grep missing",
+      "state": "missing",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -n \"pub fn \\|pub(crate) fn \" crates/x/src/a.rs"
+      }
+    },
+    {
+      "name": "Bash rg for a declared name, ast-grep opted out",
+      "state": "opt-out",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "rg \"fn hunk_start\""
+      }
     }
   ]
 }

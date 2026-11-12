@@ -22,12 +22,34 @@ const STRUCT: &str = r"(^|\s)(impl |#\[derive|#\[cfg|#\[test|@Component|@Injecta
 const NON_CODE_GLOB: &str = r"(?i)\*\.(toml|md|markdown|json|jsonc|yaml|yml|txt|env|sql|sh|bash|zsh|fish|lock|cfg|ini|conf|csv|xml|html|svg|css|graphql|gql|proto|makefile|dockerfile)";
 const NON_CODE_TYPE: &str = r"(?im)^(toml|json|yaml|md|markdown|html|css|sql|sh|bash|make|docker|config|xml|csv|graphql|proto)$";
 const NON_CODE_PATH: &str = r"(?i)(\.claude/|docs/|\.github/|infra/|scripts/|\.config|Makefile|Dockerfile|Cargo\.toml|package\.json|tsconfig)";
+/// Regex syntax a hand-written declaration pattern carries around its words.
+const REGEX_SYNTAX: &str = r"\\[sSbBwWd]|[\\^$()?*+\[\]{}.|]";
+const DECLARATION: &[&str] = &[
+  "fn",
+  "struct",
+  "enum",
+  "trait",
+  "type",
+  "const",
+  "class",
+  "interface",
+  "def",
+  "function",
+  "func",
+];
+const MODIFIER: &[&str] = &[
+  "pub", "crate", "super", "export", "default", "async", "unsafe", "extern", "static",
+];
 
 #[derive(Clone, Copy)]
 enum Kind {
   GrepStructural,
   BashStructural,
   BashGeneric,
+  /// A Bash search for declaration keywords alone: a hand-rolled outline.
+  Outline,
+  /// A Bash search for a declaration keyword and a name: a definition lookup.
+  Symbol,
 }
 
 #[derive(Clone, Copy)]
@@ -47,6 +69,48 @@ fn matches(regex: &'static OnceLock<Option<Regex>>, pattern: &str, text: &str) -
 fn structural(text: &str) -> bool {
   static REGEX: OnceLock<Option<Regex>> = OnceLock::new();
   matches(&REGEX, STRUCT, text)
+}
+
+/// Classify a search argument that names only declarations, or one declaration by name.
+fn declaration(arg: &str) -> Option<Kind> {
+  static SYNTAX: OnceLock<Option<Regex>> = OnceLock::new();
+  let words = SYNTAX
+    .get_or_init(|| Regex::new(REGEX_SYNTAX).ok())
+    .as_ref()?
+    .replace_all(arg, " ");
+  let words: Vec<&str> = words.split_whitespace().collect();
+  let keyword = |word: &&str| DECLARATION.contains(word);
+  let known = |word: &&str| keyword(word) || MODIFIER.contains(word);
+  if words.iter().any(keyword) && words.iter().all(known) {
+    return Some(Kind::Outline);
+  }
+  let named = words.windows(2).any(|pair| match pair {
+    [first, name] => {
+      keyword(first)
+        && !known(name)
+        && name
+          .chars()
+          .all(|char| char.is_alphanumeric() || char == '_')
+    }
+    _ => false,
+  });
+  named.then_some(Kind::Symbol)
+}
+
+/// Outline or symbol for searched code; `None` when an argument names non-code files.
+fn reading(args: &[&String]) -> Option<Kind> {
+  static GLOB: OnceLock<Option<Regex>> = OnceLock::new();
+  static PATH: OnceLock<Option<Regex>> = OnceLock::new();
+  if args
+    .iter()
+    .any(|arg| matches(&GLOB, NON_CODE_GLOB, arg) || matches(&PATH, NON_CODE_PATH, arg))
+  {
+    return None;
+  }
+  args
+    .iter()
+    .filter(|arg| !arg.starts_with('-'))
+    .find_map(|arg| declaration(arg))
 }
 
 fn field(input: &Map<String, Value>, key: &str) -> String {
@@ -94,14 +158,11 @@ fn shell(analysis: &ShellAnalysis) -> Option<Kind> {
   if searches.is_empty() {
     return None;
   }
-  let is_structural = searches
-    .iter()
-    .any(|args| args.iter().any(|arg| structural(arg)));
-  Some(if is_structural {
-    Kind::BashStructural
-  } else {
-    Kind::BashGeneric
-  })
+  let args: Vec<&String> = searches.iter().flat_map(|args| args.iter()).collect();
+  if args.iter().any(|arg| structural(arg)) {
+    return Some(Kind::BashStructural);
+  }
+  Some(reading(&args).unwrap_or(Kind::BashGeneric))
 }
 
 fn message(kind: Kind, state: State) -> Option<&'static str> {
@@ -128,6 +189,16 @@ fn message(kind: Kind, state: State) -> Option<&'static str> {
       "grep/rg in Bash detected. Use Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.",
     ),
     (Kind::GrepStructural | Kind::BashStructural, State::OptOut) => None,
+    (Kind::Outline, State::Available) => Some(
+      "Listing definitions? `toolu ast-grep outline <path>` prints every item's signature, first doc line and line range in one call; then read only the range you need.",
+    ),
+    (Kind::Symbol, State::Available) => Some(
+      "Looking for a definition? `toolu ast-grep symbol <name>` prints it with every reference and its enclosing item.",
+    ),
+    // Without ast-grep the read commands cannot run, so keep the plain Bash nudge.
+    (Kind::Outline | Kind::Symbol, State::Missing | State::OptOut) => {
+      message(Kind::BashGeneric, state)
+    }
   }
 }
 
