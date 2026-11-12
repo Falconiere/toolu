@@ -7,8 +7,9 @@
 //! - `telemetry`: closed-schema JSONL events; `sweeper`: spent-state reclaim;
 //! - `edit_records`: `Edit`, `Write`, `MultiEdit` and `apply_patch` payloads as records;
 //! - `push_waiver`: push-review waivers, promoted from their pending marker;
-//! - `diff_sha`: the branch-diff hash; `git`: branch, worktree and origin facts
-//!   read from `.git`; `detect`: project markers, linters, tools and line counts.
+//! - `diff_sha`: the branch-diff hash; `tree_sha`: the working-tree content hash;
+//!   `git`: branch, worktree and origin facts read from `.git`; `detect`: project
+//!   markers, linters, tools and line counts.
 
 pub mod apply_patch;
 /// Working-tree blob IDs for content-addressed caches.
@@ -31,6 +32,7 @@ pub mod sweeper;
 pub mod telemetry;
 pub mod telemetry_schema;
 pub mod time;
+pub mod tree_sha;
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
 pub const LAYER: &str = "state";
