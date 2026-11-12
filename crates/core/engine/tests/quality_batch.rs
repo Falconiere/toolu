@@ -155,10 +155,10 @@ mod tests {
       panic!("missing quality gate entries");
     };
     assert_eq!(entries.len(), 2);
-    assert_eq!(entries[0].0, "a.ts");
+    assert_eq!(entries[0].0, root.join("a.ts").display().to_string());
     assert_eq!(entries[0].1.source, "throw-string");
     assert_eq!(entries[0].1.violations, "a.ts:1:throw \"boom\";\n");
-    assert_eq!(entries[1].0, "b.py");
+    assert_eq!(entries[1].0, root.join("b.py").display().to_string());
     assert_eq!(entries[1].1.source, "mocker-param");
     assert_eq!(
       entries[1].1.violations,
