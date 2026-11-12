@@ -64,7 +64,7 @@
         "exitCode": 0,
         "state": {
           ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Forbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
         }
       }
     ],
@@ -75,7 +75,7 @@
         "exitCode": 0,
         "state": {
           ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Forbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
         }
       }
     ],
@@ -233,7 +233,7 @@
         "exitCode": 0,
         "state": {
           ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
         }
       },
       {
@@ -242,7 +242,7 @@
         "exitCode": 0,
         "state": {
           ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"ts-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
         }
       }
     ],
@@ -253,7 +253,7 @@
         "exitCode": 0,
         "state": {
           ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/old.ts\",\n  \"violations\": \"Forbidden console.log in src/old.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/old.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/old.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
         }
       },
       {
@@ -262,7 +262,7 @@
         "exitCode": 0,
         "state": {
           ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"ts-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
         }
       }
     ],
@@ -273,7 +273,7 @@
         "exitCode": 0,
         "state": {
           ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
         }
       }
     ],
@@ -284,7 +284,7 @@
         "exitCode": 0,
         "state": {
           ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
         }
       }
     ],
