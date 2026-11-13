@@ -22,7 +22,7 @@ checkouts, regenerate CLI docs, then run changed checks and the full gate.
   {
     "id": "s1",
     "title": "Guard detached ledger writes and run the native child",
-    "input": "Real temporary Git repositories, a sleeping plan check, a tracked edit, and bound and unbound resource roots",
+    "input": "Real temporary Git repositories without ignore rules, a sleeping plan check, a tracked edit, and bound and unbound resource roots",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-5"],
     "check": "cargo test -p toolu-cli --test ledger_cli"
   },
@@ -55,6 +55,8 @@ checkouts, regenerate CLI docs, then run changed checks and the full gate.
 
 - `crates/toolu/src/ledger.rs`, `crates/toolu/src/ledger_detach.rs` and sibling unit tests.
 - `crates/core/engine/src/ledger/run.rs` and sibling unit tests.
+- `crates/core/engine/src/ledger/context.rs` and `step.rs` for telemetry
+  placement during a guarded run.
 - `crates/cli/tests/ledger_cli.rs` and its existing real Git helper.
 - `docs/cli/ledger.md`, `docs/cli/commands.json`, and
   `crates/cli/tests/fixtures/commands_json.snap` from `cargo xtask docs-cli`.
@@ -72,3 +74,9 @@ the scoped commit, run `toolu ledger run <this plan> --verify`, the complete
 version-2 review, `toolu ledger verdict status`, then push and open the PR
 only when all gates are ready. The plan's pathless `s4` reruns the full gate
 during final verification.
+
+## Deviations
+
+The first real passing test produced `stale: true` because toolu appended
+telemetry inside a checkout with no `.gitignore`. `s1` now routes only detached
+telemetry to the result resource root; the test exercises this boundary.

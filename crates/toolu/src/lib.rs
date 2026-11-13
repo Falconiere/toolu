@@ -22,6 +22,7 @@ pub mod doctor;
 pub mod gc;
 /// `toolu ledger`.
 pub mod ledger;
+mod ledger_detach;
 /// Session-start, user-prompt-submit, and pre-compact.
 pub mod lifecycle;
 /// The standalone MCP blocker hook.

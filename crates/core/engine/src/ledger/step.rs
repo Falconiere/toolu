@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::ctx::StateCtx;
 use toolu_state::telemetry::{TelemetryEvent, telemetry_append};
@@ -56,7 +57,18 @@ fn execute(ctx: &RunContext<'_>, check: String, tmp: &Path) -> (i32, Vec<u8>) {
 }
 
 fn telemetry(ctx: &RunContext<'_>, out: &mut Output, event: &TelemetryEvent) {
-  let mut state = StateCtx::new(ctx.opts.roots.clone());
+  let roots = ctx.telemetry_dir.as_ref().map_or_else(
+    || ctx.opts.roots.clone(),
+    |dir| {
+      let env = ctx
+        .opts
+        .env()
+        .clone()
+        .with("TELEMETRY_DIR", &dir.display().to_string());
+      Roots::new(env, Some(ctx.opts.roots.host()))
+    },
+  );
+  let mut state = StateCtx::new(roots);
   state.now = Some(ctx.clock());
   let _result = telemetry_append(&mut state, &ctx.root, event);
   for line in state.warnings {

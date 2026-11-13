@@ -2,6 +2,8 @@
 //! exit codes, and every `--json` document against its `commands.schema.json`
 //! definition.
 
+#[path = "helpers/ledger_detach.rs"]
+mod detach;
 #[path = "helpers/ledger.rs"]
 mod ledger;
 

@@ -26,6 +26,8 @@ use toolu_runtime::invocation::current_dir;
 
 use outcome::{located, ran, reported, self_tested, statused, verdict};
 
+use crate::ledger_detach;
+
 const AFTER_HELP: &str = "Exit codes of run and status: 0 every step is fresh-green, 1 a step is not, 2 an error \
 (nothing is written). preflight exits 0 when the plan and its spec are Approved, 1 when not, 2 when the plan \
 cannot be read. verdict exits 0 when ready, 1 when blocked, 2 outside a repository.";
@@ -65,6 +67,18 @@ fn run_command() -> Command {
         .help(
           "Re-run steps without paths and steps whose paths changed, and stamp the verified hash",
         ),
+    )
+    .arg(
+      Arg::new("detach")
+        .long("detach")
+        .action(ArgAction::SetTrue)
+        .help("Return a job id while a copy runs the checks and records the result"),
+    )
+    .arg(
+      Arg::new("result")
+        .long("result")
+        .value_name("ID")
+        .hide(true),
     )
 }
 
@@ -133,7 +147,7 @@ fn text(matches: &ArgMatches, id: &str) -> Option<String> {
   matches.get_one::<String>(id).cloned()
 }
 
-fn plan_ledger(name: &str, matches: &ArgMatches, opts: &LedgerOptions, json: bool) -> Outcome {
+fn plan_ledger(name: &str, matches: &ArgMatches, opts: &LedgerOptions, ctx: &Ctx) -> Outcome {
   if let Some(failed) = require_git(opts) {
     return reported(&failed, None);
   }
@@ -145,19 +159,23 @@ fn plan_ledger(name: &str, matches: &ArgMatches, opts: &LedgerOptions, json: boo
         force: matches.get_flag("force"),
         verify: matches.get_flag("verify"),
       };
-      ran(
-        &ledger_run(&text(matches, "doc").unwrap_or_default(), &flags, opts),
-        json,
-      )
+      let doc = text(matches, "doc").unwrap_or_default();
+      if let Some(id) = text(matches, "result") {
+        return ledger_detach::run_result(&id, &doc, &flags, opts, ctx);
+      }
+      if matches.get_flag("detach") {
+        return ledger_detach::run_detached(&doc, &flags, opts, ctx);
+      }
+      ran(&ledger_run(&doc, &flags, opts), ctx.json)
     }
-    "status" => statused(ledger_status(opts), json),
+    "status" => statused(ledger_status(opts), ctx.json),
     "preflight" => reported(
       &ledger_preflight(text(matches, "doc").as_deref(), opts),
       None,
     ),
-    "path" => located(ledger_path_command(opts), "path", json),
-    "root" => located(ledger_root_command(opts), "root", json),
-    _ => self_tested(&ledger_self_test(), json),
+    "path" => located(ledger_path_command(opts), "path", ctx.json),
+    "root" => located(ledger_root_command(opts), "root", ctx.json),
+    _ => self_tested(&ledger_self_test(), ctx.json),
   }
 }
 
@@ -176,7 +194,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
       .is_some_and(|mode| mode == "json");
     return verdict(&verdict_main(mode_json, &opts), ctx.json);
   }
-  plan_ledger(name, sub, &opts, ctx.json)
+  plan_ledger(name, sub, &opts, ctx)
 }
 
 #[cfg(test)]

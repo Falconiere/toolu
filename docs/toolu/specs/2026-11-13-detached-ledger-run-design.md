@@ -31,6 +31,10 @@ For detached runs, the ledger engine compares the captured hash to a fresh
 refuses the write with a distinct error. Detached
 `--step` defers the usual early `running` pre-write, so the same rule holds for
 that form. Blocking runs retain their pre-write and output behavior.
+The detached path writes its `step_run` telemetry under the result's resource
+root, outside the guarded worktree. This prevents toolu's own telemetry from
+making an ordinary repository without `.claude/tmp` in `.gitignore` appear
+stale; check commands retain their original environment.
 
 ## Interfaces / Schema
 
@@ -76,7 +80,7 @@ that form. Blocking runs retain their pre-write and output behavior.
 
 | AC | Real input and observable result | Check |
 | --- | --- | --- |
-| AC-1 | Temp Git checkout, approved plan with a sleeping successful check; prompt id, done/0 result, green ledger | `cargo test -p toolu-cli --test ledger_cli` |
+| AC-1 | Temp Git checkout without ignore rules, approved plan with a sleeping successful check; prompt id, done/0 result, green ledger | `cargo test -p toolu-cli --test ledger_cli` |
 | AC-2 | Existing ledger bytes, sleeping check, tracked edit before release; identical bytes, stale result | `cargo test -p toolu-cli --test ledger_cli` |
 | AC-3 | Existing ledger bytes and `--step`, then tracked edit during check; no pre-write or final write | `cargo test -p toolu-cli --test ledger_cli` |
 | AC-4 | Current blocking CLI, fixture cases and generated contract | `cargo test -p toolu-cli --test ledger_cli --test ledger_cases --test contract` |

@@ -5,10 +5,13 @@
 //! nothing is written. The check's exit code decides green, never the agent;
 //! one step's run is `super::step`.
 
+use std::path::Path;
+
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::git::branch_slug;
+use toolu_state::tree_sha::tree_sha;
 
-use super::context::{CommandFail, RunContext, RunFlags, or_fail, prepare};
+use super::context::{CommandFail, RunContext, RunFlags, RunGuard, or_fail, prepare};
 use super::entries::{carry_forward, pending_entry, refresh_authored, running_entry};
 use super::io::{CommandResult, LedgerOptions, Output};
 use super::jq::{JqError, NULL, alt, equals, get, raw, string};
@@ -214,6 +217,7 @@ fn finish(
   ctx: &RunContext<'_>,
   out: &mut Output,
   steps: Vec<Ordered>,
+  guard: &mut RunGuard<'_>,
 ) -> Result<Ordered, CommandFail> {
   let failed = "plan-ledger: failed to recompute summary";
   let mut ledger = or_fail(
@@ -239,6 +243,14 @@ fn finish(
     (false, false) => string(&previous),
   };
   ledger.set("verified_sha", stamp);
+  if let Some(expected) = guard.expected_tree {
+    let actual = tree_sha(ctx.opts.env(), &ctx.root)
+      .ok_or_else(|| CommandFail::line("plan-ledger: cannot hash working tree"))?;
+    if actual != expected {
+      guard.stale = true;
+      return Err(CommandFail::line("tree changed during the run"));
+    }
+  }
   ctx.write_or_fail(&ledger, "plan-ledger: ledger write failed")?;
   // TypeScript prints nothing when jq cannot render the line, and exits on freshness alone.
   if let Ok(line) = summary_line(&ledger, &branch_slug(&ctx.branch)) {
@@ -252,10 +264,12 @@ fn run_inner(
   flags: &RunFlags,
   opts: &LedgerOptions,
   out: &mut Output,
+  guard: &mut RunGuard<'_>,
 ) -> Result<Ordered, CommandFail> {
   flags.check()?;
   let mut ctx = prepare(doc, flags, opts)?;
-  if !flags.step().is_empty() {
+  ctx.telemetry_dir = guard.telemetry_dir.map(Path::to_path_buf);
+  if !flags.step().is_empty() && guard.expected_tree.is_none() {
     pre_write(&ctx)?;
   }
   let mut warnings = Vec::new();
@@ -270,13 +284,17 @@ fn run_inner(
     out.stderr("plan-ledger: every step declares paths, so --verify re-runs them all; give the final full-gate step no paths".to_owned());
   }
   let steps = run_steps(&ctx, out)?;
-  finish(&ctx, out, steps)
+  finish(&ctx, out, steps, guard)
 }
 
-/// `toolu ledger run <doc> [--step <id>] [--activity <label>] [--force] [--verify]`.
-pub fn ledger_run(doc: &str, flags: &RunFlags, opts: &LedgerOptions) -> CommandResult {
+fn run_with_tree(
+  doc: &str,
+  flags: &RunFlags,
+  opts: &LedgerOptions,
+  mut guard: RunGuard<'_>,
+) -> (CommandResult, bool) {
   let mut out = Output::default();
-  match run_inner(doc, flags, opts, &mut out) {
+  let result = match run_inner(doc, flags, opts, &mut out, &mut guard) {
     Ok(ledger) => {
       let exit = u8::from(!all_fresh(&ledger));
       out.result(exit, Some(ledger))
@@ -287,7 +305,35 @@ pub fn ledger_run(doc: &str, flags: &RunFlags, opts: &LedgerOptions) -> CommandR
       }
       out.result(2, None)
     }
-  }
+  };
+  (result, guard.stale)
+}
+
+/// `toolu ledger run <doc> [--step <id>] [--activity <label>] [--force] [--verify]`.
+pub fn ledger_run(doc: &str, flags: &RunFlags, opts: &LedgerOptions) -> CommandResult {
+  run_with_tree(doc, flags, opts, RunGuard::default()).0
+}
+
+/// Run with a captured working-tree hash, refusing every ledger write when
+/// the tree changed. The returned flag distinguishes staleness from other
+/// failures without parsing diagnostics.
+pub fn ledger_run_guarded(
+  doc: &str,
+  flags: &RunFlags,
+  opts: &LedgerOptions,
+  expected_tree: &str,
+  telemetry_dir: &Path,
+) -> (CommandResult, bool) {
+  run_with_tree(
+    doc,
+    flags,
+    opts,
+    RunGuard {
+      expected_tree: Some(expected_tree),
+      telemetry_dir: Some(telemetry_dir),
+      stale: false,
+    },
+  )
 }
 
 #[cfg(test)]
