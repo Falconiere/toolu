@@ -34,15 +34,7 @@ pub(crate) fn flush(engine: &mut Engine) -> Result<(), String> {
           return Err(err);
         }
       };
-      for record in stored {
-        let steps = commit_journal(&mut engine.world, &record);
-        if !steps.is_empty() {
-          journal::batch_event("follow");
-        }
-        for step in steps {
-          let _applied = engine.apply_step(step)?;
-        }
-      }
+      apply_batch_follow_ups(engine, stored)?;
       continue;
     }
     let Some(step) = engine.world.outbox.pop_front() else {
@@ -50,6 +42,34 @@ pub(crate) fn flush(engine: &mut Engine) -> Result<(), String> {
     };
     let _applied = engine.apply_step(step)?;
   }
+}
+
+/// Run each durable row's `commit_journal` follow-ups in order.
+///
+/// On an apply error, remaining follow-up steps (including later rows' commits)
+/// are pushed back onto the outbox so durable rows are not dropped.
+fn apply_batch_follow_ups(engine: &mut Engine, stored: Vec<Record>) -> Result<(), String> {
+  let mut rows = stored.into_iter();
+  while let Some(record) = rows.next() {
+    let steps = commit_journal(&mut engine.world, &record);
+    if !steps.is_empty() {
+      journal::batch_event("follow");
+    }
+    let mut steps = steps.into_iter();
+    while let Some(step) = steps.next() {
+      if let Err(err) = engine.apply_step(step) {
+        let mut rest: Vec<Step> = steps.collect();
+        for later in rows {
+          rest.extend(commit_journal(&mut engine.world, &later));
+        }
+        for step in rest.into_iter().rev() {
+          engine.world.outbox.push_front(step);
+        }
+        return Err(err);
+      }
+    }
+  }
+  Ok(())
 }
 
 /// Fill `epic` from the issue or epic map when the record left it empty.

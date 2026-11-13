@@ -34,7 +34,8 @@ Beside `append` / `append_locked`. Empty input returns `Ok(vec![])` without lock
 ## Failure modes and edge cases
 
 - Empty batch: no lock, no flush, no follow-ups.
-- Write or flush failure: propagate before any `commit_journal` follow-up for that batch; no partial follow-up side effects from undurable rows.
+- Write or flush failure: restore the drained journal rows to the front of the outbox and propagate; no follow-ups run for undurable rows.
+- Follow-up apply failure after the batch is durable: run `commit_journal` for remaining rows and push unapplied follow-up steps back onto the outbox, then propagate.
 - Torn day-file tail: keep existing repair-then-rebuild behavior for the batch write path.
 - Concurrent writers: same journal lock as today; other processes do not join the batch.
 - Follow-up that enqueues more journals: those land after the current batch's follow-ups finish applying, not inside the already-drained batch.
