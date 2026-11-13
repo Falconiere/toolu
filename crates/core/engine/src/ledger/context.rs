@@ -112,6 +112,16 @@ pub struct RunContext<'a> {
   pub opts: &'a LedgerOptions,
   /// The raw `PLAN_LEDGER_STEP_TIMEOUT`.
   pub timeout: String,
+  /// A detached run's telemetry directory, outside the tree being guarded.
+  pub telemetry_dir: Option<PathBuf>,
+}
+
+/// The optional detached-run write guard and its stale verdict.
+#[derive(Default)]
+pub(super) struct RunGuard<'a> {
+  pub expected_tree: Option<&'a str>,
+  pub telemetry_dir: Option<&'a Path>,
+  pub stale: bool,
 }
 
 fn need<T>(value: Option<T>, line: String) -> Result<T, CommandFail> {
@@ -191,6 +201,7 @@ pub fn prepare<'a>(
     scope: Ordered::Object(Vec::new()),
     opts,
     timeout,
+    telemetry_dir: None,
   })
 }
 

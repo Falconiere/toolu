@@ -140,6 +140,19 @@ pub fn update(root: &Path, record: &Record) -> Result<(), String> {
   replace_atomic(&path, &body).map_err(|err| io(&path, err))
 }
 
+/// Mark an unstarted job done with `message`, returning that message with any
+/// result-write error appended for the caller to report.
+pub fn fail(root: &Path, record: &mut Record, message: String) -> String {
+  "done".clone_into(&mut record.state);
+  record.exit_code = Some(1);
+  record.finished_at = Some(iso_millis(SystemTime::now()));
+  record.output.clone_from(&message);
+  match update(root, record) {
+    Ok(()) => message,
+    Err(err) => format!("{message}; job result {} not recorded: {err}", record.id),
+  }
+}
+
 /// Read one record; `None` when it does not exist.
 ///
 /// # Errors

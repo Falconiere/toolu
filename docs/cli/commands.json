@@ -107,6 +107,28 @@
               "short": null,
               "takesValue": false,
               "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Return a job id while a copy runs the checks and records the result",
+              "hidden": false,
+              "long": "detach",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": true,
+              "long": "result",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ID"
             }
           ],
           "hidden": false,
