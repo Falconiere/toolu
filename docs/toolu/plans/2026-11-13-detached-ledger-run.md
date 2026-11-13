@@ -83,3 +83,6 @@ telemetry inside a checkout with no `.gitignore`. `s1` now routes only detached
 telemetry to the result resource root; the test exercises this boundary.
 The changed-crate gate found a duplicate failure helper, so `s1` also moves
 that helper into `job_results` for the epic and ledger callers.
+The local review found that a relative plan path from a subdirectory resolved
+at the worktree root in the detached child. `s1` adds a real Git regression
+case and preserves the caller's working directory in the child.

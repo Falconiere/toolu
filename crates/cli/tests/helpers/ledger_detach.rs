@@ -117,6 +117,22 @@ fn detached_passing_plan_returns_before_check_and_records_green() {
   assert_eq!(ledger["steps"][0]["status"], "green");
 }
 
+#[test]
+fn relative_plan_path_uses_the_launch_directory() {
+  let project = Project::new().unwrap();
+  project.write("sub/plan.md", &plan("true")).unwrap();
+  let output = project
+    .command(&project.root.join("sub"))
+    .args(["ledger", "run", "plan.md", "--detach"])
+    .output()
+    .unwrap();
+  let id = id(&output);
+  let done = wait_done(&resource_root(&project), &id);
+  assert_eq!(done["exit_code"], 0, "{done}");
+  let ledger: Value = serde_json::from_slice(&std::fs::read(project.ledger()).unwrap()).unwrap();
+  assert_eq!(ledger["steps"][0]["status"], "green");
+}
+
 fn stale_run(step_only: bool) {
   let project = Project::new().unwrap();
   project.write("plan.md", &plan("true")).unwrap();

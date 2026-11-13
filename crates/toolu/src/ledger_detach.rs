@@ -92,7 +92,7 @@ pub(crate) fn run_detached(
     );
   };
   let mut spec = Spec::new(relaunch(&exe, &record.id, doc, flags, ctx));
-  spec.cwd = Some(worktree);
+  spec.cwd = Some(opts.cwd.clone());
   match spawn_orphan(&spec) {
     Ok(_) => Outcome::data(format!("{}\n", record.id)),
     Err(err) => fail_early(
