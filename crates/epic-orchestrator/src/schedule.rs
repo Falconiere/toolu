@@ -211,7 +211,7 @@ pub(crate) fn prompt_jobs(engine: &mut Engine, key: &str) -> Result<(), String> 
   let Some(issue) = engine.world.issues.get(key) else {
     return Ok(());
   };
-  if issue.agent_status != "idle" {
+  if issue.agent_status != "idle" || !crate::attention::has_live_agent(&engine.world, key) {
     return Ok(());
   }
   let Some(worktree) = issue.worktree.as_deref() else {

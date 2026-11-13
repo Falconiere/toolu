@@ -21,7 +21,7 @@ The existing socket request is `{ "op": "event", "key": "<issue key>", "event": 
 
 ## Failure modes and edge cases
 
-- Missing issue, worktree, or idle agent: leave results unclaimed and queue nothing.
+- Missing issue, worktree, or live idle agent: leave results unclaimed and queue nothing, including after an issue enters cleanup or merges.
 - Duplicate event or repeated idle status: the claim returns no delivered records; queue nothing.
 - Result finishes while the agent works: leave it unclaimed until the agent becomes idle.
 - Two finished results: claim and prompt each once, in the result store's order.

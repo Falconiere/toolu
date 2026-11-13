@@ -77,6 +77,27 @@ fn job_done_leaves_a_bad_result_unclaimed_without_a_prompt() {
 }
 
 #[test]
+fn job_done_does_not_claim_a_result_after_the_worker_is_gone() {
+  use toolu_engine::resources::job_results;
+
+  let (tmp, mut engine) = idle_job_engine();
+  let tree = tmp.path().join("work");
+  engine.world.issues.get_mut("a").expect("issue").stage = "merged".into();
+  let mut record = job_results::create(tmp.path(), "a", &tree, "late gate").expect("create");
+  record.state = "done".into();
+  record.exit_code = Some(0);
+  job_results::update(tmp.path(), &record).expect("finish");
+  super::prompt_jobs(&mut engine, "a").expect("late event");
+  assert_eq!(
+    job_results::pending(tmp.path(), &tree)
+      .expect("pending")
+      .len(),
+    1
+  );
+  assert!(engine.world.outbox.is_empty());
+}
+
+#[test]
 fn a_burst_of_queued_prompts_flushes_once_with_every_distinct_text() {
   let mut world = World::new(0);
   let issue = ensure_issue(&mut world, "a", "one", "/epic");

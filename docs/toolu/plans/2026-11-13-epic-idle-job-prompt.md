@@ -19,7 +19,7 @@ Add failing engine tests, implement the event and idle delivery paths, document 
     "title": "Deliver finished results on job-done and idle transitions",
     "check": "unset PUSH_REVIEW_BASE DOCS_SYNC_BASE; cargo test -p toolu-epic-orchestrator --lib job_done && cargo test -p toolu-epic-orchestrator --lib finished_job && cargo xtask check-changed --base origin/main",
     "ac_refs": ["AC-1", "AC-2", "AC-3"],
-    "input": "schema-1 result files created and finished under a temporary resource root, a malformed result file, duplicate socket job-done requests, and pushed Herdr events and snapshots carrying working and idle agent statuses"
+    "input": "schema-1 result files created and finished under a temporary resource root, a malformed result file, a result after the issue merges, duplicate socket job-done requests, and pushed Herdr events and snapshots carrying working and idle agent statuses"
   },
   {
     "id": "s2",
@@ -53,3 +53,5 @@ The focused tests use the real result store and engine journal to prove one-time
 The socket-event test moved to its own sibling module to keep `dispatch_test.rs` under the Rust file limit. The first full crate run exposed an ordering assumption in the new two-result test; it was corrected. Two unchanged rebase fault tests also failed in that concurrent run, then all six rebase fault tests passed on both this branch and an isolated `origin/main` checkout under one managed job. The first `check-changed` found duplicated test setup and missing pinned npm tools; the second found three Clippy test syntax issues. After consolidating the setup, running `npm ci --ignore-scripts`, and fixing those assertions and match arms, `check-changed` passed.
 
 After all three ledger steps passed, `origin/main` gained PR #894. The clean rebase made those stamps stale. This worktree's local `main` lags `origin/main`, so final ledger verification uses `PUSH_REVIEW_BASE=origin/main`; each plan check unsets that override and `DOCS_SYNC_BASE` so temporary Git fixtures keep their own base resolution.
+
+The rebased full verification reached the test runner but failed two different existing tests under load: `statusline_cli::stale_counts_lag_one_refresh_and_warm_render_starts_no_git_child` in `s1` and `plugins::update::only_toolu_plugins_are_updated_once_each_and_retired_ones_get_a_hint` in `s3`. Review also found that an idle status can outlive the worker during cleanup; `prompt_jobs` now uses the existing live-agent guard before claiming, with a real result-file regression test.
