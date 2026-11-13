@@ -23,10 +23,18 @@ Establish parser and filter behavior with tests, switch the three token lookups,
     "input": "temporary daily JSONL files with numeric and missing text fields, missing sequence, escaped token, other-row note, and incomplete tail; assert parsed fields, date order, and candidate filtering"
   },
   {
+    "id": "s1a",
+    "title": "Repair the existing duplicate-code gate finding",
+    "check": "cargo test -p toolu-ast-grep --lib -- map::large && cargo xtask gate --only jscpd",
+    "depends_on": ["s1"],
+    "paths": ["crates/ast-grep/src/map/large.rs", "crates/ast-grep/src/map/tests/large_test.rs"],
+    "input": "the existing large-directory text and JSON summaries with 160 real FileOutline entries; jscpd scans repository Rust source"
+  },
+  {
     "id": "s2",
     "title": "Use candidate scans for notify, report, and answer deduplication",
     "check": "cargo test -p toolu-epic-orchestrator --lib",
-    "depends_on": ["s1"],
+    "depends_on": ["s1a"],
     "ac_refs": ["AC-2", "AC-3", "AC-4"],
     "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/attention_ops.rs", "crates/epic-orchestrator/src/tests/dispatch_test.rs", "crates/epic-orchestrator/src/tests/dispatch_notify_replay_test.rs", "crates/epic-orchestrator/src/tests/attention_submission_test.rs", "crates/epic-orchestrator/src/tests/attention_ops_test.rs", "crates/epic-orchestrator/src/metrics", "crates/epic-orchestrator/src/cleanup.rs"],
     "input": "real temporary engine journals spanning older, yesterday, and today dates; token in note versus token field; escaped submission ID and existing metrics, cleanup, dispatch cases"
@@ -54,9 +62,14 @@ Establish parser and filter behavior with tests, switch the three token lookups,
 ## Critical files
 
 - `crates/epic-orchestrator/src/journal.rs` and `crates/epic-orchestrator/src/tests/journal_test.rs`
+- `crates/ast-grep/src/map/large.rs` and its sibling test for the gate repair
 - `crates/epic-orchestrator/src/dispatch.rs`, `attention_ops.rs`, and their sibling tests
 - `docs/epic-orchestrator/README.md`, this plan, and its approved spec
 
 ## Verification
 
 The focused journal test proves the wire-format edge cases on real JSONL files; the crate lib suite covers affected callers and the existing metrics, cleanup, and dispatch cases. `check-changed` and the full gate check affected and workspace behavior. Before push, fetch and rebase if main moved and rerun affected checks. Delivery requires scoped commits, final `toolu ledger run <plan> --verify`, a complete version 2 code-review state, `toolu ledger verdict status` of `ready`, and a PR targeting `main` with issue and epic links. The epic engine takes over after `report babysit`.
+
+## Deviations
+
+After s1, `cargo xtask check-changed --base origin/main` failed on an 11-line jscpd duplicate within `crates/ast-grep/src/map/large.rs` that is already present on main. The same run reported missing web tools in this worktree. Installed the pinned tools with `npm ci --ignore-scripts` and added s1a to remove the duplicate through one shared directory-summary calculation, test both outputs, and rerun jscpd before continuing. This is a gate repair; journal behavior and acceptance criteria are unchanged.

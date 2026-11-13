@@ -73,6 +73,20 @@ fn directory_rows<'a>(files: &'a [Listed<'a>]) -> BTreeMap<String, Vec<Listed<'a
   rows
 }
 
+fn details<'a>(cwd: &Path, group: &[Listed<'a>]) -> (usize, Vec<&'a str>, Option<String>) {
+  let lines = group
+    .iter()
+    .filter_map(|(_, file)| file.map(|file| file.lines))
+    .sum();
+  let names = group
+    .iter()
+    .filter_map(|(_, file)| *file)
+    .flat_map(|file| names(file).0)
+    .take(MAX_NAMES)
+    .collect();
+  (lines, names, module_doc(cwd, group))
+}
+
 /// Text summary with a header, directory rows, and an omission count.
 pub(super) fn text(dir: &str, files: &[Listed<'_>], cwd: &Path) -> String {
   let rows = directory_rows(files);
@@ -82,17 +96,8 @@ pub(super) fn text(dir: &str, files: &[Listed<'_>], cwd: &Path) -> String {
     rows.len()
   )];
   for (path, group) in rows.iter().take(148) {
-    let lines: usize = group
-      .iter()
-      .filter_map(|(_, file)| file.map(|file| file.lines))
-      .sum();
-    let names: Vec<&str> = group
-      .iter()
-      .filter_map(|(_, file)| *file)
-      .flat_map(|file| names(file).0)
-      .take(MAX_NAMES)
-      .collect();
-    let doc = module_doc(cwd, group).map_or_else(String::new, |doc| format!(" // {doc}"));
+    let (lines, names, doc) = details(cwd, group);
+    let doc = doc.map_or_else(String::new, |doc| format!(" // {doc}"));
     let names = if names.is_empty() {
       String::new()
     } else {
@@ -112,12 +117,14 @@ pub(super) fn text(dir: &str, files: &[Listed<'_>], cwd: &Path) -> String {
 /// JSON summary of the same bounded directory rows.
 pub(super) fn json(dir: &str, files: &[Listed<'_>], cwd: &Path) -> Value {
   let rows = directory_rows(files);
-  let dirs: Vec<Value> = rows.iter().take(148).map(|(path, group)| {
-    let lines: usize = group.iter().filter_map(|(_, file)| file.map(|file| file.lines)).sum();
-    let names: Vec<&str> = group.iter().filter_map(|(_, file)| *file)
-      .flat_map(|file| names(file).0).take(MAX_NAMES).collect();
-    json!({"path": path, "files": group.len(), "lines": lines, "doc": module_doc(cwd, group), "names": names})
-  }).collect();
+  let dirs: Vec<Value> = rows
+    .iter()
+    .take(148)
+    .map(|(path, group)| {
+      let (lines, names, doc) = details(cwd, group);
+      json!({"path": path, "files": group.len(), "lines": lines, "doc": doc, "names": names})
+    })
+    .collect();
   json!({"dir": dir, "directories": dirs, "omitted": rows.len().saturating_sub(148)})
 }
 
