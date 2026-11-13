@@ -1,7 +1,7 @@
 use std::fs;
 use std::time::UNIX_EPOCH;
 
-use super::{Record, append, file_for, retain, tail};
+use super::{Record, append, file_for, parse, retain, tail};
 
 #[test]
 fn append_is_ordered_and_a_partial_line_is_ignored() {
@@ -112,4 +112,52 @@ fn each_streams_days_from_a_given_day_in_date_order_without_partial_lines() {
   })
   .unwrap();
   assert_eq!(none, 0);
+}
+
+#[test]
+fn parse_uses_empty_text_for_missing_or_non_string_fields_and_requires_seq() {
+  let row = parse(r#"{"seq":7,"kind":"action","name":false,"note":123,"key":{"nested":true}}"#)
+    .expect("valid sequence");
+  assert_eq!(row.seq, 7);
+  assert_eq!(
+    (row.kind.as_str(), row.name.as_str(), row.note.as_str()),
+    ("action", "", "")
+  );
+  assert_eq!(
+    (row.at.as_str(), row.key.as_str(), row.token.as_str()),
+    ("", "", "")
+  );
+  assert!(parse(r#"{"note":"no sequence"}"#).is_none());
+  assert!(parse(r#"{"seq":-1,"note":"negative sequence"}"#).is_none());
+}
+
+#[test]
+fn each_with_skips_other_lines_and_keeps_escaped_token_candidates() {
+  let dir = tempfile::tempdir().expect("temp");
+  let journal = dir.path().join("journal");
+  fs::create_dir_all(&journal).expect("journal");
+  let token = "quote\" and newline\n";
+  let line = |seq: u64, field: &str, value: &str| {
+    let mut row = serde_json::json!({"seq": seq, "token": "other", "note": "unrelated"});
+    row[field] = serde_json::json!(value);
+    format!("{row}\n")
+  };
+  fs::write(journal.join("2026-10-01.jsonl"), line(1, "token", token)).expect("old");
+  fs::write(
+    journal.join("2026-10-02.jsonl"),
+    format!(
+      "{}{}{}{{\"seq\":4",
+      line(2, "note", token),
+      line(3, "token", token),
+      line(9, "note", "nothing")
+    ),
+  )
+  .expect("current");
+  let mut candidates = Vec::new();
+  super::each_with(&journal, "2026-10-02", token, |row| {
+    candidates.push((row.seq, row.token == token));
+    Ok(())
+  })
+  .expect("scan");
+  assert_eq!(candidates, [(2, false), (3, true)]);
 }

@@ -210,6 +210,11 @@ directory are synced. Missing, stale or corrupt caches rebuild from complete
 JSONL records on the next append or paged read. An incomplete trailing line is
 ignored. If a day file is truncated, recovery resumes sequence allocation from
 the last complete record still in the log.
+Readers decode each record directly into its fields. Missing or non-string text
+fields are empty, and rows without an unsigned sequence are ignored. Token
+lookups skip lines without the encoded token before parsing, then compare the
+decoded `token` field exactly. Notify deduplication scans all retained days;
+report and answer deduplication read only yesterday and today in UTC.
 
 The local control socket is mode `0600`. A connected peer has five seconds
 total to finish one JSON request line (up to 16 MiB); idle, incomplete and

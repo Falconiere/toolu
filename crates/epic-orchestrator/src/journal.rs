@@ -8,7 +8,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use serde_json::Value;
+use serde::de::{IgnoredAny, MapAccess, SeqAccess, Visitor};
 use toolu_state::time::{epoch_millis, iso_seconds};
 
 /// Rebuildable sequence and offset cache for the daily JSONL log.
@@ -18,25 +18,87 @@ use crate::lock::Held;
 use crate::note::bounded_note;
 
 /// One closed journal record.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 pub(crate) struct Record {
   /// Monotonic sequence.
   pub seq: u64,
   /// UTC journal timestamp.
+  #[serde(default, deserialize_with = "text_or_empty")]
   pub at: String,
   /// `transition`, `action`, `prompt`, `judgment`, `admission`, `recovery` or
   /// `notify` (a worker notice).
+  #[serde(default, deserialize_with = "text_or_empty")]
   pub kind: String,
   /// What happened, for example `merge-intent`.
+  #[serde(default, deserialize_with = "text_or_empty")]
   pub name: String,
   /// Epic key, possibly empty.
+  #[serde(default, deserialize_with = "text_or_empty")]
   pub epic: String,
   /// Issue key, possibly empty.
+  #[serde(default, deserialize_with = "text_or_empty")]
   pub key: String,
   /// Action or spool token, possibly empty.
+  #[serde(default, deserialize_with = "text_or_empty")]
   pub token: String,
   /// Capped note.
+  #[serde(default, deserialize_with = "text_or_empty")]
   pub note: String,
+}
+
+fn text_or_empty<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+  D: serde::Deserializer<'de>,
+{
+  deserializer.deserialize_any(Text)
+}
+
+struct Text;
+
+impl<'de> Visitor<'de> for Text {
+  type Value = String;
+
+  fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    formatter.write_str("a string or any ignored JSON value")
+  }
+
+  fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<String, E> {
+    Ok(value.to_owned())
+  }
+
+  fn visit_string<E: serde::de::Error>(self, value: String) -> Result<String, E> {
+    Ok(value)
+  }
+
+  fn visit_bool<E: serde::de::Error>(self, _value: bool) -> Result<String, E> {
+    Ok(String::new())
+  }
+
+  fn visit_i64<E: serde::de::Error>(self, _value: i64) -> Result<String, E> {
+    Ok(String::new())
+  }
+
+  fn visit_u64<E: serde::de::Error>(self, _value: u64) -> Result<String, E> {
+    Ok(String::new())
+  }
+
+  fn visit_f64<E: serde::de::Error>(self, _value: f64) -> Result<String, E> {
+    Ok(String::new())
+  }
+
+  fn visit_unit<E: serde::de::Error>(self) -> Result<String, E> {
+    Ok(String::new())
+  }
+
+  fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<String, A::Error> {
+    while seq.next_element::<IgnoredAny>()?.is_some() {}
+    Ok(String::new())
+  }
+
+  fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<String, A::Error> {
+    while map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {}
+    Ok(String::new())
+  }
 }
 
 impl Record {
@@ -155,14 +217,37 @@ pub(crate) fn batch_event(label: &'static str) {
 /// A file cannot be read. A bad line is skipped.
 pub(crate) fn tail(dir: &Path, now: SystemTime) -> Result<Vec<Record>, String> {
   let mut out = Vec::new();
+  tail_with(dir, now, "", |row| {
+    out.push(row);
+    Ok(())
+  })?;
+  Ok(out)
+}
+
+/// Visit only yesterday's and today's rows containing `needle` before parsing.
+///
+/// # Errors
+/// A file cannot be read, or `each` fails.
+pub(crate) fn tail_with<F>(
+  dir: &Path,
+  now: SystemTime,
+  needle: &str,
+  mut each: F,
+) -> Result<(), String>
+where
+  F: FnMut(Record) -> Result<(), String>,
+{
+  let encoded = encoded_needle(needle)?;
   let previous = UNIX_EPOCH + Duration::from_secs(epoch_millis(now) / 1000);
   let yesterday = previous
     .checked_sub(Duration::from_hours(24))
     .unwrap_or(UNIX_EPOCH);
   for stamp in [yesterday, now] {
-    out.extend(read_file(&dir.join(format!("{}.jsonl", day(stamp))))?);
+    for row in read_file(&file_for(dir, stamp), &encoded)? {
+      each(row)?;
+    }
   }
-  Ok(out)
+  Ok(())
 }
 
 /// Delete daily files whose date is strictly older than `days` before `now`.
@@ -204,7 +289,7 @@ fn file_name(path: &Path) -> Option<String> {
     .map(|name| name.to_string_lossy().into_owned())
 }
 
-fn read_file(path: &Path) -> Result<Vec<Record>, String> {
+fn read_file(path: &Path, needle: &str) -> Result<Vec<Record>, String> {
   let text = match std::fs::read_to_string(path) {
     Ok(text) => text,
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -214,6 +299,7 @@ fn read_file(path: &Path) -> Result<Vec<Record>, String> {
   for line in text
     .split_inclusive('\n')
     .filter(|line| line.ends_with('\n'))
+    .filter(|line| line.contains(needle))
   {
     if let Some(row) = parse(line.trim_end_matches('\n')) {
       rows.push(row);
@@ -222,27 +308,18 @@ fn read_file(path: &Path) -> Result<Vec<Record>, String> {
   Ok(rows)
 }
 
+fn encoded_needle(needle: &str) -> Result<String, String> {
+  // shortcut: toolu writes JSONL with serde_json; parse token fields if external writers are supported.
+  if needle.is_empty() {
+    Ok(String::new())
+  } else {
+    serde_json::to_string(needle).map_err(|err| err.to_string())
+  }
+}
+
 /// One complete JSON object, or nothing when `line` is not a record.
 pub(super) fn parse(line: &str) -> Option<Record> {
-  let value: Value = serde_json::from_str(line).ok()?;
-  let field = |key: &str| {
-    value
-      .get(key)
-      .and_then(Value::as_str)
-      .unwrap_or("")
-      .to_owned()
-  };
-  let seq = value.get("seq").and_then(Value::as_u64)?;
-  Some(Record {
-    seq,
-    at: field("at"),
-    kind: field("kind"),
-    name: field("name"),
-    epic: field("epic"),
-    key: field("key"),
-    token: field("token"),
-    note: field("note"),
-  })
+  serde_json::from_str(line).ok()
 }
 
 /// Retained records after `since`, in sequence order, and the oldest retained sequence.
@@ -264,10 +341,27 @@ pub(crate) fn page(
 ///
 /// # Errors
 /// The directory or a file cannot be read, or `each` fails.
-pub(crate) fn each<F>(dir: &Path, from_day: &str, mut each: F) -> Result<(), String>
+pub(crate) fn each<F>(dir: &Path, from_day: &str, each: F) -> Result<(), String>
 where
   F: FnMut(Record) -> Result<(), String>,
 {
+  each_with(dir, from_day, "", each)
+}
+
+/// Like [`each`], skipping lines without the JSON-encoded token text before parsing.
+///
+/// # Errors
+/// The directory or a file cannot be read, or `each` fails.
+pub(crate) fn each_with<F>(
+  dir: &Path,
+  from_day: &str,
+  needle: &str,
+  mut each: F,
+) -> Result<(), String>
+where
+  F: FnMut(Record) -> Result<(), String>,
+{
+  let encoded = encoded_needle(needle)?;
   let entries = match std::fs::read_dir(dir) {
     Ok(entries) => entries,
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
@@ -287,7 +381,7 @@ where
   }
   days.sort();
   for path in days {
-    for row in read_file(&path)? {
+    for row in read_file(&path, &encoded)? {
       each(row)?;
     }
   }

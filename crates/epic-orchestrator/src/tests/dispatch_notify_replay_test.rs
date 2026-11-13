@@ -101,6 +101,56 @@ fn notify_tokens_are_global_and_report_deduplication_stays_on_markers() {
 }
 
 #[test]
+fn token_lookup_uses_the_token_field_and_keeps_notify_global() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let engine = open(tmp.path());
+  let journal = engine.paths.journal_dir();
+  std::fs::create_dir_all(&journal).expect("journal");
+  let old = journal.join("2020-01-01.jsonl");
+  let note_only = json!({"seq": 1, "name": "other", "token": "different", "note": "note-token"});
+  let old_spool = json!({"seq": 2, "name": "spool", "token": "old-token"});
+  std::fs::write(&old, format!("{note_only}\n{old_spool}\n")).expect("old rows");
+  assert!(
+    !crate::dispatch::spool_seen(&engine, &json!({"op": "notify", "token": "note-token"}))
+      .expect("note")
+  );
+  assert!(
+    crate::dispatch::spool_seen(&engine, &json!({"op": "notify", "token": "old-token"}))
+      .expect("notify")
+  );
+  assert!(
+    !crate::dispatch::spool_seen(&engine, &json!({"op": "report", "token": "old-token"}))
+      .expect("report")
+  );
+  crate::journal::append(
+    &journal,
+    &engine.paths.journal_lock(),
+    &crate::journal::Record::new("action", "spool", "a", "today-token", ""),
+    engine.now,
+  )
+  .expect("today row");
+  assert!(
+    crate::dispatch::spool_seen(&engine, &json!({"op": "report", "token": "today-token"}))
+      .expect("today")
+  );
+  let future = engine.now + std::time::Duration::from_hours(48);
+  let future_spool = json!({"seq": 100, "name": "spool", "token": "future-token"});
+  std::fs::write(
+    crate::journal::file_for(&journal, future),
+    format!("{future_spool}\n"),
+  )
+  .expect("future row");
+  assert!(
+    crate::dispatch::spool_seen(&engine, &json!({"op": "notify", "token": "future-token"}))
+      .expect("future notify")
+  );
+  assert!(
+    !crate::dispatch::spool_seen(&engine, &json!({"op": "report", "token": "future-token"}))
+      .expect("future report")
+  );
+}
+
+#[test]
 fn distinct_notify_tokens_with_identical_text_keep_the_relay_cooldown() {
   let tmp = tempfile::tempdir().expect("temp");
   let mut engine = open(tmp.path());
