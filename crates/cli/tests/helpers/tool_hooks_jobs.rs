@@ -103,6 +103,17 @@ fn a_post_tool_block_still_delivers_the_finished_job() {
       .delivered_at
       .is_some()
   );
+  let without_reason = sb
+    .bound_job(&project, "cargo test without reason", 1)
+    .unwrap();
+  executable(&module, "/bin/sh", "printf '{\"decision\":\"block\"}\\n'").unwrap();
+  let blocked = sb.hook("post-tools", payload, None).unwrap();
+  let doc: serde_json::Value = serde_json::from_slice(&blocked.stdout).unwrap();
+  assert_eq!(doc["decision"], "block");
+  assert_eq!(
+    doc["reason"],
+    format!("{}\ncommand failed", job_results::line(&without_reason))
+  );
   std::fs::remove_file(module).unwrap();
   assert_eq!(
     streams(&sb.hook("post-tools", payload, None).unwrap()).0,

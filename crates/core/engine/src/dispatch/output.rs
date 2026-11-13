@@ -223,10 +223,11 @@ pub(crate) fn final_block(block: &str, advisories: &Advisories) -> String {
   let Some(mut doc @ Ordered::Object(_)) = parse_document(block).ok() else {
     return printed(block);
   };
-  let Some(Ordered::String(reason)) = doc.get("reason") else {
-    return printed(block);
+  let context = advisories.contexts.join("\n\n");
+  let reason = match doc.get("reason") {
+    Some(Ordered::String(reason)) if !reason.is_empty() => format!("{reason}\n\n{context}"),
+    _ => context,
   };
-  let reason = format!("{reason}\n\n{}", advisories.contexts.join("\n\n"));
   doc.set("reason", Ordered::String(reason));
   jq_print(&doc)
 }
