@@ -4193,6 +4193,28 @@
               "short": null,
               "takesValue": false,
               "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Print a job id and run the command detached, recording its result",
+              "hidden": false,
+              "long": "detach",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Record the outcome in job result ID (detached copy)",
+              "hidden": true,
+              "long": "result",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ID"
             }
           ],
           "hidden": false,

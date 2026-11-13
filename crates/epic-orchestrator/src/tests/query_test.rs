@@ -10,7 +10,7 @@ use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
 
 use super::{
-  ack, answer, answerer, ask, epic_for, job, located, pause, report, status, wait, wait_default,
+  ack, answer, answerer, ask, epic_for, located, pause, report, status, wait, wait_default,
 };
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
@@ -88,7 +88,7 @@ fn report_and_job_fail_closed() {
     .arg(Arg::new("status-file").long("status-file"))
     .get_matches_from(["report", "execution", "--status-file", "a.json"]);
   assert!(report(&bad, &env).stderr.expect("err").contains("status"));
-  let outcome = job(
+  let outcome = crate::job::run(
     &Command::new("job")
       .arg(Arg::new("argv").num_args(0..))
       .get_matches_from(["job"]),

@@ -22,6 +22,16 @@ fn report_takes_a_known_phase_and_job_takes_trailing_argv() {
     .try_get_matches_from(["job", "--no-wait", "--", "cargo", "--version"])
     .expect("job");
   assert!(job.get_flag("no-wait"));
+  let detached = job_command()
+    .try_get_matches_from(["job", "--detach", "--", "cargo", "xtask", "gate"])
+    .expect("detached job");
+  assert!(detached.get_flag("detach"));
+  assert!(
+    job_command()
+      .try_get_matches_from(["job", "--detach", "--result", "x", "--", "true"])
+      .is_err(),
+    "--detach and --result are two ends of one run"
+  );
   assert_eq!(
     job
       .get_many::<String>("argv")

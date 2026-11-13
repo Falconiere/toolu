@@ -255,6 +255,7 @@ fn a_waiting_job_is_admitted_once_the_slot_frees_and_its_observer_hears_each_ste
   let mut observe = |admission: Admission<'_>| {
     seen.push(match admission {
       Admission::Attempt => "attempt".to_owned(),
+      Admission::Admitted => "admitted".to_owned(),
       Admission::Refused(reason) => format!("refused:{reason}"),
     });
   };
@@ -268,7 +269,7 @@ fn a_waiting_job_is_admitted_once_the_slot_frees_and_its_observer_hears_each_ste
   release.join().unwrap();
   assert_eq!(output.stdout, "ok");
   assert_eq!(seen[..2], ["attempt", "refused:capacity"]);
-  assert_eq!(seen.last().map(String::as_str), Some("attempt"));
+  assert_eq!(seen.last().map(String::as_str), Some("admitted"));
   assert!(seen.len() >= 3, "{seen:?}");
   assert_eq!(active_jobs(&root), 0);
 }

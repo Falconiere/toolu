@@ -1,7 +1,7 @@
 //! Running `toolu epic` against a temp home, resource root and epic state.
 
 use std::path::PathBuf;
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 /// A fallible helper result.
 pub(crate) type Res<T> = Result<T, Box<dyn std::error::Error>>;
@@ -29,6 +29,11 @@ impl Home {
 
   /// Run `toolu` with `args` in a clean environment rooted here.
   pub(crate) fn run(&self, args: &[&str]) -> Res<Output> {
+    Ok(self.command(args).output()?)
+  }
+
+  /// A configured native `toolu` command for a test that needs its process.
+  pub(crate) fn command(&self, args: &[&str]) -> Command {
     let mut command = Command::new(TOOLU);
     command
       .env_clear()
@@ -38,12 +43,13 @@ impl Home {
       .env("EPIC_STATE_HOME", self.path("epics"))
       .env("HERDR_SOCKET_PATH", self.path("no-herdr.sock"))
       .env("TOOLU_EPIC_HERDR", "off")
-      .args(args);
+      .args(args)
+      .stdin(Stdio::null());
     // Coverage runs write each child's profile where the harness says.
     if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
       command.env("LLVM_PROFILE_FILE", profile);
     }
-    Ok(command.output()?)
+    command
   }
 }
 

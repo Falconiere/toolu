@@ -1,51 +1,15 @@
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-use toolu_engine::resources::binding::bind_worktree;
 use toolu_engine::resources::jobs::{JOB_WAIT_BOUND, JOB_WAIT_POLL};
-use toolu_engine::resources::leases::{LeaseKind, LeaseRequest, acquire_lease, release_lease};
+use toolu_engine::resources::leases::release_lease;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
-use toolu_runtime::json::ordered::Ordered;
 
 use super::run_job_with;
+use crate::job_fixture::{bound, hold};
 use crate::journal;
 use crate::paths::Paths;
-
-/// A bound git worktree and its resource root under `tmp`.
-fn bound(tmp: &Path, key: &str) -> (PathBuf, PathBuf) {
-  let work = tmp.join("work");
-  std::fs::create_dir_all(&work).expect("work");
-  let init = Command::new("git")
-    .args(["init", "-q"])
-    .current_dir(&work)
-    .status()
-    .expect("git init");
-  assert!(init.success());
-  let root = tmp.join("resources");
-  std::fs::create_dir_all(&root).expect("root");
-  bind_worktree(&root, &work, key, &work.display().to_string()).expect("bind");
-  (work, root)
-}
-
-/// Occupy the only job slot; the lease token.
-fn hold(root: &Path) -> String {
-  let occupied = LeaseRequest {
-    kind: LeaseKind::Job,
-    key: "occupied".to_owned(),
-    state_dir: "other".to_owned(),
-    host: None,
-    host_cap: None,
-    epic_cap: None,
-    worktree: None,
-  };
-  let lease = acquire_lease(root, &occupied, SystemTime::now()).expect("lease");
-  let Some(Ordered::String(token)) = lease.get("token") else {
-    panic!("lease without a token: {lease:?}");
-  };
-  token.clone()
-}
 
 fn admissions(root: &Path) -> Vec<(String, String)> {
   journal::tail(&Paths::at(root).journal_dir(), SystemTime::now())

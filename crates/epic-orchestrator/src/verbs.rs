@@ -77,7 +77,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
     Some(("wait", args)) => crate::query::wait(ctx, args, &env),
     Some(("report", args)) => crate::query::report(args, &env),
     Some(("notify", args)) => crate::query::notify(args, &env),
-    Some(("job", args)) => crate::query::job(args),
+    Some(("job", args)) => crate::job::run(args),
     Some(("service", args)) if args.subcommand_name() == Some("install") => {
       crate::service::service(&env)
     }
@@ -210,6 +210,7 @@ fn wait_command() -> Command {
     )
 }
 
+/// A true/false long flag shared by epic subcommands.
 pub(crate) fn flag(name: &'static str, help: &'static str) -> Arg {
   Arg::new(name)
     .long(name)
