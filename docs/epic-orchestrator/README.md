@@ -76,6 +76,7 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 | `release` | Release a coupling hold so the issue launches next                                           |
 | `report`  | Worker phase reporter                                                                        |
 | `wait`    | The orchestrator's next judgment from the resident engine                                    |
+| `job`     | Run a managed command; `--wait [id]` claims one detached result ([contract](../../plugins/epic-orchestrator/README.md#machine-resources-and-lifecycle)) |
 | `metrics` | Epic runs measured from the engine journal, beside the TypeScript baseline                   |
 | `summary` | One epic's report: measures, budgets and token use per worker                                |
 | `baseline`| Derive the TypeScript-era baseline from recorded epic state directories                      |

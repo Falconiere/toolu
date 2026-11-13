@@ -336,6 +336,21 @@ Process groups retain their lease until background descendants exit. A crashed
 job owner is reconciled only after its recorded group is gone; agent ownership
 is never freed merely because its launcher exited.
 
+For a detached command, `toolu epic job --detach -- <command> <args...>` prints
+its result ID immediately. From the same Git worktree, run
+`toolu epic job --wait <id>` to block once and claim that result. Omitting the ID
+selects the oldest undelivered result, including one still waiting for admission;
+when none exists, it succeeds immediately with no output. Only the selected
+result is marked delivered, so sibling results remain available. A repeated
+claim, unknown ID or ID from another worktree fails.
+
+The wait replays the stored command output and exits 0 for success or 1 for
+failure. It waits up to 5400 seconds by default; `--max-seconds <N>` changes that
+bound. A timeout exits 1 and names the worktree's pending IDs without claiming
+or cancelling the jobs, so retry the wait for the same ID. Wait mode accepts no
+command and cannot be combined with `--detach` or `--no-wait`. It needs the Git
+worktree and the same resource home, but no resource binding or running engine.
+
 Resource sampling runs at most once per 30 seconds. Load above 1.5 times effective
 CPUs, less than 10% available memory, or Linux steal above 25% starts a pressure
 window. Sixty seconds of pressure holds new work. Recovery requires 120 seconds
