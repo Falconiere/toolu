@@ -28,12 +28,14 @@ and leaves the prior ledger byte-identical.
 
 ## Boundaries and alternatives
 
-The result belongs to the existing epic resource binding; this issue adds no
-second result store, job queue, or snapshot checkout. Restoring an overwritten
-ledger after detecting staleness would expose a partial write and could erase
-another writer's update. Rejecting `--step` would narrow the requested `run`
-interface. The stale check compares the tree at the specified boundaries; it
-does not freeze the repository while checks run.
+The result uses the bound resource root and key when there is a binding; an
+ordinary checkout uses the existing `resource_home` and an empty key. This
+preserves the ledger's current bound and unbound behavior and adds no second
+result store, job queue, or snapshot checkout. Restoring an overwritten ledger
+after detecting staleness would expose a partial write and could erase another
+writer's update. Rejecting `--step` would narrow the requested `run` interface.
+The stale check compares the tree at the specified boundaries; it does not
+freeze the repository while checks run.
 
 ## Risks and handoff
 
