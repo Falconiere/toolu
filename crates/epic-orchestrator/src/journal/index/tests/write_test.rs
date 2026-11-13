@@ -42,3 +42,28 @@ impl Drop for FlushDisarm {
     super::super::FLUSH_SINK.with(|slot| *slot.borrow_mut() = None);
   }
 }
+
+#[test]
+fn append_batch_assigns_consecutive_sequences_and_flushes_once() {
+  use std::sync::Arc;
+  use std::sync::atomic::{AtomicU64, Ordering};
+
+  let root = tempfile::tempdir().unwrap();
+  let dir = root.path().join("journal");
+  let lock = root.path().join("journal.lock");
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_100);
+  let sink = Arc::new(AtomicU64::new(0));
+  super::super::FLUSH_SINK.with(|slot| *slot.borrow_mut() = Some(Arc::clone(&sink)));
+  let _disarm = FlushDisarm;
+  let rows = [
+    crate::journal::Record::new("action", "batch-a", "k", "t", "n"),
+    crate::journal::Record::new("action", "batch-b", "k", "t", "n"),
+    crate::journal::Record::new("action", "batch-c", "k", "t", "n"),
+  ];
+  let stored = crate::journal::append_batch(&dir, &lock, &rows, at).unwrap();
+  assert_eq!(
+    stored.iter().map(|row| row.seq).collect::<Vec<_>>(),
+    vec![1, 2, 3]
+  );
+  assert_eq!(sink.load(Ordering::Relaxed), 1);
+}

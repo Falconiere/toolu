@@ -30,7 +30,13 @@ thread_local! {
 
 thread_local! {
   /// Per-thread file flush counter. Absent unless a test installs one.
-  static FLUSH_SINK: RefCell<Option<Arc<AtomicU64>>> = const { RefCell::new(None) };
+  pub(crate) static FLUSH_SINK: RefCell<Option<Arc<AtomicU64>>> = const { RefCell::new(None) };
+}
+
+thread_local! {
+  /// Per-thread batch phase log. Absent unless a test installs one.
+  static BATCH_SINK: RefCell<Option<Arc<std::sync::Mutex<Vec<&'static str>>>>> =
+    const { RefCell::new(None) };
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -84,6 +90,30 @@ fn flush(file: &File) -> Result<(), String> {
   file.sync_all().map_err(|err| err.to_string())
 }
 
+/// Record a batch phase label when a test sink is installed.
+pub(crate) fn batch_event(label: &'static str) {
+  BATCH_SINK.with(|slot| {
+    if let Some(sink) = slot.borrow().as_ref() {
+      sink.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+        .push(label);
+    }
+  });
+}
+
+/// Install the batch phase sink for a test. Returns the previous sink.
+pub(crate) fn install_batch_sink(
+  sink: Arc<std::sync::Mutex<Vec<&'static str>>>,
+) -> Option<Arc<std::sync::Mutex<Vec<&'static str>>>> {
+  BATCH_SINK.with(|slot| slot.borrow_mut().replace(sink))
+}
+
+/// Clear the batch phase sink.
+pub(crate) fn clear_batch_sink() {
+  BATCH_SINK.with(|slot| {
+    *slot.borrow_mut() = None;
+  });
+}
+
 fn as_u64(value: usize) -> Result<u64, String> {
   u64::try_from(value).map_err(|err| err.to_string())
 }
@@ -100,23 +130,34 @@ fn parsed(line: &[u8]) -> Option<Record> {
   super::parse(std::str::from_utf8(line).ok()?)
 }
 
-/// Assign the next sequence, sync the JSONL line, then update the cache.
+/// Assign consecutive sequences, sync the JSONL lines once, then update the cache.
 ///
 /// # Errors
 /// The log or the cache cannot be written.
-pub(super) fn append_locked(
+pub(super) fn append_batch_locked(
   dir: &Path,
-  record: &mut Record,
+  records: &mut [Record],
   now: SystemTime,
 ) -> Result<(), String> {
+  if records.is_empty() {
+    return Ok(());
+  }
   let summary = fresh(dir)?;
-  record.seq = summary.last.saturating_add(1);
-  record.at = iso_millis(now);
-  let placed = write::write_line(dir, now, record, &summary)?;
-  if placed.torn {
+  let mut seq = summary.last;
+  for record in records.iter_mut() {
+    seq = seq.saturating_add(1);
+    record.seq = seq;
+    record.at = iso_millis(now);
+  }
+  let placed = write::write_lines(dir, now, records, &summary)?;
+  if placed.iter().any(|row| row.torn) {
     return scan::rebuild(dir).map(|_| ());
   }
-  publish(dir, summary, record, &placed)
+  let mut summary = summary;
+  for (record, hit) in records.iter().zip(placed.iter()) {
+    summary = publish(dir, summary, record, hit)?;
+  }
+  Ok(())
 }
 
 /// Records strictly after `since`, and the oldest retained sequence.
@@ -217,7 +258,7 @@ fn publish(
   mut summary: Summary,
   record: &Record,
   placed: &Placed,
-) -> Result<(), String> {
+) -> Result<Summary, String> {
   let file_id = touch_day(&mut summary, &placed.day, record.seq, placed.end)?;
   let mut file = std::fs::OpenOptions::new()
     .create(true)
@@ -237,7 +278,8 @@ fn publish(
   if summary.oldest.is_none() {
     summary.oldest = Some(record.seq);
   }
-  store(dir, &summary)
+  store(dir, &summary)?;
+  Ok(summary)
 }
 
 fn touch_day(summary: &mut Summary, day: &str, seq: u64, end: u64) -> Result<u32, String> {

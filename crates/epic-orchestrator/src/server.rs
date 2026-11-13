@@ -153,13 +153,43 @@ impl Engine {
 
   /// Journal steps sitting in the outbox.
   ///
+  /// Consecutive journal steps at the front share one lock and one JSONL sync
+  /// before any of their follow-ups run.
+  ///
   /// # Errors
   /// A step cannot be written.
   pub(crate) fn flush(&mut self) -> Result<(), String> {
-    while let Some(step) = self.world.outbox.pop_front() {
+    loop {
+      let mut batch = Vec::new();
+      while matches!(self.world.outbox.front(), Some(Step::Journal(_))) {
+        let Some(Step::Journal(record)) = self.world.outbox.pop_front() else {
+          break;
+        };
+        batch.push(stamp(&self.world, record));
+      }
+      if !batch.is_empty() {
+        let stored = journal::append_batch(
+          &self.paths.journal_dir(),
+          &self.paths.journal_lock(),
+          &batch,
+          self.now,
+        )?;
+        for record in stored {
+          let steps = commit_journal(&mut self.world, &record);
+          if !steps.is_empty() {
+            journal::batch_event("follow");
+          }
+          for step in steps {
+            let _applied = self.apply(step)?;
+          }
+        }
+        continue;
+      }
+      let Some(step) = self.world.outbox.pop_front() else {
+        return Ok(());
+      };
       let _applied = self.apply(step)?;
     }
-    Ok(())
   }
 
   /// Persist pause for every epic, or one epic.
