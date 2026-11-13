@@ -39,7 +39,7 @@ The binding and claim match the current Git worktree, so another worktree's resu
 
 ## Documentation impact
 
-Update `docs/epic-orchestrator/README.md` to explain that the next tool call or prompt delivers a finished detached job once. The CLI reference is generated and its commands do not change.
+Update `docs/epic-orchestrator/README.md` to explain that the next tool call or prompt delivers a finished detached job once. Register the built-in in `fixtures/gate-coverage/inventory.json` and `docs/gate-coverage-matrix.md`. The CLI reference is generated and its commands do not change.
 
 ## Open Questions
 

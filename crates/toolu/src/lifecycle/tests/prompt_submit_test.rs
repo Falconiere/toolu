@@ -149,9 +149,9 @@ fn a_normal_prompt_reports_a_failed_job_once_without_trivial_or_blocked_consumpt
   let resources = root.join("resources");
   bind_worktree(&resources, &root, "issue-878", "").unwrap();
   let mut record = job_results::create(&resources, "issue-878", &root, "cargo test").unwrap();
-  record.state = "done".to_owned();
+  "done".clone_into(&mut record.state);
   record.exit_code = Some(3);
-  record.output = "last error\n".to_owned();
+  "last error\n".clone_into(&mut record.output);
   job_results::update(&resources, &record).unwrap();
   let env = env(&root, &bin_with(&root, false));
   assert_eq!(run(&env, &root, r#"{"prompt":"yes"}"#).stdout, None);

@@ -16,14 +16,16 @@ impl Sandbox {
         .arg("-q")
         .arg(&project)
         .status()?;
-      assert!(status.success());
+      if !status.success() {
+        return Err(format!("git init failed: {status}").into());
+      }
     }
     bind_worktree(&resources, &project, "issue-878", "")?;
     let mut record = job_results::create(&resources, "issue-878", worktree, label)?;
-    record.state = "done".to_owned();
+    "done".clone_into(&mut record.state);
     record.exit_code = Some(exit_code);
     record.finished_at = Some(record.started_at.clone());
-    record.output = "command failed\n".to_owned();
+    "command failed\n".clone_into(&mut record.output);
     job_results::update(&resources, &record)?;
     Ok(record)
   }

@@ -18,7 +18,7 @@ Shared claim and post-tool delivery, then prompt delivery and user docs, followe
     "id": "post-tool",
     "title": "Claim and report finished jobs after edit or shell calls",
     "ac_refs": ["AC-1", "AC-2", "AC-4"],
-    "paths": ["crates/core/engine/src/resources/job_results.rs", "crates/core/engine/src/gates/job_results.rs", "crates/core/engine/src/gates.rs", "crates/core/engine/src/builtins.rs", "crates/core/engine/src/dispatch/fold.rs", "crates/core/engine/src/dispatch/output.rs", "crates/cli/tests/tool_hooks.rs", "crates/cli/tests/helpers/tool_hooks_jobs.rs"],
+    "paths": ["crates/core/engine/src/resources/job_results.rs", "crates/core/engine/src/gates/job_results.rs", "crates/core/engine/src/gates.rs", "crates/core/engine/src/builtins.rs", "crates/core/engine/src/dispatch/fold.rs", "crates/core/engine/src/dispatch/output.rs", "crates/core/engine/tests/post_waiver.rs", "crates/cli/tests/tool_hooks.rs", "crates/cli/tests/helpers/tool_hooks_jobs.rs", "crates/xtask/src/tests/gate_coverage_names_test.rs"],
     "input": "Real temporary Git worktree bindings and finished result JSON, including a failing result, another worktree, a later blocking post-tool module, and a later exit-2 module",
     "check": "cargo test -p toolu-cli --test tool_hooks"
   },
@@ -36,7 +36,7 @@ Shared claim and post-tool delivery, then prompt delivery and user docs, followe
     "title": "Document the once-only detached job notification",
     "ac_refs": ["AC-1", "AC-3"],
     "depends_on": ["prompt"],
-    "paths": ["docs/epic-orchestrator/README.md"],
+    "paths": ["docs/epic-orchestrator/README.md", "docs/gate-coverage-matrix.md", "fixtures/gate-coverage/inventory.json"],
     "input": "The documented toolu epic job --detach usage and hook behavior",
     "check": "cargo xtask check-markdown-cli"
   },
@@ -53,7 +53,7 @@ Shared claim and post-tool delivery, then prompt delivery and user docs, followe
 
 ## Critical files
 
-`crates/core/engine/src/resources/job_results.rs`, `crates/core/engine/src/gates/job_results.rs`, `crates/core/engine/src/gates.rs`, `crates/core/engine/src/builtins.rs`, `crates/core/engine/src/dispatch/{fold,output}.rs`, `crates/cli/tests/{tool_hooks.rs,helpers/tool_hooks_jobs.rs}`, `crates/toolu/src/lifecycle/prompt_submit.rs`, `crates/toolu/src/lifecycle/tests/prompt_submit_test.rs`, and `docs/epic-orchestrator/README.md`.
+`crates/core/engine/src/resources/job_results.rs`, `crates/core/engine/src/gates/job_results.rs`, `crates/core/engine/src/gates.rs`, `crates/core/engine/src/builtins.rs`, `crates/core/engine/src/dispatch/{fold,output}.rs`, `crates/core/engine/tests/post_waiver.rs`, `crates/cli/tests/{tool_hooks.rs,helpers/tool_hooks_jobs.rs}`, `crates/toolu/src/lifecycle/prompt_submit.rs`, `crates/toolu/src/lifecycle/tests/prompt_submit_test.rs`, `crates/xtask/src/tests/gate_coverage_names_test.rs`, `docs/epic-orchestrator/README.md`, `fixtures/gate-coverage/inventory.json`, and `docs/gate-coverage-matrix.md`.
 
 ## Verification
 
@@ -63,3 +63,6 @@ The post-tool test must assert the exact one-time host advisory line, an empty s
 
 - Before execution, moved the prose step from generated `docs/cli/epic.md` to maintained `docs/epic-orchestrator/README.md`; the generated reference is unchanged because no CLI flag changes.
 - During the first behavior step, added the post-block visibility case after finding that a later block otherwise discards a claimed advisory.
+- The changed-path gate required registering the new built-in in the coverage inventory and matrix. It also found duplicate test setup and Clippy findings in the new test helper, corrected before rerun.
+- The changed-path workspace run found the existing `POST_TOOL` order assertion needed the new built-in trace row.
+- The later workspace run found `xtask`'s discovery order assertion also needed the new built-in row.
