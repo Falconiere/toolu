@@ -44,7 +44,7 @@ pub(crate) fn flush(engine: &mut Engine) -> Result<(), String> {
 fn restore_on_lock_busy(engine: &mut Engine, batch: Vec<Record>, err: &str) {
   // Only the lock wait fails before any line is written. Later write or cache
   // errors may leave durable lines; re-queueing those would append duplicates.
-  if err != "journal-busy" {
+  if !err.starts_with("journal-busy") {
     return;
   }
   for record in batch.into_iter().rev() {
