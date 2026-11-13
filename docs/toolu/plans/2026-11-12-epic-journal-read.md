@@ -42,7 +42,7 @@ Establish parser and filter behavior with tests, switch the three token lookups,
   {
     "id": "s3",
     "title": "Document journal read behavior and run changed checks",
-    "check": "env -u PUSH_REVIEW_BASE NEXTEST_TEST_THREADS=4 cargo xtask check-changed --base origin/main && env -u PUSH_REVIEW_BASE cargo xtask check-markdown-cli",
+    "check": "env -u PUSH_REVIEW_BASE NEXTEST_TEST_THREADS=2 cargo xtask check-changed --base origin/main && env -u PUSH_REVIEW_BASE cargo xtask check-markdown-cli",
     "depends_on": ["s1", "s2"],
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4"],
     "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/attention_ops.rs", "crates/epic-orchestrator/src/journal/tests", "crates/epic-orchestrator/src/tests", "docs/epic-orchestrator/README.md", "docs/toolu/specs/2026-11-12-epic-journal-read-design.md", "docs/toolu/plans/2026-11-12-epic-journal-read.md"],
@@ -79,3 +79,5 @@ Before s2, source inspection showed that `each_with(from_day)` includes future-d
 The s2 `check-changed` run found `attention_submission_test.rs` at 301 code lines, one above the 300-line guardrail. Moved its future-day test unchanged in behavior to sibling `attention_window_test.rs` and registered that test module. The test stays in s2's declared paths; no assertion or acceptance criterion was removed.
 
 Two broad runs on the shared machine failed different unchanged tests under load: Nextest's CLI doctor stub did not report its version after ten seconds, and an asynchronous epic notification missed its five-second wait. Each test passed when rerun alone; the full epic library suite also passed before the test-file move. The remaining suite checks cap test threads at four to retain all assertions while reducing contention. The final gate remains required to pass.
+
+The final ledger verification against `origin/main` hit two further timing failures in unchanged workspace tests under four-thread `check-changed` runs: an engine resource fence and the xtask hook measurer's two-second deadline. Both passed in focused runs, and the full gate passed. After rebasing on #891, `check-changed` uses two test threads to reduce local contention while retaining the complete suite; the full gate still uses four.
