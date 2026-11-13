@@ -164,13 +164,39 @@ fn wait_replays_failure_and_claims_without_a_resource_binding() {
 }
 
 #[test]
+fn wait_uses_the_worktree_binding_root_when_it_differs_from_the_environment() {
+  let home = Home::new().unwrap();
+  let work = bound(&home).unwrap();
+  let binding_path = work.join(".git/toolu-resource.json");
+  let mut binding: Value = serde_json::from_slice(&std::fs::read(&binding_path).unwrap()).unwrap();
+  let bound_root = home.path("bound-resources");
+  binding["root"] = Value::String(bound_root.display().to_string());
+  std::fs::write(&binding_path, format!("{binding}\n")).unwrap();
+
+  let id = detach(&home, &work, "printf bound-root").unwrap();
+  let output = wait(&home, &work, &["epic", "job", "--wait", &id]).unwrap();
+  assert_eq!(output.status.code(), Some(0), "{}", err(&output));
+  assert_eq!(
+    String::from_utf8_lossy(&output.stdout).trim_end(),
+    "bound-root"
+  );
+  let result = std::fs::read_to_string(bound_root.join(format!("jobs/results/{id}.json"))).unwrap();
+  let result: Value = serde_json::from_str(&result).unwrap();
+  assert!(result["delivered_at"].is_string());
+  assert!(
+    !home
+      .path(&format!("resources/jobs/results/{id}.json"))
+      .exists()
+  );
+}
+
+#[test]
 fn wait_empty_timeout_and_invalid_command() {
   let home = Home::new().unwrap();
   let work = bound(&home).unwrap();
-  let started = Instant::now();
   let empty = wait(&home, &work, &["epic", "job", "--wait"]).unwrap();
   assert_eq!(empty.status.code(), Some(0), "{}", err(&empty));
-  assert!(started.elapsed() < Duration::from_secs(5));
+  assert!(String::from_utf8_lossy(&empty.stdout).trim().is_empty());
   let usage = wait(&home, &work, &["epic", "job", "--wait", "--", "true"]).unwrap();
   assert_eq!(usage.status.code(), Some(64), "{}", err(&usage));
   let id = detach(&home, &work, "sleep 3; printf done").unwrap();

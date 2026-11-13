@@ -13,7 +13,7 @@ A detached `toolu epic job` returns an id immediately. An agent that later needs
 
 ## Architecture
 
-Add `--wait [id]` and `--max-seconds N` to `job_command`. Dispatch the wait before the existing path that requires a resource binding and argv. Use `resource_home` from the command environment and `toolu_runtime::git::toplevel` for the current worktree. With no id, choose the first record returned by `job_results::pending`, already sorted oldest first; keep that id for the whole call. Poll the selected record internally against a monotonic deadline. Add a one-record claim under the existing resource lock. Claim only when it is done, then replay its stored output and success or failure. This uses the #872 result format without consuming other jobs.
+Add `--wait [id]` and `--max-seconds N` to `job_command`. Dispatch the wait before the existing path that requires a resource binding and argv. Use the worktree binding's resource root when present, falling back to `resource_home` from the command environment when the binding is absent; reject an invalid binding. Use `toolu_runtime::git::toplevel` for the current worktree. With no id, choose the first record returned by `job_results::pending`, already sorted oldest first; keep that id for the whole call. Poll the selected record internally against a monotonic deadline. Add a one-record claim under the existing resource lock. Claim only when it is done, then replay its stored output and success or failure. This uses the #872 result format without consuming other jobs.
 
 ## Interfaces / Schema
 

@@ -4,7 +4,7 @@
 
 ## Evidence and approach
 
-Issue #877 defines the CLI contract and 5400-second default. Merged PR #890 supplies `job_results::pending`, the atomic result files, and the real-binary detach test. `crates/epic-orchestrator/src/job.rs` currently requires argv and a resource binding, so wait dispatch must happen first. Reuse `resource_home`, `git::toplevel`, and the existing resource lock; claim only one result. The brainstorm's Jev judgment supports selecting the oldest undelivered record, including a completed one.
+Issue #877 defines the CLI contract and 5400-second default. Merged PR #890 supplies `job_results::pending`, the atomic result files, and the real-binary detach test. `crates/epic-orchestrator/src/job.rs` currently requires argv and a resource binding, so wait dispatch must happen first. Use the binding's resource root when present and `resource_home` when absent; reuse `git::toplevel` and the existing resource lock. Claim only one result. The brainstorm's Jev judgment supports selecting the oldest undelivered record, including a completed one.
 
 ## Workstream summary
 
@@ -19,7 +19,7 @@ Add the one-result wait and real-binary coverage, regenerate CLI documentation, 
     "title": "Wait for and claim one detached result",
     "check": "unset PUSH_REVIEW_BASE DOCS_SYNC_BASE; cargo test -p toolu-cli --test epic_job_detach && cargo test -p toolu-engine --lib -- resources::job_results::tests && cargo xtask check-changed --base origin/main",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4"],
-    "input": "real Git worktrees and real detached sh commands: failing exit 3, empty queue, one-second timeout preserving the id, two results claimed separately, foreign worktree id, a wait after removing the binding, and invalid CLI combination"
+    "input": "real Git worktrees and real detached sh commands: failing exit 3, empty queue, one-second timeout preserving the id, two results claimed separately, foreign worktree id, a wait after removing the binding, a binding root different from the environment, and invalid CLI combination"
   },
   {
     "id": "s2",
@@ -54,3 +54,5 @@ The focused real-binary test proves failure replay, empty and timed-out waits, o
 The first `check-changed` found the required sibling test for new `job_wait.rs` and missing pinned npm tools. Added a real non-Git-directory boundary test and ran `npm ci --ignore-scripts`. The next run found a `panic-in-result-fn` lint in the new integration-test helper; it now returns an error. The following run found an old hand-built `job` match in `query_test.rs` without the new argument; updated it and passed its focused test. The complete `check-changed` then passed. Generated CLI docs and the contract snapshot were synchronized before that complete run so the changed gate could assess the final command surface.
 
 The Codex-host branch verification used `PUSH_REVIEW_BASE=origin/main` to select the true epic base. Its checks inherited the variable, and two unchanged golden-gate tests failed because their temporary Git repositories have no `origin/main`. Both tests and the full gate passed earlier without the override. Each plan check now unsets `PUSH_REVIEW_BASE` and `DOCS_SYNC_BASE` inside its check shell while the ledger process still uses the remote base for diff identity. This isolates test fixtures from the host's review-base override.
+
+Final code review found that a valid worktree binding can point to a different resource root from the environment. Wait now reads that binding root and falls back to the environment only when the binding is absent; a real-binary regression case covers the mismatch. Under concurrent full gates, the focused test's five-second process timing assertion failed despite an empty result. It now checks the returned empty result, while the separate one-second timeout case covers the bounded wait.

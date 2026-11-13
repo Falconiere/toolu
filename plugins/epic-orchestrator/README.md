@@ -349,7 +349,9 @@ failure. It waits up to 5400 seconds by default; `--max-seconds <N>` changes tha
 bound. A timeout exits 1 and names the worktree's pending IDs without claiming
 or cancelling the jobs, so retry the wait for the same ID. Wait mode accepts no
 command and cannot be combined with `--detach` or `--no-wait`. It needs the Git
-worktree and the same resource home, but no resource binding or running engine.
+worktree and the same resource home, but no running engine. With a valid resource
+binding, it uses that binding's root. If the binding is gone, the environment's
+resource home must still point to the stored results.
 
 Resource sampling runs at most once per 30 seconds. Load above 1.5 times effective
 CPUs, less than 10% available memory, or Linux steal above 25% starts a pressure

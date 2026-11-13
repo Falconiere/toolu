@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use toolu_engine::resources::{job_results, store::resource_home};
+use toolu_engine::resources::{binding::resource_binding, job_results, store::resource_home};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::{env::Env, git};
@@ -15,7 +15,11 @@ pub(crate) fn run(env: &Env, cwd: &Path, id: &str, max_seconds: u64) -> Outcome 
   let Some(worktree) = git::toplevel(env, cwd) else {
     return failed("toolu epic job", "no Git worktree found");
   };
-  let root = resource_home(env);
+  let root = match resource_binding(cwd) {
+    Ok(Some(binding)) => binding.root,
+    Ok(None) => resource_home(env),
+    Err(err) => return failed("toolu epic job", &err),
+  };
   let selected = if id.is_empty() {
     match job_results::pending(&root, &worktree) {
       Ok(records) => match records.first() {
