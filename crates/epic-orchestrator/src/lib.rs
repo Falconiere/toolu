@@ -113,6 +113,7 @@ mod model_issue;
 mod note;
 mod notify;
 mod notify_notice;
+mod outbox_flush;
 mod paths;
 #[cfg(test)]
 #[path = "tests/peer_fixture_test.rs"]
@@ -153,7 +154,6 @@ mod scenario_flow;
 #[path = "tests/scenario_rig_test.rs"]
 mod scenario_rig;
 mod schedule;
-mod outbox_flush;
 mod server;
 mod server_snapshot;
 mod service;
