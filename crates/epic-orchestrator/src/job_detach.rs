@@ -94,16 +94,27 @@ pub(crate) fn run_result(
     Err(err) => return Outcome::failed(Exit::Failure, err),
   };
   let mut running = false;
+  let mut running_error = None;
   let (outcome, code) = {
     let mut on_admitted = || {
       if !running {
         running = true;
         "running".clone_into(&mut record.state);
-        let _recorded = job_results::update(&root, &record);
+        running_error = job_results::update(&root, &record).err();
       }
     };
     run_job_observed(argv, cwd, bound, poll, &mut on_admitted)
   };
+  finish_result(&root, record, outcome, code, running_error)
+}
+
+fn finish_result(
+  root: &Path,
+  mut record: job_results::Record,
+  mut outcome: Outcome,
+  code: Option<i32>,
+  running_error: Option<String>,
+) -> Outcome {
   "done".clone_into(&mut record.state);
   record.exit_code = Some(i64::from(code.unwrap_or(1)));
   record.finished_at = Some(iso_millis(SystemTime::now()));
@@ -112,10 +123,21 @@ pub(crate) fn run_result(
   } else {
     outcome.stderr.clone().unwrap_or_default()
   };
-  if let Err(err) = job_results::update(&root, &record) {
+  if let Some(err) = running_error {
+    let note = format!("job result running state not recorded: {err}");
+    if !record.output.is_empty() && !record.output.ends_with('\n') {
+      record.output.push('\n');
+    }
+    record.output.push_str(&note);
+    outcome.stderr = Some(match outcome.stderr {
+      Some(stderr) if !stderr.is_empty() => format!("{stderr}\n{note}"),
+      _ => note,
+    });
+  }
+  if let Err(err) = job_results::update(root, &record) {
     return Outcome::failed(Exit::Failure, format!("job result not recorded: {err}"));
   }
-  job_results::announce(&root, &record.key);
+  job_results::announce(root, &record.key);
   outcome
 }
 

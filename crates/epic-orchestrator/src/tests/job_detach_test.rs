@@ -1,5 +1,6 @@
 //! The detached copy path over a real bound worktree.
 
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use toolu_engine::resources::job_results;
@@ -11,6 +12,22 @@ use crate::job_fixture::{bound, hold};
 
 fn argv(words: &[&str]) -> Vec<String> {
   words.iter().map(|word| (*word).to_owned()).collect()
+}
+
+fn wait_for(path: &Path, message: &str) {
+  let deadline = Instant::now() + Duration::from_secs(2);
+  while !path.exists() {
+    assert!(Instant::now() < deadline, "{message}");
+    std::thread::sleep(Duration::from_millis(20));
+  }
+}
+
+fn block_result(root: &Path, id: &str) -> (PathBuf, PathBuf) {
+  let path = root.join("jobs/results").join(format!("{id}.json"));
+  let original = root.join("original-result.json");
+  std::fs::rename(&path, &original).unwrap();
+  std::fs::create_dir(&path).unwrap();
+  (path, original)
 }
 
 #[test]
@@ -55,38 +72,53 @@ fn the_copy_records_done_with_the_exit_code_and_the_failure_tail() {
 }
 
 #[test]
-fn a_refused_copy_stays_waiting_until_it_acquires_the_lease() {
+fn a_refused_copy_reports_a_failed_running_write_after_admission() {
   let tmp = tempfile::tempdir().expect("temp");
   let (work, root) = bound(tmp.path(), "detached");
   std::fs::write(root.join("policy.json"), r#"{"maxAgents":1,"maxJobs":1}"#).unwrap();
   let token = hold(&root);
   let record = job_results::create(&root, "detached", &work, "true").unwrap();
   let id = record.id.clone();
+  let started = tmp.path().join("started");
+  let command = argv(&[
+    "sh",
+    "-c",
+    "touch \"$1\"; sleep 2",
+    "sh",
+    started.to_str().unwrap(),
+  ]);
   let copy = std::thread::spawn(move || {
     run_result(
       &id,
-      &argv(&["true"]),
+      &command,
       &work,
       Duration::from_secs(5),
       Duration::from_millis(20),
     )
   });
   let marker = root.join("waiting-jobs/detached.json");
-  let deadline = Instant::now() + Duration::from_secs(2);
-  while !marker.exists() {
-    assert!(Instant::now() < deadline, "copy never attempted admission");
-    std::thread::sleep(Duration::from_millis(20));
-  }
+  wait_for(&marker, "copy never attempted admission");
   assert_eq!(
     job_results::get(&root, &record.id).unwrap().unwrap().state,
     "waiting"
   );
+  let (path, original) = block_result(&root, &record.id);
   release_lease(&root, &token).unwrap();
-  assert_eq!(copy.join().unwrap().exit, Exit::Success);
-  assert_eq!(
-    job_results::get(&root, &record.id).unwrap().unwrap().state,
-    "done"
+  wait_for(&started, "copy never started command");
+  std::fs::remove_dir(&path).unwrap();
+  std::fs::rename(original, &path).unwrap();
+  let outcome = copy.join().unwrap();
+  assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
+  assert!(
+    outcome
+      .stderr
+      .unwrap()
+      .contains("running state not recorded")
   );
+  let done = job_results::get(&root, &record.id).unwrap().unwrap();
+  assert_eq!(done.state, "done");
+  assert_eq!(done.exit_code, Some(0));
+  assert!(done.output.contains("running state not recorded"));
 }
 
 #[test]
