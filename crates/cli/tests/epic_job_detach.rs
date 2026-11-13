@@ -196,7 +196,7 @@ fn wait_empty_timeout_and_invalid_command() {
   let work = bound(&home).unwrap();
   let empty = wait(&home, &work, &["epic", "job", "--wait"]).unwrap();
   assert_eq!(empty.status.code(), Some(0), "{}", err(&empty));
-  assert!(String::from_utf8_lossy(&empty.stdout).trim().is_empty());
+  assert_eq!(String::from_utf8_lossy(&empty.stdout).trim(), "");
   let usage = wait(&home, &work, &["epic", "job", "--wait", "--", "true"]).unwrap();
   assert_eq!(usage.status.code(), Some(64), "{}", err(&usage));
   let id = detach(&home, &work, "sleep 3; printf done").unwrap();
