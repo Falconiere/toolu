@@ -133,6 +133,21 @@ fn token_lookup_uses_the_token_field_and_keeps_notify_global() {
     crate::dispatch::spool_seen(&engine, &json!({"op": "report", "token": "today-token"}))
       .expect("today")
   );
+  let future = engine.now + std::time::Duration::from_hours(48);
+  let future_spool = json!({"seq": 100, "name": "spool", "token": "future-token"});
+  std::fs::write(
+    crate::journal::file_for(&journal, future),
+    format!("{future_spool}\n"),
+  )
+  .expect("future row");
+  assert!(
+    crate::dispatch::spool_seen(&engine, &json!({"op": "notify", "token": "future-token"}))
+      .expect("future notify")
+  );
+  assert!(
+    !crate::dispatch::spool_seen(&engine, &json!({"op": "report", "token": "future-token"}))
+      .expect("future report")
+  );
 }
 
 #[test]

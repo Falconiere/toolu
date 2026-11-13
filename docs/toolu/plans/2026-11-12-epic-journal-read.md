@@ -37,7 +37,7 @@ Establish parser and filter behavior with tests, switch the three token lookups,
     "depends_on": ["s1a"],
     "ac_refs": ["AC-2", "AC-3", "AC-4"],
     "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/attention_ops.rs", "crates/epic-orchestrator/src/tests/dispatch_test.rs", "crates/epic-orchestrator/src/tests/dispatch_notify_replay_test.rs", "crates/epic-orchestrator/src/tests/attention_submission_test.rs", "crates/epic-orchestrator/src/tests/attention_ops_test.rs", "crates/epic-orchestrator/src/metrics", "crates/epic-orchestrator/src/cleanup.rs"],
-    "input": "real temporary engine journals spanning older, yesterday, and today dates; token in note versus token field; escaped submission ID and existing metrics, cleanup, dispatch cases"
+    "input": "real temporary engine journals spanning older, yesterday, today, and future dates; token in note versus token field; escaped submission ID and existing metrics, cleanup, dispatch cases"
   },
   {
     "id": "s3",
@@ -73,3 +73,5 @@ The focused journal test proves the wire-format edge cases on real JSONL files; 
 ## Deviations
 
 After s1, `cargo xtask check-changed --base origin/main` failed on an 11-line jscpd duplicate within `crates/ast-grep/src/map/large.rs` that is already present on main. The same run reported missing web tools in this worktree. Installed the pinned tools with `npm ci --ignore-scripts` and added s1a to remove the duplicate through one shared directory-summary calculation, test both outputs, and rerun jscpd before continuing. This is a gate repair; journal behavior and acceptance criteria are unchanged.
+
+Before s2, source inspection showed that `each_with(from_day)` includes future-dated files while the existing `tail` reads exactly yesterday and today. The reviewed spec now names `tail_with` for report and answer, and s2's input includes a future-day row. The issue's unchanged-window requirement is preserved.
