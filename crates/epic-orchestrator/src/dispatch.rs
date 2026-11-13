@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 
 use crate::journal::{self, Record};
 use crate::model::Report;
-use crate::schedule::note_event;
+use crate::schedule::{note_event, prompt_jobs};
 use crate::server::{Engine, Stop};
 use crate::socket_loop::Waiter;
 use crate::status_api::document;
@@ -134,7 +134,9 @@ fn reply_event(
 ) -> Result<bool, String> {
   let key = request.get("key").and_then(Value::as_str).unwrap_or("");
   let event = request.get("event").and_then(Value::as_str).unwrap_or("");
-  note_event(&mut engine.world, key, event);
+  if note_event(&mut engine.world, key, event) {
+    prompt_jobs(engine, key)?;
+  }
   engine.flush()?;
   let _sent = reply.send(json!({"ok": true}));
   pump_after(engine)
@@ -304,6 +306,10 @@ pub(crate) fn spool_seen(engine: &Engine, request: &Value) -> Result<bool, Strin
 #[cfg(test)]
 #[path = "tests/dispatch_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/dispatch_job_test.rs"]
+mod job_tests;
 
 #[cfg(test)]
 #[path = "tests/dispatch_notify_test.rs"]

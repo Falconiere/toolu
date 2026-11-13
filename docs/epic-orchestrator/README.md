@@ -201,6 +201,13 @@ herdr answers one request per socket connection, so each herdr call, the
 session's ping and snapshot included, opens its own connection; only the
 subscription stays open.
 
+A detached job announces `job-done` through the engine socket when its result is
+saved. If the worker agent is idle, the engine claims each finished result and
+queues a `job` prompt with its result line and any failed command output. A job
+that finishes while the agent works stays pending until herdr reports the agent
+idle through a status event or snapshot. Repeated events do not resend a
+claimed result.
+
 The journal stores one JSONL file per UTC day. A single append writes a complete
 record and syncs the daily JSONL file before updating `sequence.index` and
 `sequence.offsets`. Consecutive journal steps the engine drains from the front

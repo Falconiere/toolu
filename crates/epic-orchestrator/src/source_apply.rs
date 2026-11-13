@@ -9,7 +9,7 @@ use crate::journal::Record;
 use crate::limit::on_status;
 use crate::logic::push_attention;
 mod identity;
-use crate::schedule::{map_pane_closed, note_event, note_herdr};
+use crate::schedule::{map_pane_closed, note_event, note_herdr, prompt_jobs};
 use crate::server::Engine;
 use identity::{event_key, event_kind, field, same_agent};
 pub(crate) use identity::{filters, snapshot_body};
@@ -58,14 +58,14 @@ fn apply_snapshot(engine: &mut Engine, body: &Value) -> Result<(), String> {
   let rows = body.get("agents").and_then(Value::as_array);
   let keys: Vec<String> = engine.world.issues.keys().cloned().collect();
   for key in &keys {
-    bind_or_gone(engine, key, rows);
+    bind_or_gone(engine, key, rows)?;
   }
   engine.pump().map(|_| ())
 }
 
-fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
+fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) -> Result<(), String> {
   let Some(issue) = engine.world.issues.get(key) else {
-    return;
+    return Ok(());
   };
   let running = issue.stage == "running";
   let found = rows.and_then(|rows| rows.iter().find(|row| same_agent(issue, row)));
@@ -82,7 +82,10 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
         issue.pane = pane;
       }
     }
-    return;
+    if status == Some("idle") {
+      prompt_jobs(engine, key)?;
+    }
+    return Ok(());
   }
   // An agent herdr does not list cannot be working in the worktree.
   let now = engine.world.now_ms;
@@ -92,6 +95,7 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
   if running {
     note_event(&mut engine.world, key, "gone");
   }
+  Ok(())
 }
 
 fn apply_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), String> {
@@ -150,6 +154,9 @@ fn status_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), Stri
   let now = engine.world.now_ms;
   if let Some(issue) = engine.world.issues.get_mut(&key) {
     issue.set_agent_status(status, now);
+  }
+  if status == "idle" {
+    prompt_jobs(engine, &key)?;
   }
   if status == "working" || (status != "blocked" && scan_done(engine, &key, status)) {
     return on_status(engine, &key, status, "");

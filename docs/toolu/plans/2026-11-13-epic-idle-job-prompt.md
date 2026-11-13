@@ -42,8 +42,12 @@ Add failing engine tests, implement the event and idle delivery paths, document 
 
 ## Critical files
 
-`crates/epic-orchestrator/src/schedule.rs`, `dispatch.rs`, `source_apply.rs`, their sibling tests, and `docs/epic-orchestrator/README.md`.
+`crates/epic-orchestrator/src/schedule.rs`, `dispatch.rs`, `source_apply.rs`, their sibling tests (including `tests/dispatch_job_test.rs`), and `docs/epic-orchestrator/README.md`.
 
 ## Verification
 
 The focused tests use the real result store and engine journal to prove one-time delivery, deferred delivery while working, snapshot delivery, and prompt text. Run `check-changed` after code work, then the full gate before pushing. Fetch and rebase if `origin/main` moves; rerun affected checks. Final delivery needs ledger verification, complete code review, ready verdict, push, and the PR. After `report babysit`, the epic engine owns further review and merge.
+
+## Deviations
+
+The socket-event test moved to its own sibling module to keep `dispatch_test.rs` under the Rust file limit. The first full crate run exposed an ordering assumption in the new two-result test; it was corrected. Two unchanged rebase fault tests also failed in that concurrent run, then all six rebase fault tests passed on both this branch and an isolated `origin/main` checkout under one managed job. The first `check-changed` found duplicated test setup and missing pinned npm tools; the second found three Clippy test syntax issues. After consolidating the setup, running `npm ci --ignore-scripts`, and fixing those assertions and match arms, `check-changed` passed.
