@@ -25,7 +25,7 @@ The existing socket request is `{ "op": "event", "key": "<issue key>", "event": 
 - Duplicate event or repeated idle status: the claim returns no delivered records; queue nothing.
 - Result finishes while the agent works: leave it unclaimed until the agent becomes idle.
 - Two finished results: claim and prompt each once, in the result store's order.
-- A result read or claim error: propagate the error through the engine operation; do not invent a completion prompt.
+- A result read or claim error: a socket `job-done` request reports the error. A Herdr idle update journals `job-prompt-failed` and continues handling the other workers and status effects; do not invent a completion prompt.
 
 ## Acceptance criteria
 

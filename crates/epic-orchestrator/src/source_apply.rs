@@ -58,14 +58,14 @@ fn apply_snapshot(engine: &mut Engine, body: &Value) -> Result<(), String> {
   let rows = body.get("agents").and_then(Value::as_array);
   let keys: Vec<String> = engine.world.issues.keys().cloned().collect();
   for key in &keys {
-    bind_or_gone(engine, key, rows)?;
+    bind_or_gone(engine, key, rows);
   }
   engine.pump().map(|_| ())
 }
 
-fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) -> Result<(), String> {
+fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
   let Some(issue) = engine.world.issues.get(key) else {
-    return Ok(());
+    return;
   };
   let running = issue.stage == "running";
   let found = rows.and_then(|rows| rows.iter().find(|row| same_agent(issue, row)));
@@ -83,9 +83,9 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) -> Re
       }
     }
     if status == Some("idle") {
-      prompt_jobs(engine, key)?;
+      prompt_idle_jobs(engine, key);
     }
-    return Ok(());
+    return;
   }
   // An agent herdr does not list cannot be working in the worktree.
   let now = engine.world.now_ms;
@@ -95,7 +95,6 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) -> Re
   if running {
     note_event(&mut engine.world, key, "gone");
   }
-  Ok(())
 }
 
 fn apply_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), String> {
@@ -156,7 +155,7 @@ fn status_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), Stri
     issue.set_agent_status(status, now);
   }
   if status == "idle" {
-    prompt_jobs(engine, &key)?;
+    prompt_idle_jobs(engine, &key);
   }
   if status == "working" || (status != "blocked" && scan_done(engine, &key, status)) {
     return on_status(engine, &key, status, "");
@@ -254,6 +253,12 @@ fn journal(engine: &mut Engine, name: &str, key: &str, note: &str) {
     .push_back(crate::model::Step::Journal(Record::new(
       "action", name, key, "", note,
     )));
+}
+
+fn prompt_idle_jobs(engine: &mut Engine, key: &str) {
+  if let Err(err) = prompt_jobs(engine, key) {
+    journal(engine, "job-prompt-failed", key, &err);
+  }
 }
 
 #[cfg(test)]
