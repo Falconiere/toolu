@@ -51,7 +51,7 @@ fn append_batch_assigns_consecutive_sequences_and_flushes_once() {
   let root = tempfile::tempdir().unwrap();
   let dir = root.path().join("journal");
   let lock = root.path().join("journal.lock");
-  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_100);
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_710_000_000);
   let sink = Arc::new(AtomicU64::new(0));
   super::super::FLUSH_SINK.with(|slot| *slot.borrow_mut() = Some(Arc::clone(&sink)));
   let _disarm = FlushDisarm;

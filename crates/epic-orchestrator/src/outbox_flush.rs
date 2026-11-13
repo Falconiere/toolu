@@ -20,32 +20,35 @@ pub(crate) fn flush(engine: &mut Engine) -> Result<(), String> {
       batch.push(stamp(&engine.world, record));
     }
     if !batch.is_empty() {
-      let stored = match journal::append_batch(
+      match journal::append_batch(
         &engine.paths.journal_dir(),
         &engine.paths.journal_lock(),
         &batch,
         engine.now,
       ) {
-        Ok(stored) => stored,
+        Ok(stored) => apply_batch_follow_ups(engine, stored)?,
         Err(err) => {
-          // Only the lock wait fails before any line is written. Later write or
-          // cache errors may leave durable lines; re-queueing those would
-          // append duplicates on the next flush.
-          if err == "journal-busy" {
-            for record in batch.into_iter().rev() {
-              engine.world.outbox.push_front(Step::Journal(record));
-            }
-          }
+          restore_on_lock_busy(engine, batch, &err);
           return Err(err);
         }
-      };
-      apply_batch_follow_ups(engine, stored)?;
+      }
       continue;
     }
     let Some(step) = engine.world.outbox.pop_front() else {
       return Ok(());
     };
     let _applied = engine.apply_step(step)?;
+  }
+}
+
+fn restore_on_lock_busy(engine: &mut Engine, batch: Vec<Record>, err: &str) {
+  // Only the lock wait fails before any line is written. Later write or cache
+  // errors may leave durable lines; re-queueing those would append duplicates.
+  if err != "journal-busy" {
+    return;
+  }
+  for record in batch.into_iter().rev() {
+    engine.world.outbox.push_front(Step::Journal(record));
   }
 }
 
@@ -60,21 +63,42 @@ fn apply_batch_follow_ups(engine: &mut Engine, stored: Vec<Record>) -> Result<()
     if !steps.is_empty() {
       journal::batch_event("follow");
     }
-    let mut steps = steps.into_iter();
-    while let Some(step) = steps.next() {
-      if let Err(err) = engine.apply_step(step) {
-        let mut rest: Vec<Step> = steps.collect();
-        for later in rows {
-          rest.extend(commit_journal(&mut engine.world, &later));
-        }
-        for step in rest.into_iter().rev() {
-          engine.world.outbox.push_front(step);
-        }
+    match apply_follow_ups(engine, steps) {
+      Ok(()) => {}
+      Err((err, rest)) => {
+        requeue_remaining(engine, &mut rows, rest);
         return Err(err);
       }
     }
   }
   Ok(())
+}
+
+fn apply_follow_ups(engine: &mut Engine, steps: Vec<Step>) -> Result<(), (String, Vec<Step>)> {
+  let mut pending = steps.into_iter();
+  while let Some(step) = pending.next() {
+    if let Err(err) = engine.apply_step(step) {
+      return Err((err, pending.collect()));
+    }
+  }
+  Ok(())
+}
+
+fn requeue_remaining(
+  engine: &mut Engine,
+  rows: &mut impl Iterator<Item = Record>,
+  mut rest: Vec<Step>,
+) {
+  for later in rows {
+    rest.extend(commit_journal(&mut engine.world, &later));
+  }
+  requeue_steps(engine, rest);
+}
+
+fn requeue_steps(engine: &mut Engine, rest: Vec<Step>) {
+  for step in rest.into_iter().rev() {
+    engine.world.outbox.push_front(step);
+  }
 }
 
 /// Fill `epic` from the issue or epic map when the record left it empty.

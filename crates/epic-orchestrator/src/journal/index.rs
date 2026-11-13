@@ -35,7 +35,7 @@ thread_local! {
 
 thread_local! {
   /// Per-thread batch phase log. Absent unless a test installs one.
-  static BATCH_SINK: RefCell<Option<Arc<std::sync::Mutex<Vec<&'static str>>>>> =
+  pub(crate) static BATCH_SINK: RefCell<Option<Arc<std::sync::Mutex<Vec<&'static str>>>>> =
     const { RefCell::new(None) };
 }
 
@@ -99,20 +99,6 @@ pub(crate) fn batch_event(label: &'static str) {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .push(label);
     }
-  });
-}
-
-/// Install the batch phase sink for a test. Returns the previous sink.
-pub(crate) fn install_batch_sink(
-  sink: Arc<std::sync::Mutex<Vec<&'static str>>>,
-) -> Option<Arc<std::sync::Mutex<Vec<&'static str>>>> {
-  BATCH_SINK.with(|slot| slot.borrow_mut().replace(sink))
-}
-
-/// Clear the batch phase sink.
-pub(crate) fn clear_batch_sink() {
-  BATCH_SINK.with(|slot| {
-    *slot.borrow_mut() = None;
   });
 }
 

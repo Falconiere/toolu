@@ -149,18 +149,6 @@ pub(crate) fn batch_event(label: &'static str) {
   index::batch_event(label);
 }
 
-/// Install the batch phase sink for a test.
-pub(crate) fn install_batch_sink(
-  sink: std::sync::Arc<std::sync::Mutex<Vec<&'static str>>>,
-) -> Option<std::sync::Arc<std::sync::Mutex<Vec<&'static str>>>> {
-  index::install_batch_sink(sink)
-}
-
-/// Clear the batch phase sink.
-pub(crate) fn clear_batch_sink() {
-  index::clear_batch_sink();
-}
-
 /// Complete records from today's file and the previous day's file, in order.
 ///
 /// # Errors
