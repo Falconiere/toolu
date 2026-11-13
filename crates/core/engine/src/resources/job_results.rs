@@ -213,6 +213,30 @@ pub fn claim_finished(root: &Path, worktree: &Path) -> Result<Vec<Record>, Strin
   })
 }
 
+/// Claim one finished result of `worktree`, leaving every other result pending.
+///
+/// # Errors
+/// The result cannot be read or written, or it belongs to another worktree.
+pub fn claim_one(root: &Path, worktree: &Path, id: &str) -> Result<Option<Record>, String> {
+  with_resource_lock(root, || {
+    let Some(mut record) = get(root, id)? else {
+      return Ok(None);
+    };
+    if record.worktree != worktree.display().to_string() {
+      return Err(format!("job result {id} belongs to another worktree"));
+    }
+    if record.state != "done" || record.delivered_at.is_some() {
+      return Ok(None);
+    }
+    if record.exit_code.is_none() {
+      return Err(format!("job result {id} has no exit code"));
+    }
+    record.delivered_at = Some(iso_millis(SystemTime::now()));
+    update(root, &record)?;
+    Ok(Some(record))
+  })
+}
+
 /// The line an agent is told about a finished record.
 #[must_use]
 pub fn line(record: &Record) -> String {

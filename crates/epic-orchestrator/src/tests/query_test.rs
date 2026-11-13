@@ -90,8 +90,10 @@ fn report_and_job_fail_closed() {
   assert!(report(&bad, &env).stderr.expect("err").contains("status"));
   let outcome = crate::job::run(
     &Command::new("job")
+      .arg(Arg::new("wait").long("wait").num_args(0..=1))
       .arg(Arg::new("argv").num_args(0..))
       .get_matches_from(["job"]),
+    &env,
   );
   assert_eq!(outcome.exit, Exit::Failure);
   assert!(

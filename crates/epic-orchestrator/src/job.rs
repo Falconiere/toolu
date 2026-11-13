@@ -12,6 +12,7 @@ use toolu_engine::resources::jobs::{
 };
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
+use toolu_runtime::env::Env;
 use toolu_runtime::invocation::current_dir;
 use toolu_runtime::process::Spec;
 
@@ -28,11 +29,22 @@ const OK_TAIL: usize = 40;
 const TAIL_BYTES: usize = 64 * 1024;
 
 /// Run one managed expensive job from its CLI arguments.
-pub(crate) fn run(matches: &ArgMatches) -> Outcome {
+pub(crate) fn run(matches: &ArgMatches, env: &Env) -> Outcome {
   let cwd = match current_dir() {
     Ok(cwd) => cwd,
     Err(err) => return failed("toolu epic job", &err.to_string()),
   };
+  if let Some(id) = matches.get_one::<String>("wait") {
+    return crate::job_wait::run(
+      env,
+      &cwd,
+      id,
+      matches
+        .get_one::<u64>("max-seconds")
+        .copied()
+        .unwrap_or(5400),
+    );
+  }
   let argv: Vec<String> = matches
     .get_many::<String>("argv")
     .map(|values| values.cloned().collect())
