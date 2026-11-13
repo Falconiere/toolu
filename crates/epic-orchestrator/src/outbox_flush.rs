@@ -28,8 +28,13 @@ pub(crate) fn flush(engine: &mut Engine) -> Result<(), String> {
       ) {
         Ok(stored) => stored,
         Err(err) => {
-          for record in batch.into_iter().rev() {
-            engine.world.outbox.push_front(Step::Journal(record));
+          // Only the lock wait fails before any line is written. Later write or
+          // cache errors may leave durable lines; re-queueing those would
+          // append duplicates on the next flush.
+          if err == "journal-busy" {
+            for record in batch.into_iter().rev() {
+              engine.world.outbox.push_front(Step::Journal(record));
+            }
           }
           return Err(err);
         }
