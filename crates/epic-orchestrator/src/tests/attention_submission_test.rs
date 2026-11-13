@@ -49,6 +49,25 @@ fn a_submission_id_admits_before_prompting_and_dedupes_the_same_payload() {
 }
 
 #[test]
+fn an_escaped_submission_id_dedupes_without_matching_another_rows_note() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = engine(tmp.path(), "sent");
+  report(&mut engine, "needs-human");
+  let id = "quote\" and newline\n";
+  crate::journal::append(
+    &engine.paths.journal_dir(),
+    &engine.paths.journal_lock(),
+    &crate::journal::Record::new("action", "other", "a", "different", id),
+    engine.now,
+  )
+  .expect("note row");
+  let request = submitted("take B", id);
+  assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
+  assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
+  assert_eq!(prompts(tmp.path()).len(), 1);
+}
+
+#[test]
 fn a_fingerprint_is_the_sha256_of_key_nul_text() {
   // `printf 'a\0take B' | shasum -a 256`
   assert_eq!(
