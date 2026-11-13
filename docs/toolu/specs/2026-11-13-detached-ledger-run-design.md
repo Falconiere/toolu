@@ -90,7 +90,7 @@ stale; check commands retain their original environment.
 
 Run `cargo xtask docs-cli` and update its generated `docs/cli/ledger.md`,
 `docs/cli/commands.json`, and CLI contract snapshot. Explain detached result
-location and stale behavior in the ledger user documentation.
+location and stale behavior in `plugins/toolu/README.md`.
 
 ## Open Questions
 

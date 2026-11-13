@@ -29,6 +29,7 @@ codex plugin add toolu@toolu
 - **Commit workflows** — Claude `/commit` and `/review-and-commit`, with Codex equivalents `$toolu:commit` and `$toolu:review-and-commit`, all reading shared workflow bodies.
 - **Model routing** — Claude keeps its Haiku/Sonnet/Opus aliases. Codex defaults to Luna/medium, Terra/medium or high, and Sol/high by work class. Both are configurable under `models`.
 - **Commands** — `/toolu:doctor` runs `toolu doctor` and presents the report. `/toolu:status` runs `toolu status` and presents the repository, gate and push-review state.
+- **Plan-ledger checks** — `toolu ledger run <DOC> --detach` returns a job id while the checks continue. The result is saved at `<resource root>/jobs/results/<id>.json` (`~/.local/state/toolu/resources` by default, or the worktree's bound resource root). A changed working tree marks the result `stale: true` and leaves the prior ledger untouched; read the finished result through the epic's job notification in a bound worktree.
 - **Tier-pinned agents** — Claude reads bundled definitions. The setup skill runs `toolu setup agents` to preview, install, update or remove the six Codex profiles, then `toolu doctor` and `toolu config validate`.
 
 ## Muse

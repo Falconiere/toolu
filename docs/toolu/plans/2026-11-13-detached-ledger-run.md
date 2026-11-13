@@ -60,6 +60,7 @@ checkouts, regenerate CLI docs, then run changed checks and the full gate.
 - `crates/cli/tests/ledger_cli.rs` and its existing real Git helper.
 - `docs/cli/ledger.md`, `docs/cli/commands.json`, and
   `crates/cli/tests/fixtures/commands_json.snap` from `cargo xtask docs-cli`.
+- `plugins/toolu/README.md` for result location and stale behavior.
 
 ## Verification
 
@@ -80,3 +81,5 @@ during final verification.
 The first real passing test produced `stale: true` because toolu appended
 telemetry inside a checkout with no `.gitignore`. `s1` now routes only detached
 telemetry to the result resource root; the test exercises this boundary.
+The changed-crate gate found a duplicate failure helper, so `s1` also moves
+that helper into `job_results` for the epic and ledger callers.

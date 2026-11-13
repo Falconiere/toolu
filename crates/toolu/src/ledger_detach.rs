@@ -30,15 +30,7 @@ fn location(opts: &LedgerOptions) -> Result<(PathBuf, String, PathBuf), Outcome>
 }
 
 fn fail_early(root: &Path, record: &mut job_results::Record, message: String) -> Outcome {
-  "done".clone_into(&mut record.state);
-  record.exit_code = Some(1);
-  record.finished_at = Some(iso_millis(SystemTime::now()));
-  record.output.clone_from(&message);
-  let message = match job_results::update(root, record) {
-    Ok(()) => message,
-    Err(err) => format!("{message}; job result {} not recorded: {err}", record.id),
-  };
-  Outcome::failed(Exit::Failure, message)
+  Outcome::failed(Exit::Failure, job_results::fail(root, record, message))
 }
 
 fn relaunch(exe: &Path, id: &str, doc: &str, flags: &RunFlags, ctx: &Ctx) -> Vec<String> {
