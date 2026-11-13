@@ -18,8 +18,8 @@ Shared claim and post-tool delivery, then prompt delivery and user docs, followe
     "id": "post-tool",
     "title": "Claim and report finished jobs after edit or shell calls",
     "ac_refs": ["AC-1", "AC-2", "AC-4"],
-    "paths": ["crates/core/engine/src/resources/job_results.rs", "crates/core/engine/src/gates/job_results.rs", "crates/core/engine/src/gates.rs", "crates/core/engine/src/builtins.rs", "crates/cli/tests/tool_hooks.rs"],
-    "input": "Real temporary Git worktree bindings and finished result JSON, including a failing result and another worktree",
+    "paths": ["crates/core/engine/src/resources/job_results.rs", "crates/core/engine/src/gates/job_results.rs", "crates/core/engine/src/gates.rs", "crates/core/engine/src/builtins.rs", "crates/core/engine/src/dispatch/fold.rs", "crates/core/engine/src/dispatch/output.rs", "crates/cli/tests/tool_hooks.rs", "crates/cli/tests/helpers/tool_hooks_jobs.rs"],
+    "input": "Real temporary Git worktree bindings and finished result JSON, including a failing result, another worktree, a later blocking post-tool module, and a later exit-2 module",
     "check": "cargo test -p toolu-cli --test tool_hooks"
   },
   {
@@ -36,7 +36,7 @@ Shared claim and post-tool delivery, then prompt delivery and user docs, followe
     "title": "Document the once-only detached job notification",
     "ac_refs": ["AC-1", "AC-3"],
     "depends_on": ["prompt"],
-    "paths": ["docs/cli/epic.md"],
+    "paths": ["docs/epic-orchestrator/README.md"],
     "input": "The documented toolu epic job --detach usage and hook behavior",
     "check": "cargo xtask check-markdown-cli"
   },
@@ -53,8 +53,13 @@ Shared claim and post-tool delivery, then prompt delivery and user docs, followe
 
 ## Critical files
 
-`crates/core/engine/src/resources/job_results.rs`, `crates/core/engine/src/gates/job_results.rs`, `crates/core/engine/src/gates.rs`, `crates/core/engine/src/builtins.rs`, `crates/cli/tests/tool_hooks.rs`, `crates/toolu/src/lifecycle/prompt_submit.rs`, `crates/toolu/src/lifecycle/tests/prompt_submit_test.rs`, and `docs/cli/epic.md`.
+`crates/core/engine/src/resources/job_results.rs`, `crates/core/engine/src/gates/job_results.rs`, `crates/core/engine/src/gates.rs`, `crates/core/engine/src/builtins.rs`, `crates/core/engine/src/dispatch/{fold,output}.rs`, `crates/cli/tests/{tool_hooks.rs,helpers/tool_hooks_jobs.rs}`, `crates/toolu/src/lifecycle/prompt_submit.rs`, `crates/toolu/src/lifecycle/tests/prompt_submit_test.rs`, and `docs/epic-orchestrator/README.md`.
 
 ## Verification
 
-The post-tool test must assert the exact one-time host advisory line, an empty second call, and an unclaimed other-worktree record. The prompt test must assert the failed result's line followed by its stored output in `additionalContext`, an empty repeat, and no claim on trivial or blocked prompts. Run `cargo xtask check-changed --base origin/main` after each code step. After scoped commits, run `toolu ledger run <plan> --verify`, review the committed diff, require a ready ledger verdict, push the branch, and open the issue PR. The worker brief substitutes its `report babysit` handoff for the skill's babysit invocation.
+The post-tool test must assert the exact one-time host advisory line, an empty second call, an unclaimed other-worktree record, a later block whose visible reason includes the claimed notice, and a later exit-2 whose stderr includes it. The prompt test must assert the failed result's line followed by its stored output in `additionalContext`, an empty repeat, and no claim on trivial or blocked prompts. Run `cargo xtask check-changed --base origin/main` after each code step. After scoped commits, run `toolu ledger run <plan> --verify`, review the committed diff, require a ready ledger verdict, push the branch, and open the issue PR. The worker brief substitutes its `report babysit` handoff for the skill's babysit invocation.
+
+## Deviations
+
+- Before execution, moved the prose step from generated `docs/cli/epic.md` to maintained `docs/epic-orchestrator/README.md`; the generated reference is unchanged because no CLI flag changes.
+- During the first behavior step, added the post-block visibility case after finding that a later block otherwise discards a claimed advisory.

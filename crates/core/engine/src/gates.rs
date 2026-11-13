@@ -43,6 +43,8 @@ pub(crate) mod docs_sync;
 pub(crate) mod gate_paths;
 /// `gate-status.sh`: the quality gate's command channel.
 pub(crate) mod gate_status;
+/// Finished detached jobs reported after shell and edit tools.
+pub(crate) mod job_results;
 /// The mcp-blocker PreToolUse built-in.
 pub(crate) mod mcp_blocker;
 /// Bash-style path matching for the settings-driven pre-tool gates.

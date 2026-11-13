@@ -215,6 +215,22 @@ pub(crate) fn final_ask(ask: &str, advisories: &Advisories) -> String {
   out.map_or_else(|| printed(ask), |out| jq_print(&out))
 }
 
+/// A post-tool block with prior context in its visible reason.
+pub(crate) fn final_block(block: &str, advisories: &Advisories) -> String {
+  if advisories.contexts.is_empty() {
+    return printed(block);
+  }
+  let Some(mut doc @ Ordered::Object(_)) = parse_document(block).ok() else {
+    return printed(block);
+  };
+  let Some(Ordered::String(reason)) = doc.get("reason") else {
+    return printed(block);
+  };
+  let reason = format!("{reason}\n\n{}", advisories.contexts.join("\n\n"));
+  doc.set("reason", Ordered::String(reason));
+  jq_print(&doc)
+}
+
 /// The merged advisory object for `event_name`, or "" when there is nothing to say.
 pub(crate) fn final_advisory(advisories: &Advisories, event_name: &str) -> String {
   let ctx = advisories.contexts.join("\n\n");

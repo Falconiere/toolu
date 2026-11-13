@@ -21,11 +21,11 @@ Add a PostToolUse built-in gate for shell and edit events and a prompt hint. Bot
 
 ## Failure modes and edge cases
 
-The binding and claim match the current Git worktree, so another worktree's result stays pending. Concurrent hooks can claim a result only once under the resource lock. Waiting and running records stay pending. An unrelated tool event does not claim a result. A claim error leaves the result available for a later attempt; the post-tool dispatcher reports its normal gate warning, while the prompt keeps its existing hint behavior. Empty, trivial, and blocked prompts do not claim a result because they cannot deliver a normal hint.
+The binding and claim match the current Git worktree, so another worktree's result stays pending. Concurrent hooks can claim a result only once under the resource lock. Waiting and running records stay pending. An unrelated tool event does not claim a result. A later post-tool block carries previously collected context in its visible reason; a later exit-2 module prints it to stderr. Neither hides a claimed notice. A claim error leaves the result available for a later attempt; the post-tool dispatcher reports its normal gate warning, while the prompt keeps its existing hint behavior. Empty, trivial, and blocked prompts do not claim a result because they cannot deliver a normal hint.
 
 ## Acceptance criteria
 
-- **AC-1:** Given one finished result for the current worktree, the next post-tool shell or edit call emits its line once and a second call emits nothing.
+- **AC-1:** Given one finished result for the current worktree, the next post-tool shell or edit call emits its line once and a second call emits nothing, even if a later post-tool rule blocks.
 - **AC-2:** Given a result bound to another worktree, a post-tool call emits nothing and leaves that result unclaimed.
 - **AC-3:** Given a finished result and a normal prompt, `additionalContext` contains the result line and a later hook does not repeat it.
 - **AC-4:** Given a failed finished result, the notice includes its recorded output after the line.
@@ -39,7 +39,7 @@ The binding and claim match the current Git worktree, so another worktree's resu
 
 ## Documentation impact
 
-Update `docs/cli/epic.md` to explain that the next tool call or prompt delivers a finished detached job once.
+Update `docs/epic-orchestrator/README.md` to explain that the next tool call or prompt delivers a finished detached job once. The CLI reference is generated and its commands do not change.
 
 ## Open Questions
 
