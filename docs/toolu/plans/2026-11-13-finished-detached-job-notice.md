@@ -66,3 +66,4 @@ The post-tool test must assert the exact one-time host advisory line, an empty s
 - The changed-path gate required registering the new built-in in the coverage inventory and matrix. It also found duplicate test setup and Clippy findings in the new test helper, corrected before rerun.
 - The changed-path workspace run found the existing `POST_TOOL` order assertion needed the new built-in trace row.
 - The later workspace run found `xtask`'s discovery order assertion also needed the new built-in row.
+- The hook benchmark needed a release binary first. Separated prompt CPU readings were 15.5 ms for `origin/main` and 17.8 ms for this branch against a 16 ms budget. A candidate fast path did not improve the measurement and was removed. A paired run under heavier host load read 27.0 ms for `origin/main` and 26.2 ms for this branch, so the host load dominates this benchmark evidence.
