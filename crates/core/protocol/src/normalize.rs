@@ -77,6 +77,7 @@ impl View<'_> {
         output: self.tool_output.cloned(),
         tool: self.tool(&unknown),
       },
+      HostEvent::Stop => return None,
     })
   }
 

@@ -1,10 +1,14 @@
 use super::{ENFORCING_EVENTS, is_enforcing};
 
 #[test]
-fn pre_tool_use_and_permission_request_enforce() {
-  assert_eq!(ENFORCING_EVENTS, ["PreToolUse", "PermissionRequest"]);
+fn pre_tool_use_permission_request_and_stop_enforce() {
+  assert_eq!(
+    ENFORCING_EVENTS,
+    ["PreToolUse", "PermissionRequest", "Stop"]
+  );
   assert!(is_enforcing("PreToolUse"));
   assert!(is_enforcing("PermissionRequest"));
+  assert!(is_enforcing("Stop"));
 }
 
 #[test]
@@ -36,6 +40,7 @@ fn host_events_keep_the_typescript_order_and_slugs() {
       "tool/pre",
       "shell/pre",
       "tool/post",
+      "stop",
     ]
   );
   for event in HostEvent::ALL {

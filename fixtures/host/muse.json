@@ -1877,6 +1877,163 @@
         "should_block": true,
         "block_reason": "x"
       }
+    },
+    {
+      "name": "stop: allow",
+      "event": "stop",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "stop: ask",
+      "event": "stop",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "stop: deny",
+      "event": "stop",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "no .env writes"
+      }
+    },
+    {
+      "name": "stop: advisory",
+      "event": "stop",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "stop: post_block",
+      "event": "stop",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "lint failed"
+      }
+    },
+    {
+      "name": "stop: runtime_failure",
+      "event": "stop",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "gate crashed"
+      }
+    },
+    {
+      "name": "stop: ask from a guardrail gate",
+      "event": "stop",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "confirm .env write"
+      }
+    },
+    {
+      "name": "stop: ask from a judgement gate",
+      "event": "stop",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
     }
   ]
 }

@@ -4,7 +4,7 @@
 //! Claude-shaped payload, so `OpenCode` uses Claude's names; its own hook names
 //! are mapped in `crate::opencode::event`.
 //! `None` marks an event the host does not have.
-//! Muse's `Notification`, `Stop`, `SubagentStop` and `PostToolUseFailure` have
+//! Muse's `Notification`, `SubagentStop` and `PostToolUseFailure` have
 //! no corresponding [`HostEvent`] and do not reverse-map.
 
 use crate::event::HostEvent;
@@ -21,7 +21,9 @@ const CURSOR_ALIASES: [(&str, HostEvent); 4] = [
 /// `host`'s name for `event`, or `None` when the host has no such event.
 pub fn native_event(host: Host, event: HostEvent) -> Option<&'static str> {
   match host {
-    Host::Claude | Host::Codex | Host::Muse | Host::Opencode => Some(pascal(event)),
+    Host::Claude | Host::Muse => Some(pascal(event)),
+    Host::Codex | Host::Opencode if event == HostEvent::Stop => None,
+    Host::Codex | Host::Opencode => Some(pascal(event)),
     Host::Cursor => cursor(event),
     Host::Hermes => hermes(event),
   }
@@ -59,6 +61,7 @@ fn pascal(event: HostEvent) -> &'static str {
     HostEvent::PermissionEvaluate => "PermissionRequest",
     HostEvent::ToolPre | HostEvent::ShellPre => "PreToolUse",
     HostEvent::ToolPost => "PostToolUse",
+    HostEvent::Stop => "Stop",
   }
 }
 
@@ -72,6 +75,7 @@ fn cursor(event: HostEvent) -> Option<&'static str> {
     HostEvent::ToolPre => Some("preToolUse"),
     HostEvent::ShellPre => Some("beforeShellExecution"),
     HostEvent::ToolPost => Some("postToolUse"),
+    HostEvent::Stop => None,
   }
 }
 
@@ -83,6 +87,7 @@ fn hermes(event: HostEvent) -> Option<&'static str> {
     HostEvent::PreCompact | HostEvent::PermissionEvaluate => None,
     HostEvent::ToolPre | HostEvent::ShellPre => Some("pre_tool_call"),
     HostEvent::ToolPost => Some("post_tool_call"),
+    HostEvent::Stop => None,
   }
 }
 

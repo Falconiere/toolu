@@ -185,7 +185,9 @@ where
 
 fn class(event: HostEvent) -> Class {
   match event {
-    HostEvent::ToolPre | HostEvent::ShellPre | HostEvent::PermissionEvaluate => Class::Enforcing,
+    HostEvent::ToolPre | HostEvent::ShellPre | HostEvent::PermissionEvaluate | HostEvent::Stop => {
+      Class::Enforcing
+    }
     HostEvent::ToolPost | HostEvent::SessionUnload => Class::Post,
     HostEvent::SessionStart | HostEvent::Prompt | HostEvent::PreCompact => Class::Context,
   }

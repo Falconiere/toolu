@@ -107,7 +107,7 @@ fn schema_name(event: HostEvent) -> Option<&'static str> {
     HostEvent::SessionStart => "session-start",
     HostEvent::Prompt => "user-prompt-submit",
     HostEvent::PermissionEvaluate => "permission-request",
-    HostEvent::PreCompact | HostEvent::SessionUnload => return None,
+    HostEvent::PreCompact | HostEvent::SessionUnload | HostEvent::Stop => return None,
   };
   Some(name)
 }

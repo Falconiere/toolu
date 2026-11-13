@@ -97,13 +97,13 @@ fn only_muse_events_toolu_handles_are_accepted() {
     "SessionEnd",
     "UserPromptSubmit",
     "PreCompact",
+    "Stop",
   ] {
     assert!(is_event(event), "{event}");
     assert!(hook(&target("toolu", event, "x"), DEFAULT_TIMEOUT_MS).is_ok());
   }
   for event in [
     "Notification",
-    "Stop",
     "SubagentStop",
     "PostToolUseFailure",
     "preToolUse",
