@@ -113,6 +113,7 @@ mod model_issue;
 mod note;
 mod notify;
 mod notify_notice;
+mod outbox_flush;
 mod paths;
 #[cfg(test)]
 #[path = "tests/peer_fixture_test.rs"]

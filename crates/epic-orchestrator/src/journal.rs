@@ -1,7 +1,9 @@
 //! Append-only JSON lines under `<root>/journal/`, one file a day, with a
 //! sequence number. A line without a trailing newline is ignored.
 //! `sequence.index` and `sequence.offsets` are a rebuildable cache of the last
-//! sequence and each complete line's offset. Only the JSONL line is synced.
+//! sequence and each complete line's offset. A single append syncs the JSONL
+//! line once; a consecutive engine batch syncs once after every line of the
+//! batch.
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -95,12 +97,56 @@ pub(crate) fn append_within(
   now: SystemTime,
   wait: Duration,
 ) -> Result<Record, String> {
+  let mut stored = append_batch_within(dir, lock, std::slice::from_ref(record), now, wait)?;
+  stored
+    .pop()
+    .ok_or_else(|| "missing journal record".to_owned())
+}
+
+/// Append every record under one lock hold and one JSONL sync.
+///
+/// # Errors
+/// The lock is busy past [`LOCK_WAIT`] or the file cannot be written.
+pub(crate) fn append_batch(
+  dir: &Path,
+  lock: &Path,
+  records: &[Record],
+  now: SystemTime,
+) -> Result<Vec<Record>, String> {
+  append_batch_within(dir, lock, records, now, LOCK_WAIT)
+}
+
+/// [`append_batch`] retrying a live holder for `wait` instead.
+///
+/// # Errors
+/// The lock is busy past `wait` or the file cannot be written.
+pub(crate) fn append_batch_within(
+  dir: &Path,
+  lock: &Path,
+  records: &[Record],
+  now: SystemTime,
+  wait: Duration,
+) -> Result<Vec<Record>, String> {
+  if records.is_empty() {
+    return Ok(Vec::new());
+  }
   let _held = journal_held(lock, wait)?;
   std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
-  let mut stored = record.clone();
-  stored.note = bounded_note(&stored.note);
-  index::append_locked(dir, &mut stored, now)?;
+  let mut stored: Vec<Record> = records
+    .iter()
+    .map(|record| {
+      let mut row = record.clone();
+      row.note = bounded_note(&row.note);
+      row
+    })
+    .collect();
+  index::append_batch_locked(dir, &mut stored, now)?;
   Ok(stored)
+}
+
+/// Record a batch phase label when a test sink is installed.
+pub(crate) fn batch_event(label: &'static str) {
+  index::batch_event(label);
 }
 
 /// Complete records from today's file and the previous day's file, in order.

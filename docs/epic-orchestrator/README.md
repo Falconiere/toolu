@@ -200,10 +200,12 @@ herdr answers one request per socket connection, so each herdr call, the
 session's ping and snapshot included, opens its own connection; only the
 subscription stays open.
 
-The journal stores one JSONL file per UTC day. Each append writes a complete
+The journal stores one JSONL file per UTC day. A single append writes a complete
 record and syncs the daily JSONL file before updating `sequence.index` and
-`sequence.offsets`.
-Those files are rebuildable caches; neither their writes nor the containing
+`sequence.offsets`. Consecutive journal steps the engine drains from the front
+of its outbox share one lock hold and one JSONL sync for the whole batch, then
+run each row's follow-ups in order so every line is durable before any effect.
+Those index files are rebuildable caches; neither their writes nor the containing
 directory are synced. Missing, stale or corrupt caches rebuild from complete
 JSONL records on the next append or paged read. An incomplete trailing line is
 ignored. If a day file is truncated, recovery resumes sequence allocation from

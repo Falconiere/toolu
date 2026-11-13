@@ -41,8 +41,9 @@ pub(crate) enum Stop {
   Fault,
 }
 
+/// Outcome of applying one outbox step.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Applied {
+pub(crate) enum Applied {
   Continue,
   Fault,
 }
@@ -153,13 +154,13 @@ impl Engine {
 
   /// Journal steps sitting in the outbox.
   ///
+  /// Consecutive journal steps at the front share one lock and one JSONL sync
+  /// before any of their follow-ups run.
+  ///
   /// # Errors
   /// A step cannot be written.
   pub(crate) fn flush(&mut self) -> Result<(), String> {
-    while let Some(step) = self.world.outbox.pop_front() {
-      let _applied = self.apply(step)?;
-    }
-    Ok(())
+    crate::outbox_flush::flush(self)
   }
 
   /// Persist pause for every epic, or one epic.
@@ -229,6 +230,11 @@ impl Engine {
     )
   }
 
+  /// Apply one outbox step (journal follow-ups and non-journal drains).
+  pub(crate) fn apply_step(&mut self, step: Step) -> Result<Applied, String> {
+    self.apply(step)
+  }
+
   fn apply(&mut self, step: Step) -> Result<Applied, String> {
     match step {
       Step::Journal(record) => self.apply_journal(record),
@@ -261,7 +267,7 @@ impl Engine {
   }
 
   fn apply_journal(&mut self, record: Record) -> Result<Applied, String> {
-    let record = stamp(&self.world, record);
+    let record = crate::outbox_flush::stamp(&self.world, record);
     let stored = journal::append(
       &self.paths.journal_dir(),
       &self.paths.journal_lock(),
@@ -360,24 +366,6 @@ fn recovered(world: &World, key: &str) -> bool {
     .get(key)
     .and_then(|issue| issue.pending.as_ref())
     .is_some_and(|pending| pending.recovered)
-}
-
-fn stamp(world: &World, mut record: Record) -> Record {
-  if record.epic.is_empty() {
-    let issue = crate::watch::issue_of(world, &record.key).unwrap_or(&record.key);
-    record.epic = world
-      .issues
-      .get(issue)
-      .map(|issue| issue.epic.clone())
-      .or_else(|| {
-        world
-          .epics
-          .contains_key(&record.key)
-          .then(|| record.key.clone())
-      })
-      .unwrap_or_default();
-  }
-  record
 }
 
 #[cfg(test)]

@@ -1,3 +1,6 @@
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+
 #[test]
 fn the_synced_record_is_a_single_terminated_line() {
   let root = tempfile::tempdir().unwrap();
@@ -13,16 +16,8 @@ fn the_synced_record_is_a_single_terminated_line() {
 
 #[test]
 fn each_append_flushes_only_its_jsonl_line() {
-  use std::sync::Arc;
-  use std::sync::atomic::{AtomicU64, Ordering};
-
   let root = tempfile::tempdir().unwrap();
-  let dir = root.path().join("journal");
-  let lock = root.path().join("journal.lock");
-  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
-  let sink = Arc::new(AtomicU64::new(0));
-  super::super::FLUSH_SINK.with(|slot| *slot.borrow_mut() = Some(Arc::clone(&sink)));
-  let _disarm = FlushDisarm;
+  let (dir, lock, at, sink, _disarm) = flush_counter_rig(root.path(), "per-row");
   for _ in 0..2 {
     crate::journal::append(
       &dir,
@@ -33,6 +28,41 @@ fn each_append_flushes_only_its_jsonl_line() {
     .unwrap();
     assert_eq!(sink.swap(0, Ordering::Relaxed), 1);
   }
+}
+
+#[test]
+fn append_batch_assigns_consecutive_sequences_and_flushes_once() {
+  let root = tempfile::tempdir().unwrap();
+  let (dir, lock, at, sink, _disarm) = flush_counter_rig(root.path(), "batch");
+  let rows = [
+    crate::journal::Record::new("action", "batch-a", "k", "t", "n"),
+    crate::journal::Record::new("action", "batch-b", "k", "t", "n"),
+    crate::journal::Record::new("action", "batch-c", "k", "t", "n"),
+  ];
+  let stored = crate::journal::append_batch(&dir, &lock, &rows, at).unwrap();
+  assert_eq!(
+    stored.iter().map(|row| row.seq).collect::<Vec<_>>(),
+    vec![1, 2, 3]
+  );
+  assert_eq!(sink.load(Ordering::Relaxed), 1);
+}
+
+fn flush_counter_rig(
+  root: &std::path::Path,
+  label: &str,
+) -> (
+  std::path::PathBuf,
+  std::path::PathBuf,
+  std::time::SystemTime,
+  Arc<AtomicU64>,
+  FlushDisarm,
+) {
+  let dir = root.join(label);
+  let lock = root.join(format!("{label}.lock"));
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+  let sink = Arc::new(AtomicU64::new(0));
+  super::super::FLUSH_SINK.with(|slot| *slot.borrow_mut() = Some(Arc::clone(&sink)));
+  (dir, lock, at, sink, FlushDisarm)
 }
 
 struct FlushDisarm;
