@@ -20,12 +20,20 @@ pub(crate) fn flush(engine: &mut Engine) -> Result<(), String> {
       batch.push(stamp(&engine.world, record));
     }
     if !batch.is_empty() {
-      let stored = journal::append_batch(
+      let stored = match journal::append_batch(
         &engine.paths.journal_dir(),
         &engine.paths.journal_lock(),
         &batch,
         engine.now,
-      )?;
+      ) {
+        Ok(stored) => stored,
+        Err(err) => {
+          for record in batch.into_iter().rev() {
+            engine.world.outbox.push_front(Step::Journal(record));
+          }
+          return Err(err);
+        }
+      };
       for record in stored {
         let steps = commit_journal(&mut engine.world, &record);
         if !steps.is_empty() {

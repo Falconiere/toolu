@@ -106,6 +106,31 @@ fn three_queued_journal_steps_share_one_flush() {
 }
 
 #[test]
+fn a_failed_journal_batch_puts_the_drained_rows_back() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = Engine::open(Paths::at(tmp.path()), None, Fault::None).expect("open");
+  for name in ["one", "two"] {
+    engine.world.outbox.push_back(crate::model::Step::Journal(
+      crate::journal::Record::new("action", name, "k", "t", "n"),
+    ));
+  }
+  std::fs::create_dir_all(engine.paths.journal_lock()).expect("block lock");
+  assert!(engine.flush().is_err());
+  assert_eq!(engine.world.outbox.len(), 2);
+  let names: Vec<&str> = engine
+    .world
+    .outbox
+    .iter()
+    .filter_map(|step| match step {
+      crate::model::Step::Journal(row) => Some(row.name.as_str()),
+      _ => None,
+    })
+    .collect();
+  assert_eq!(names, ["one", "two"]);
+  std::fs::remove_dir(engine.paths.journal_lock()).expect("restore lock");
+}
+
+#[test]
 fn journal_batch_follow_ups_run_after_the_shared_flush() {
   use std::sync::{Arc, Mutex};
 
