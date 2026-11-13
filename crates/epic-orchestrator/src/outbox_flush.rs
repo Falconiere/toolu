@@ -119,3 +119,7 @@ pub(crate) fn stamp(world: &World, mut record: Record) -> Record {
   }
   record
 }
+
+#[cfg(test)]
+#[path = "tests/outbox_flush_test.rs"]
+mod tests;
