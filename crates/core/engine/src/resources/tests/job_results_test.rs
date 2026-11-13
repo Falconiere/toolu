@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use super::{announce, claim_finished, create, get, line, pending, update};
+use super::{announce, claim_finished, claim_one, create, get, line, pending, update};
 
 fn finish(root: &Path, id: &str, code: i64) -> super::Record {
   let mut record = get(root, id).unwrap().unwrap();
@@ -86,4 +86,21 @@ fn a_stale_done_record_lines_and_announce_without_an_engine_is_ignored() {
   );
   announce(&root, "k");
   assert_eq!(get(&root, &record.id).unwrap().unwrap().state, "done");
+}
+
+#[test]
+fn claim_one_preserves_other_results_and_rejects_a_foreign_worktree() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("resources");
+  let tree = dir.path().join("tree");
+  let other = dir.path().join("other");
+  let first = create(&root, "k", &tree, "first").unwrap();
+  let second = create(&root, "k", &tree, "second").unwrap();
+  assert!(claim_one(&root, &tree, &first.id).unwrap().is_none());
+  finish(&root, &first.id, 0);
+  finish(&root, &second.id, 1);
+  assert!(claim_one(&root, &other, &first.id).is_err());
+  assert!(claim_one(&root, &tree, &first.id).unwrap().is_some());
+  assert!(claim_one(&root, &tree, &first.id).unwrap().is_none());
+  assert_eq!(pending(&root, &tree).unwrap()[0].id, second.id);
 }

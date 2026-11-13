@@ -300,10 +300,10 @@ Options:
 ```text
 Run a command under the worktree's resource lease, waiting up to 30 min for admission
 
-Usage: toolu epic job [OPTIONS] <ARGV>...
+Usage: toolu epic job [OPTIONS] [ARGV]...
 
 Arguments:
-  <ARGV>...  The command and its arguments
+  [ARGV]...  The command and its arguments
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -311,7 +311,9 @@ Options:
       --detach            Print a job id and run the command detached, recording its result
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --wait [<ID>]       Wait for one detached result; default the oldest pending result
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --max-seconds <N>   Maximum seconds to wait; default 5400
   -h, --help              Print help
 ```
 

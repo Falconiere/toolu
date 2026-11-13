@@ -43,8 +43,12 @@ Add the one-result wait and real-binary coverage, regenerate CLI documentation, 
 
 ## Critical files
 
-`crates/epic-orchestrator/src/job.rs`, `job_wait.rs`, `verbs_report.rs`, `verbs.rs`, `lib.rs`; `crates/core/engine/src/resources/job_results.rs` and its sibling test; `crates/cli/tests/epic_job_detach.rs`; generated CLI docs and contract snapshot.
+`crates/epic-orchestrator/src/job.rs`, `job_wait.rs`, its sibling test, `tests/query_test.rs`, `verbs_report.rs`, `verbs.rs`, `lib.rs`; `crates/core/engine/src/resources/job_results.rs` and its sibling test; `crates/cli/tests/epic_job_detach.rs`; generated CLI docs and contract snapshot.
 
 ## Verification
 
 The focused real-binary test proves failure replay, empty and timed-out waits, one-record delivery, and worktree isolation. The engine unit test proves atomic one-record claims. `check-changed` runs after the code step; generated docs and contract are checked before the full gate. Fetch and rebase on a moved `origin/main` before implementation and push, rerunning affected checks. Delivery then requires final ledger verification, code review, a ready verdict, branch push, and PR; the epic engine takes over after `report babysit`.
+
+## Deviations
+
+The first `check-changed` found the required sibling test for new `job_wait.rs` and missing pinned npm tools. Added a real non-Git-directory boundary test and ran `npm ci --ignore-scripts`. The next run found a `panic-in-result-fn` lint in the new integration-test helper; it now returns an error. The following run found an old hand-built `job` match in `query_test.rs` without the new argument; updated it and passed its focused test. The complete `check-changed` then passed. Generated CLI docs and the contract snapshot were synchronized before that complete run so the changed gate could assess the final command surface.

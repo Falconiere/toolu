@@ -66,7 +66,24 @@ pub(crate) fn job_command() -> Command {
         "detach",
         "Print a job id and run the command detached, recording its result",
       )
-      .conflicts_with("result"),
+      .conflicts_with_all(["result", "wait"]),
+    )
+    .arg(
+      Arg::new("wait")
+        .long("wait")
+        .value_name("ID")
+        .num_args(0..=1)
+        .default_missing_value("")
+        .conflicts_with_all(["no-wait", "result", "argv"])
+        .help("Wait for one detached result; default the oldest pending result"),
+    )
+    .arg(
+      Arg::new("max-seconds")
+        .long("max-seconds")
+        .value_name("N")
+        .value_parser(clap::value_parser!(u64))
+        .requires("wait")
+        .help("Maximum seconds to wait; default 5400"),
     )
     .arg(
       Arg::new("result")
@@ -78,7 +95,7 @@ pub(crate) fn job_command() -> Command {
     .arg(
       Arg::new("argv")
         .value_name("ARGV")
-        .required(true)
+        .required_unless_present("wait")
         .num_args(1..)
         .trailing_var_arg(true)
         .allow_hyphen_values(true)

@@ -4178,7 +4178,7 @@
               "help": "The command and its arguments",
               "multiple": true,
               "name": "ARGV",
-              "required": true
+              "required": false
             }
           ],
           "commands": [],
@@ -4204,6 +4204,28 @@
               "short": null,
               "takesValue": false,
               "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Wait for one detached result; default the oldest pending result",
+              "hidden": false,
+              "long": "wait",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ID"
+            },
+            {
+              "global": false,
+              "help": "Maximum seconds to wait; default 5400",
+              "hidden": false,
+              "long": "max-seconds",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "N"
             },
             {
               "global": false,

@@ -95,6 +95,7 @@ mod job_detach;
 #[cfg(test)]
 #[path = "tests/job_fixture_test.rs"]
 mod job_fixture;
+mod job_wait;
 mod journal;
 mod launch;
 #[cfg(test)]
