@@ -17,14 +17,14 @@ Add the one-result wait and real-binary coverage, regenerate CLI documentation, 
   {
     "id": "s1",
     "title": "Wait for and claim one detached result",
-    "check": "cargo test -p toolu-cli --test epic_job_detach && cargo test -p toolu-engine --lib -- resources::job_results::tests && cargo xtask check-changed --base origin/main",
+    "check": "unset PUSH_REVIEW_BASE DOCS_SYNC_BASE; cargo test -p toolu-cli --test epic_job_detach && cargo test -p toolu-engine --lib -- resources::job_results::tests && cargo xtask check-changed --base origin/main",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4"],
     "input": "real Git worktrees and real detached sh commands: failing exit 3, empty queue, one-second timeout preserving the id, two results claimed separately, foreign worktree id, a wait after removing the binding, and invalid CLI combination"
   },
   {
     "id": "s2",
     "title": "Regenerate and verify the public CLI contract",
-    "check": "cargo xtask docs-cli && cargo test -p toolu-cli --test contract && cargo xtask check-markdown-cli",
+    "check": "unset PUSH_REVIEW_BASE DOCS_SYNC_BASE; cargo xtask docs-cli && cargo test -p toolu-cli --test contract && cargo xtask check-markdown-cli",
     "depends_on": ["s1"],
     "ac_refs": ["AC-3"],
     "paths": ["crates/epic-orchestrator/src/verbs_report.rs", "docs/cli/epic.md", "docs/cli/commands.json", "crates/cli/tests/fixtures/commands_json.snap"],
@@ -33,7 +33,7 @@ Add the one-result wait and real-binary coverage, regenerate CLI documentation, 
   {
     "id": "s3",
     "title": "Run the complete quality gate",
-    "check": "cargo xtask gate",
+    "check": "unset PUSH_REVIEW_BASE DOCS_SYNC_BASE; cargo xtask gate",
     "depends_on": ["s1", "s2"],
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4"],
     "input": "the full branch and real workspace tests"
@@ -52,3 +52,5 @@ The focused real-binary test proves failure replay, empty and timed-out waits, o
 ## Deviations
 
 The first `check-changed` found the required sibling test for new `job_wait.rs` and missing pinned npm tools. Added a real non-Git-directory boundary test and ran `npm ci --ignore-scripts`. The next run found a `panic-in-result-fn` lint in the new integration-test helper; it now returns an error. The following run found an old hand-built `job` match in `query_test.rs` without the new argument; updated it and passed its focused test. The complete `check-changed` then passed. Generated CLI docs and the contract snapshot were synchronized before that complete run so the changed gate could assess the final command surface.
+
+The Codex-host branch verification used `PUSH_REVIEW_BASE=origin/main` to select the true epic base. Its checks inherited the variable, and two unchanged golden-gate tests failed because their temporary Git repositories have no `origin/main`. Both tests and the full gate passed earlier without the override. Each plan check now unsets `PUSH_REVIEW_BASE` and `DOCS_SYNC_BASE` inside its check shell while the ledger process still uses the remote base for diff identity. This isolates test fixtures from the host's review-base override.
