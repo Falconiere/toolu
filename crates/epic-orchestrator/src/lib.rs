@@ -153,6 +153,7 @@ mod scenario_flow;
 #[path = "tests/scenario_rig_test.rs"]
 mod scenario_rig;
 mod schedule;
+mod outbox_flush;
 mod server;
 mod server_snapshot;
 mod service;

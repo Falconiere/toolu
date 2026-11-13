@@ -94,7 +94,9 @@ fn flush(file: &File) -> Result<(), String> {
 pub(crate) fn batch_event(label: &'static str) {
   BATCH_SINK.with(|slot| {
     if let Some(sink) = slot.borrow().as_ref() {
-      sink.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+      sink
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .push(label);
     }
   });

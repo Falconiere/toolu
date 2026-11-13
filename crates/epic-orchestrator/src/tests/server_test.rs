@@ -88,9 +88,12 @@ fn three_queued_journal_steps_share_one_flush() {
     *slot.borrow_mut() = Some(Arc::clone(&sink));
   });
   for name in ["one", "two", "three"] {
-    engine.world.outbox.push_back(crate::model::Step::Journal(
-      crate::journal::Record::new("action", name, "k", "t", "n"),
-    ));
+    engine
+      .world
+      .outbox
+      .push_back(crate::model::Step::Journal(crate::journal::Record::new(
+        "action", name, "k", "t", "n",
+      )));
   }
   engine.flush().expect("flush");
   crate::journal::index::FLUSH_SINK.with(|slot| *slot.borrow_mut() = None);
@@ -115,10 +118,20 @@ fn journal_batch_follow_ups_run_after_the_shared_flush() {
   let state = epic.display().to_string();
   for key in ["a", "b"] {
     let issue = crate::logic::ensure_issue(&mut engine.world, key, "epic", &state);
-    issue.pending = Some(crate::model::fresh(crate::model::Action::Launch, "t".into()));
-    engine.world.outbox.push_back(crate::model::Step::Journal(
-      crate::journal::Record::new("action", "launch-done", key, "t", ""),
+    issue.pending = Some(crate::model::fresh(
+      crate::model::Action::Launch,
+      "t".into(),
     ));
+    engine
+      .world
+      .outbox
+      .push_back(crate::model::Step::Journal(crate::journal::Record::new(
+        "action",
+        "launch-done",
+        key,
+        "t",
+        "",
+      )));
   }
   engine.flush().expect("flush");
   crate::journal::clear_batch_sink();
