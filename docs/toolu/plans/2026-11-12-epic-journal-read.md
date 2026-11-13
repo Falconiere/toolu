@@ -33,7 +33,7 @@ Establish parser and filter behavior with tests, switch the three token lookups,
   {
     "id": "s2",
     "title": "Use candidate scans for notify, report, and answer deduplication",
-    "check": "cargo test -p toolu-epic-orchestrator --lib",
+    "check": "cargo test -p toolu-epic-orchestrator --lib -- --test-threads=4",
     "depends_on": ["s1a"],
     "ac_refs": ["AC-2", "AC-3", "AC-4"],
     "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/attention_ops.rs", "crates/epic-orchestrator/src/tests/dispatch_test.rs", "crates/epic-orchestrator/src/tests/dispatch_notify_replay_test.rs", "crates/epic-orchestrator/src/tests/attention_submission_test.rs", "crates/epic-orchestrator/src/tests/attention_window_test.rs", "crates/epic-orchestrator/src/tests/attention_ops_test.rs", "crates/epic-orchestrator/src/metrics", "crates/epic-orchestrator/src/cleanup.rs"],
@@ -42,7 +42,7 @@ Establish parser and filter behavior with tests, switch the three token lookups,
   {
     "id": "s3",
     "title": "Document journal read behavior and run changed checks",
-    "check": "env -u PUSH_REVIEW_BASE cargo xtask check-changed --base origin/main && env -u PUSH_REVIEW_BASE cargo xtask check-markdown-cli",
+    "check": "env -u PUSH_REVIEW_BASE NEXTEST_TEST_THREADS=4 cargo xtask check-changed --base origin/main && env -u PUSH_REVIEW_BASE cargo xtask check-markdown-cli",
     "depends_on": ["s1", "s2"],
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4"],
     "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/attention_ops.rs", "crates/epic-orchestrator/src/journal/tests", "crates/epic-orchestrator/src/tests", "docs/epic-orchestrator/README.md", "docs/toolu/specs/2026-11-12-epic-journal-read-design.md", "docs/toolu/plans/2026-11-12-epic-journal-read.md"],
@@ -51,7 +51,7 @@ Establish parser and filter behavior with tests, switch the three token lookups,
   {
     "id": "s4",
     "title": "Run the complete quality gate",
-    "check": "env -u PUSH_REVIEW_BASE cargo xtask gate",
+    "check": "env -u PUSH_REVIEW_BASE NEXTEST_TEST_THREADS=4 cargo xtask gate",
     "depends_on": ["s1", "s2", "s3"],
     "ac_refs": ["AC-4"],
     "input": "the committed branch against current origin/main"
@@ -77,3 +77,5 @@ After s1, `cargo xtask check-changed --base origin/main` failed on an 11-line js
 Before s2, source inspection showed that `each_with(from_day)` includes future-dated files while the existing `tail` reads exactly yesterday and today. The reviewed spec now names `tail_with` for report and answer, and s2's input includes a future-day row. The issue's unchanged-window requirement is preserved.
 
 The s2 `check-changed` run found `attention_submission_test.rs` at 301 code lines, one above the 300-line guardrail. Moved its future-day test unchanged in behavior to sibling `attention_window_test.rs` and registered that test module. The test stays in s2's declared paths; no assertion or acceptance criterion was removed.
+
+Two broad runs on the shared machine failed different unchanged tests under load: Nextest's CLI doctor stub did not report its version after ten seconds, and an asynchronous epic notification missed its five-second wait. Each test passed when rerun alone; the full epic library suite also passed before the test-file move. The remaining suite checks cap test threads at four to retain all assertions while reducing contention. The final gate remains required to pass.
