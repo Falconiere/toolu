@@ -36,7 +36,7 @@ Establish parser and filter behavior with tests, switch the three token lookups,
     "check": "cargo test -p toolu-epic-orchestrator --lib",
     "depends_on": ["s1a"],
     "ac_refs": ["AC-2", "AC-3", "AC-4"],
-    "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/attention_ops.rs", "crates/epic-orchestrator/src/tests/dispatch_test.rs", "crates/epic-orchestrator/src/tests/dispatch_notify_replay_test.rs", "crates/epic-orchestrator/src/tests/attention_submission_test.rs", "crates/epic-orchestrator/src/tests/attention_ops_test.rs", "crates/epic-orchestrator/src/metrics", "crates/epic-orchestrator/src/cleanup.rs"],
+    "paths": ["crates/epic-orchestrator/src/journal.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/attention_ops.rs", "crates/epic-orchestrator/src/tests/dispatch_test.rs", "crates/epic-orchestrator/src/tests/dispatch_notify_replay_test.rs", "crates/epic-orchestrator/src/tests/attention_submission_test.rs", "crates/epic-orchestrator/src/tests/attention_window_test.rs", "crates/epic-orchestrator/src/tests/attention_ops_test.rs", "crates/epic-orchestrator/src/metrics", "crates/epic-orchestrator/src/cleanup.rs"],
     "input": "real temporary engine journals spanning older, yesterday, today, and future dates; token in note versus token field; escaped submission ID and existing metrics, cleanup, dispatch cases"
   },
   {
@@ -75,3 +75,5 @@ The focused journal test proves the wire-format edge cases on real JSONL files; 
 After s1, `cargo xtask check-changed --base origin/main` failed on an 11-line jscpd duplicate within `crates/ast-grep/src/map/large.rs` that is already present on main. The same run reported missing web tools in this worktree. Installed the pinned tools with `npm ci --ignore-scripts` and added s1a to remove the duplicate through one shared directory-summary calculation, test both outputs, and rerun jscpd before continuing. This is a gate repair; journal behavior and acceptance criteria are unchanged.
 
 Before s2, source inspection showed that `each_with(from_day)` includes future-dated files while the existing `tail` reads exactly yesterday and today. The reviewed spec now names `tail_with` for report and answer, and s2's input includes a future-day row. The issue's unchanged-window requirement is preserved.
+
+The s2 `check-changed` run found `attention_submission_test.rs` at 301 code lines, one above the 300-line guardrail. Moved its future-day test unchanged in behavior to sibling `attention_window_test.rs` and registered that test module. The test stays in s2's declared paths; no assertion or acceptance criterion was removed.

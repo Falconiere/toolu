@@ -178,27 +178,6 @@ fn an_admit_older_than_the_tail_window_does_not_dedupe() {
 }
 
 #[test]
-fn a_future_dated_admit_does_not_dedupe() {
-  let tmp = tempfile::tempdir().expect("temp");
-  let mut engine = engine(tmp.path(), "sent");
-  report(&mut engine, "needs-human");
-  let id = "future-id";
-  let fp = super::fingerprint("a", "take B");
-  let future = engine.now + std::time::Duration::from_hours(48);
-  let row = json!({"seq": 100, "kind": "action", "name": "answer-admit", "key": "a", "token": id, "note": format!("fp={fp} by=web")});
-  std::fs::write(
-    crate::journal::file_for(&engine.paths.journal_dir(), future),
-    format!("{row}\n"),
-  )
-  .expect("future admit");
-  assert_eq!(
-    answer(&mut engine, &submitted("take B", id)),
-    json!({"ok": true})
-  );
-  assert_eq!(prompts(tmp.path()).len(), 1);
-}
-
-#[test]
 fn a_delivered_submission_dedupes_after_the_agent_is_gone() {
   let tmp = tempfile::tempdir().expect("temp");
   let mut engine = engine(tmp.path(), "sent");

@@ -287,18 +287,18 @@ pub(crate) fn spool_seen(engine: &Engine, request: &Value) -> Result<bool, Strin
   }
   if request.get("op").and_then(Value::as_str) == Some("notify") {
     let mut seen = false;
-    journal::each(&engine.paths.journal_dir(), "", |row| {
+    journal::each_with(&engine.paths.journal_dir(), "", token, |row| {
       seen |= row.token == token && (row.name == "spool" || row.kind == "notify");
       Ok(())
     })?;
     return Ok(seen);
   }
-  let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;
-  Ok(
-    rows
-      .iter()
-      .any(|row| row.name == "spool" && row.token == token),
-  )
+  let mut seen = false;
+  journal::tail_with(&engine.paths.journal_dir(), engine.now, token, |row| {
+    seen |= row.name == "spool" && row.token == token;
+    Ok(())
+  })?;
+  Ok(seen)
 }
 
 #[cfg(test)]

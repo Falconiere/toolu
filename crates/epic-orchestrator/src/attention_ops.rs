@@ -184,11 +184,10 @@ fn record_admit(engine: &mut Engine, answer: &Answer<'_>, id: &str) -> Result<()
 /// id was never admitted in that window.
 fn prior(engine: &Engine, id: &str) -> Result<Option<(String, Delivery)>, String> {
   let mut state = None;
-  let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;
-  for row in rows
-    .iter()
-    .filter(|row| row.kind == "action" && row.token == id)
-  {
+  journal::tail_with(&engine.paths.journal_dir(), engine.now, id, |row| {
+    if row.kind != "action" || row.token != id {
+      return Ok(());
+    }
     match row.name.as_str() {
       "answer-admit" => {
         let fp = row.note.strip_prefix("fp=").unwrap_or("");
@@ -209,7 +208,8 @@ fn prior(engine: &Engine, id: &str) -> Result<Option<(String, Delivery)>, String
       }
       _ => {}
     }
-  }
+    Ok(())
+  })?;
   Ok(state)
 }
 
@@ -364,3 +364,7 @@ mod redirect_tests;
 #[cfg(test)]
 #[path = "tests/attention_submission_test.rs"]
 mod submission_tests;
+
+#[cfg(test)]
+#[path = "tests/attention_window_test.rs"]
+mod window_tests;

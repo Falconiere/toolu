@@ -217,14 +217,37 @@ pub(crate) fn batch_event(label: &'static str) {
 /// A file cannot be read. A bad line is skipped.
 pub(crate) fn tail(dir: &Path, now: SystemTime) -> Result<Vec<Record>, String> {
   let mut out = Vec::new();
+  tail_with(dir, now, "", |row| {
+    out.push(row);
+    Ok(())
+  })?;
+  Ok(out)
+}
+
+/// Visit only yesterday's and today's rows containing `needle` before parsing.
+///
+/// # Errors
+/// A file cannot be read, or `each` fails.
+pub(crate) fn tail_with<F>(
+  dir: &Path,
+  now: SystemTime,
+  needle: &str,
+  mut each: F,
+) -> Result<(), String>
+where
+  F: FnMut(Record) -> Result<(), String>,
+{
+  let encoded = encoded_needle(needle)?;
   let previous = UNIX_EPOCH + Duration::from_secs(epoch_millis(now) / 1000);
   let yesterday = previous
     .checked_sub(Duration::from_hours(24))
     .unwrap_or(UNIX_EPOCH);
   for stamp in [yesterday, now] {
-    out.extend(read_file(&dir.join(format!("{}.jsonl", day(stamp))), "")?);
+    for row in read_file(&file_for(dir, stamp), &encoded)? {
+      each(row)?;
+    }
   }
-  Ok(out)
+  Ok(())
 }
 
 /// Delete daily files whose date is strictly older than `days` before `now`.
@@ -285,6 +308,15 @@ fn read_file(path: &Path, needle: &str) -> Result<Vec<Record>, String> {
   Ok(rows)
 }
 
+fn encoded_needle(needle: &str) -> Result<String, String> {
+  // shortcut: toolu writes JSONL with serde_json; parse token fields if external writers are supported.
+  if needle.is_empty() {
+    Ok(String::new())
+  } else {
+    serde_json::to_string(needle).map_err(|err| err.to_string())
+  }
+}
+
 /// One complete JSON object, or nothing when `line` is not a record.
 pub(super) fn parse(line: &str) -> Option<Record> {
   serde_json::from_str(line).ok()
@@ -329,11 +361,7 @@ pub(crate) fn each_with<F>(
 where
   F: FnMut(Record) -> Result<(), String>,
 {
-  let encoded = if needle.is_empty() {
-    String::new()
-  } else {
-    serde_json::to_string(needle).map_err(|err| err.to_string())?
-  };
+  let encoded = encoded_needle(needle)?;
   let entries = match std::fs::read_dir(dir) {
     Ok(entries) => entries,
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
