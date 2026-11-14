@@ -17,14 +17,14 @@ Add the durable marker and protocol mapping, wire the CLI and generated manifest
   {
     "id": "s1",
     "title": "Persist one Stop warning without changing result delivery",
-    "check": "cargo test -p toolu-engine --lib -- resources::job_results::tests && cargo test -p toolu-protocol && cargo xtask check-changed --base origin/main",
+    "check": "unset PUSH_REVIEW_BASE; cargo test -p toolu-engine --lib -- resources::job_results::tests && cargo test -p toolu-protocol && cargo xtask check-changed --base origin/main",
     "ac_refs": ["AC-2", "AC-3"],
     "input": "real schema-1 waiting, running, done and claimed files across two temporary worktrees; concurrent Stop attempts; a warned pending result later claimed exactly once"
   },
   {
     "id": "s2",
     "title": "Block the first Stop through the real toolu binary and generated host hooks",
-    "check": "cargo test -p toolu-cli --test tool_hooks && cargo test -p toolu-cli --test stop_hook && cargo xtask check-hooks && cargo build --release --locked --bin toolu && cargo xtask bench-hooks --only toolu/stop --only muse:toolu/stop --assert && cargo xtask check-changed --base origin/main",
+    "check": "unset PUSH_REVIEW_BASE; cargo test -p toolu-cli --test tool_hooks && cargo test -p toolu-cli --test stop_hook && cargo xtask check-hooks && cargo build --release --locked --bin toolu && cargo xtask bench-hooks --only toolu/stop --only muse:toolu/stop --assert && cargo xtask check-changed --base origin/main",
     "depends_on": ["s1"],
     "ac_refs": ["AC-1", "AC-2", "AC-4", "AC-5"],
     "input": "built toolu hook with real worktree binding and result files; generated Claude and Muse Stop hooks plus Cursor's shared-manifest mapping; benchmark payloads and budgets for both entries"
@@ -32,7 +32,7 @@ Add the durable marker and protocol mapping, wire the CLI and generated manifest
   {
     "id": "s3",
     "title": "Document supported hosts and the once-only Stop behavior",
-    "check": "cargo xtask check-markdown-cli && cargo xtask check-hooks",
+    "check": "unset PUSH_REVIEW_BASE; cargo xtask check-markdown-cli && cargo xtask check-hooks",
     "depends_on": ["s2"],
     "ac_refs": ["AC-4", "AC-5"],
     "input": "plugin hook manifest, generated Muse resolver, user-facing hook documentation and recorded live Claude/Muse/Cursor Stop probe evidence"
@@ -40,7 +40,7 @@ Add the durable marker and protocol mapping, wire the CLI and generated manifest
   {
     "id": "s4",
     "title": "Run the complete quality gate",
-    "check": "cargo xtask gate",
+    "check": "unset PUSH_REVIEW_BASE; cargo xtask gate",
     "depends_on": ["s1", "s2", "s3"],
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5"],
     "input": "final committed branch diff, real workspace test suite and generated hook benchmark"
@@ -59,3 +59,5 @@ The real-binary tests prove first block, named id, second pass, completed/unclai
 ## Deviations
 
 Cursor's interactive Stop probe established `followup_message` as its blocking response, so s2 now includes Cursor's native mapping and a separate real-binary test. The gate's colocated-test and hook-coverage rules require a sibling Stop module test plus the native manifest and coverage inventory updates.
+
+The local `main` ref in this epic worktree lags `origin/main`. Ledger runs use `PUSH_REVIEW_BASE=origin/main` to stamp the issue diff; each check unsets that override so temporary Git repositories in the workspace tests resolve their own local base.
