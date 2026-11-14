@@ -9,7 +9,7 @@ use crate::journal::Record;
 use crate::limit::on_status;
 use crate::logic::push_attention;
 mod identity;
-use crate::schedule::{map_pane_closed, note_event, note_herdr};
+use crate::schedule::{map_pane_closed, note_event, note_herdr, prompt_jobs};
 use crate::server::Engine;
 use identity::{event_key, event_kind, field, same_agent};
 pub(crate) use identity::{filters, snapshot_body};
@@ -82,6 +82,9 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
         issue.pane = pane;
       }
     }
+    if status == Some("idle") {
+      prompt_idle_jobs(engine, key);
+    }
     return;
   }
   // An agent herdr does not list cannot be working in the worktree.
@@ -150,6 +153,9 @@ fn status_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), Stri
   let now = engine.world.now_ms;
   if let Some(issue) = engine.world.issues.get_mut(&key) {
     issue.set_agent_status(status, now);
+  }
+  if status == "idle" {
+    prompt_idle_jobs(engine, &key);
   }
   if status == "working" || (status != "blocked" && scan_done(engine, &key, status)) {
     return on_status(engine, &key, status, "");
@@ -247,6 +253,12 @@ fn journal(engine: &mut Engine, name: &str, key: &str, note: &str) {
     .push_back(crate::model::Step::Journal(Record::new(
       "action", name, key, "", note,
     )));
+}
+
+fn prompt_idle_jobs(engine: &mut Engine, key: &str) {
+  if let Err(err) = prompt_jobs(engine, key) {
+    journal(engine, "job-prompt-failed", key, &err);
+  }
 }
 
 #[cfg(test)]

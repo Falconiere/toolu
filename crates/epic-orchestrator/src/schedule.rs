@@ -3,6 +3,8 @@
 use crate::journal::Record;
 use crate::logic::{push_attention, token};
 use crate::model::{Action, Pending, QueuedPrompt, Step, World};
+use crate::server::Engine;
+use toolu_engine::resources::job_results;
 
 /// How long a queued worker prompt waits before it may be sent, so one
 /// burst of notices collapses to one prompt.
@@ -183,8 +185,8 @@ pub(crate) fn flush_prompts(world: &mut World) {
   }
 }
 
-/// A source event from #446.
-pub(crate) fn note_event(world: &mut World, key: &str, event: &str) {
+/// A source event from #446. Return whether a finished job needs a result check.
+pub(crate) fn note_event(world: &mut World, key: &str, event: &str) -> bool {
   match event {
     "blocked" => {
       let _token = crate::attention::reraise(world, "blocked", key, "blocked");
@@ -198,8 +200,33 @@ pub(crate) fn note_event(world: &mut World, key: &str, event: &str) {
     ))),
     "gone" => gone(world, key),
     "merged" => crate::merge_bridge::merged(world, key),
+    "job-done" => return true,
     _ => {}
   }
+  false
+}
+
+/// Claim finished results only when the worker can receive their prompts.
+pub(crate) fn prompt_jobs(engine: &mut Engine, key: &str) -> Result<(), String> {
+  let Some(issue) = engine.world.issues.get(key) else {
+    return Ok(());
+  };
+  if issue.agent_status != "idle" || !crate::attention::has_live_agent(&engine.world, key) {
+    return Ok(());
+  }
+  let Some(worktree) = issue.worktree.as_deref() else {
+    return Ok(());
+  };
+  let results = job_results::claim_finished(&engine.paths.root, std::path::Path::new(worktree))?;
+  for result in results {
+    let mut text = job_results::line(&result);
+    if result.exit_code != Some(0) && !result.output.is_empty() {
+      text.push('\n');
+      text.push_str(&result.output);
+    }
+    crate::babysit::prompt(&mut engine.world, key, "job", text, None);
+  }
+  Ok(())
 }
 
 fn gone(world: &mut World, key: &str) {

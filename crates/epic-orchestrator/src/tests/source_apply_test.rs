@@ -5,6 +5,105 @@ use super::{Fact, apply};
 use crate::server::{Engine, Fault};
 use crate::source_fix::fixture;
 
+fn finished_job(root: &std::path::Path) -> String {
+  use toolu_engine::resources::job_results;
+
+  let mut result =
+    job_results::create(root, "a", std::path::Path::new("/work"), "gate").expect("create result");
+  result.state = "done".into();
+  result.exit_code = Some(0);
+  job_results::update(root, &result).expect("finish result");
+  result.id
+}
+
+fn job_prompts(engine: &Engine) -> usize {
+  crate::journal::tail(&engine.paths.journal_dir(), engine.now)
+    .expect("journal")
+    .iter()
+    .filter(|row| row.kind == "prompt" && row.name == "job")
+    .count()
+}
+
+#[test]
+fn finished_job_waits_for_a_pushed_idle_status() {
+  let fix = fixture(true).expect("fixture");
+  let mut engine = Engine::open(fix.engine_paths, None, Fault::None).expect("open");
+  let issue = engine.world.issues.get_mut("a").expect("issue");
+  issue.pane = Some("w1:p1".into());
+  issue.set_agent_status("working", 1);
+  let id = finished_job(fix.tmp.path());
+  let env = Env::from_pairs([("HOME", "/tmp")]);
+  let event = |status| {
+    json!({"event": "pane.agent_status_changed",
+    "data": {"pane_id": "w1:p1", "agent_status": status}})
+  };
+  apply(&mut engine, &env, Fact::Event(event("working"))).expect("working");
+  assert_eq!(job_prompts(&engine), 0);
+  assert_eq!(
+    toolu_engine::resources::job_results::pending(fix.tmp.path(), std::path::Path::new("/work"))
+      .expect("pending")[0]
+      .id,
+    id
+  );
+  apply(&mut engine, &env, Fact::Event(event("idle"))).expect("idle");
+  apply(&mut engine, &env, Fact::Event(event("idle"))).expect("repeat");
+  assert_eq!(job_prompts(&engine), 1);
+}
+
+#[test]
+fn finished_job_appears_on_an_idle_snapshot_once() {
+  let fix = fixture(true).expect("fixture");
+  let mut engine = Engine::open(fix.engine_paths, None, Fault::None).expect("open");
+  engine
+    .world
+    .issues
+    .get_mut("a")
+    .expect("issue")
+    .set_agent_status("working", 1);
+  finished_job(fix.tmp.path());
+  let env = Env::from_pairs([("HOME", "/tmp")]);
+  let body = json!({"agents": [{"name": "a", "pane_id": "w1:p1", "agent_status": "idle"}]});
+  apply(&mut engine, &env, Fact::Snapshot(body.clone())).expect("idle");
+  apply(&mut engine, &env, Fact::Snapshot(body)).expect("repeat");
+  assert_eq!(job_prompts(&engine), 1);
+}
+
+#[test]
+fn bad_job_result_does_not_stop_herdr_status_or_later_snapshot_workers() {
+  let fix = fixture(true).expect("fixture");
+  let mut engine = Engine::open(fix.engine_paths, None, Fault::None).expect("open");
+  let issue = engine.world.issues.get_mut("a").expect("issue");
+  issue.pane = Some("w1:p1".into());
+  issue.set_agent_status("working", 1);
+  let epic = fix.tmp.path().join("epic");
+  let other =
+    crate::logic::ensure_issue(&mut engine.world, "b", "two", &epic.display().to_string());
+  other.stage = "running".into();
+  other.worktree = Some("/other".into());
+  other.set_agent_status("idle", 1);
+  std::fs::create_dir_all(fix.tmp.path().join("jobs/results")).expect("result dir");
+  std::fs::write(fix.tmp.path().join("jobs/results/bad.json"), "broken").expect("bad result");
+  let env = Env::from_pairs([("HOME", "/tmp")]);
+  let snapshot = json!({"agents": [
+    {"name": "a", "pane_id": "w1:p1", "agent_status": "idle"},
+    {"name": "b", "pane_id": "w2:p2", "agent_status": "working"}
+  ]});
+  apply(&mut engine, &env, Fact::Snapshot(snapshot)).expect("snapshot");
+  assert_eq!(engine.world.issues["b"].agent_status, "working");
+  let event = json!({"event": "pane.agent_status_changed",
+    "data": {"pane_id": "w1:p1", "agent_status": "idle"}});
+  apply(&mut engine, &env, Fact::Event(event)).expect("status event");
+  let rows = crate::journal::tail(&engine.paths.journal_dir(), engine.now).expect("journal");
+  assert_eq!(
+    rows
+      .iter()
+      .filter(|row| row.kind == "action" && row.name == "job-prompt-failed" && row.key == "a")
+      .count(),
+    2
+  );
+  assert_eq!(job_prompts(&engine), 0);
+}
+
 #[test]
 fn a_closed_pane_on_an_idle_issue_does_not_launch_and_its_agent_is_unknown() {
   let fix = fixture(true).expect("fixture");
