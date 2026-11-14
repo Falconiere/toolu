@@ -221,12 +221,16 @@ The journal stores one JSONL file per UTC day. A single append writes a complete
 record and syncs the daily JSONL file before updating `sequence.index` and
 `sequence.offsets`. Consecutive journal steps the engine drains from the front
 of its outbox share one lock hold and one JSONL sync for the whole batch, then
-run each row's follow-ups in order so every line is durable before any effect.
+run each row's follow-ups in order so every line is synced before any effect.
 Those index files are rebuildable caches; neither their writes nor the containing
 directory are synced. Missing, stale or corrupt caches rebuild from complete
 JSONL records on the next append or paged read. An incomplete trailing line is
 ignored. If a day file is truncated, recovery resumes sequence allocation from
 the last complete record still in the log.
+On macOS the daily JSONL file uses plain `fsync`. Flushed rows survive a process
+crash or kill, but the latest rows may be lost in a power cut. Other platforms
+keep the existing full file sync. The caches remain rebuildable on every
+platform.
 Readers decode each record directly into its fields. Missing or non-string text
 fields are empty, and rows without an unsigned sequence are ignored. Token
 lookups skip lines without the encoded token before parsing, then compare the

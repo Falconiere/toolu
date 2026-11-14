@@ -47,6 +47,24 @@ fn append_batch_assigns_consecutive_sequences_and_flushes_once() {
   assert_eq!(sink.load(Ordering::Relaxed), 1);
 }
 
+#[test]
+fn append_timing() {
+  let root = tempfile::tempdir().unwrap();
+  let dir = root.path().join("timed");
+  let lock = root.path().join("timed.lock");
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+  let row = crate::journal::Record::new("action", "timed", "k", "t", "n");
+  let started = std::time::Instant::now();
+  for seq in 1..=100 {
+    let stored = crate::journal::append(&dir, &lock, &row, at).unwrap();
+    assert_eq!(stored.seq, seq);
+  }
+  eprintln!(
+    "100 journal appends: {:.3} ms/append",
+    started.elapsed().as_secs_f64() * 10.0
+  );
+}
+
 fn flush_counter_rig(
   root: &std::path::Path,
   label: &str,

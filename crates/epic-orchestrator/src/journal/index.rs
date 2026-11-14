@@ -87,7 +87,14 @@ fn flush(file: &File) -> Result<(), String> {
       let _prev = sink.fetch_add(1, Ordering::Relaxed);
     }
   });
-  file.sync_all().map_err(|err| err.to_string())
+  #[cfg(target_os = "macos")]
+  {
+    nix::unistd::fsync(file).map_err(|err| err.to_string())
+  }
+  #[cfg(not(target_os = "macos"))]
+  {
+    file.sync_all().map_err(|err| err.to_string())
+  }
 }
 
 /// Record a batch phase label when a test sink is installed.

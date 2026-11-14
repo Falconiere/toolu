@@ -3,7 +3,8 @@
 //! `sequence.index` and `sequence.offsets` are a rebuildable cache of the last
 //! sequence and each complete line's offset. A single append syncs the JSONL
 //! line once; a consecutive engine batch syncs once after every line of the
-//! batch.
+//! batch. On macOS the sync uses plain fsync: rows survive process crashes or
+//! kills, but recent rows may be lost in a power cut.
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
