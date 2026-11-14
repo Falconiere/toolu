@@ -4,7 +4,9 @@
 //! first deny ends the walk and the first ask is held; after it the first
 //! `decision: "block"` ends the walk. Everything else is advice.
 
-use super::output::{Advisories, final_advisory, final_ask, parse_document, printed, read_field};
+use super::output::{
+  Advisories, final_advisory, final_ask, final_block, parse_document, printed, read_field,
+};
 use super::{ModuleResult, Phase};
 use toolu_protocol::host::Host;
 
@@ -59,7 +61,7 @@ impl WalkState {
     if result.exit_code == 2 {
       return Some(ModuleResult {
         stdout: String::new(),
-        stderr: format!("{}{}", self.stderr, result.stderr),
+        stderr: self.error_stderr(&result.stderr),
         exit_code: 2,
       });
     }
@@ -83,8 +85,13 @@ impl WalkState {
     }
     let doc = parse_document(&result.stdout).ok();
     if stops_walk(self.phase, self.host, doc.as_ref()) {
+      let stdout = if self.phase == Phase::Post {
+        final_block(&result.stdout, &self.advisories)
+      } else {
+        printed(&result.stdout)
+      };
       return Some(ModuleResult {
-        stdout: printed(&result.stdout),
+        stdout,
         stderr: self.stderr.clone(),
         exit_code: 0,
       });
@@ -108,6 +115,18 @@ impl WalkState {
       stderr: self.stderr,
       exit_code: 0,
     }
+  }
+
+  fn error_stderr(&self, error: &str) -> String {
+    let mut stderr = format!("{}{error}", self.stderr);
+    if self.phase == Phase::Post && !self.advisories.contexts.is_empty() {
+      if !stderr.ends_with('\n') {
+        stderr.push('\n');
+      }
+      stderr.push_str(&self.advisories.contexts.join("\n\n"));
+      stderr.push('\n');
+    }
+    stderr
   }
 }
 

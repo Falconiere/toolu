@@ -267,3 +267,6 @@ fn the_plugin_root_gives_modules_their_lib_dir() {
   let lib = format!("{flag}/hooks/lib\n");
   assert_eq!(streams(&out), (String::new(), lib, Some(2)));
 }
+
+#[path = "helpers/tool_hooks_jobs.rs"]
+mod jobs;

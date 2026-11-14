@@ -246,6 +246,7 @@ fn the_built_ins_run_in_table_order_before_the_registry() {
     [
       ("gate-status.sh", StepKind::Builtin),
       ("push-waiver.sh", StepKind::Builtin),
+      ("job-results", StepKind::Builtin),
       ("x@t__after.sh", StepKind::Executable),
     ]
   );

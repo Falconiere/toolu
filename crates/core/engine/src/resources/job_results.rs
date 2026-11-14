@@ -11,6 +11,7 @@ use toolu_runtime::atomic::replace_atomic;
 use toolu_state::lock::token;
 use toolu_state::time::iso_millis;
 
+use super::binding::resource_binding;
 use super::lock::with_resource_lock;
 
 /// One detached job's result record (schema 1).
@@ -261,6 +262,28 @@ pub fn line(record: &Record) -> String {
     "job {} finished: exit {code}{stale}: {}",
     record.id, record.label
   )
+}
+
+/// Claim finished results of the bound worktree and render their notices.
+///
+/// # Errors
+/// The binding, a result read, or a claim write fails.
+pub fn take_notice(cwd: &Path) -> Result<Option<String>, String> {
+  let Some(binding) = resource_binding(cwd)? else {
+    return Ok(None);
+  };
+  let notices = claim_finished(&binding.root, &binding.worktree)?
+    .into_iter()
+    .map(|record| {
+      let mut notice = line(&record);
+      if record.exit_code != Some(0) && !record.output.is_empty() {
+        notice.push('\n');
+        notice.push_str(record.output.trim_end_matches('\n'));
+      }
+      notice
+    })
+    .collect::<Vec<_>>();
+  Ok((!notices.is_empty()).then(|| notices.join("\n")))
 }
 
 /// Tell the engine `job-done` for `key`, best effort: connect to its socket,

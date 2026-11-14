@@ -32,6 +32,7 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | `toolu-review:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #443/done | native | no | — |
 | `toolu-review:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #269/done | native | no | — |
 | `toolu:builtin-module:PostToolUse:gate-status` | `crates/core/engine/src/gates/gate_status.rs` | toolu | PostToolUse | port-native | required | #259/done | native | no | — |
+| `toolu:builtin-module:PostToolUse:job-results` | `crates/core/engine/src/gates/job_results.rs` | toolu | PostToolUse | port-native | required | #878/done | native | no | — |
 | `toolu:builtin-module:PostToolUse:push-waiver` | `crates/core/engine/src/gates/push_waiver.rs` | toolu | PostToolUse | port-native | required | #259/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:bash-commands` | `crates/core/engine/src/gates/bash_commands.rs` | toolu | PreToolUse | port-native | required | #261/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:code-edit-rules` | `crates/core/engine/src/gates/code_edit_rules.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |

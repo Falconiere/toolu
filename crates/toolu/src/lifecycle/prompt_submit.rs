@@ -3,6 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
+use toolu_engine::resources::job_results::take_notice;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::Outcome;
@@ -102,6 +103,11 @@ fn additional_context(
     && let Some(hint) = failing_gate_hint(&state)
   {
     parts.push(hint);
+  }
+  match take_notice(&root) {
+    Ok(Some(notice)) => parts.push(notice),
+    Ok(None) => {}
+    Err(err) => parts.push(format!("Detached job result unavailable: {err}")),
   }
   parts.join(" | ")
 }

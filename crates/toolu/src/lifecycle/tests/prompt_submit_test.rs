@@ -2,6 +2,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
+use toolu_engine::resources::{binding::bind_worktree, job_results};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::env::Env;
 
@@ -131,6 +132,47 @@ fn a_failing_gate_is_named_unless_the_prompt_is_already_about_it() {
   ));
   assert!(fixing.contains("Fix in code."));
   assert!(!fixing.contains("Quality gate failing"));
+}
+
+#[test]
+fn a_normal_prompt_reports_a_failed_job_once_without_trivial_or_blocked_consumption() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = std::fs::canonicalize(dir.path()).unwrap();
+  assert!(
+    std::process::Command::new("git")
+      .args(["init", "-q"])
+      .arg(&root)
+      .status()
+      .unwrap()
+      .success()
+  );
+  let resources = root.join("resources");
+  bind_worktree(&resources, &root, "issue-878", "").unwrap();
+  let mut record = job_results::create(&resources, "issue-878", &root, "cargo test").unwrap();
+  "done".clone_into(&mut record.state);
+  record.exit_code = Some(3);
+  "last error\n".clone_into(&mut record.output);
+  job_results::update(&resources, &record).unwrap();
+  let env = env(&root, &bin_with(&root, false));
+  assert_eq!(run(&env, &root, r#"{"prompt":"yes"}"#).stdout, None);
+  assert_eq!(
+    document(&env, &root, r#"{"prompt":"fix"}"#)["decision"],
+    "block"
+  );
+  assert!(
+    job_results::get(&resources, &record.id)
+      .unwrap()
+      .unwrap()
+      .delivered_at
+      .is_none()
+  );
+  let first = context(&document(&env, &root, r#"{"prompt":"rename helper"}"#));
+  assert!(
+    first.contains(&format!("{}\nlast error", job_results::line(&record))),
+    "{first}"
+  );
+  let second = context(&document(&env, &root, r#"{"prompt":"rename helper"}"#));
+  assert!(!second.contains(&record.id), "{second}");
 }
 
 #[test]

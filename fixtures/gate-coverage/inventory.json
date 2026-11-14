@@ -440,6 +440,26 @@
     "bashRequired": false
   },
   {
+    "id": "toolu:builtin-module:PostToolUse:job-results",
+    "sourcePath": "crates/core/engine/src/gates/job_results.rs",
+    "plugin": "toolu",
+    "kind": "builtin-module",
+    "event": "PostToolUse",
+    "matcher": "",
+    "commandOrModule": "job-results",
+    "parentId": "toolu:hooks.json:PostToolUse:hook_post-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh",
+    "semantics": "Claim and report finished detached jobs for the bound worktree after shell or edit tools.",
+    "classification": "port-native",
+    "hostMechanism": "native",
+    "support": "required",
+    "implementationIssue": 878,
+    "implementationStatus": "done",
+    "verificationBaseline": "none",
+    "verificationConformance": "cargo test -p toolu-cli --test tool_hooks",
+    "limits": "",
+    "bashRequired": false
+  },
+  {
     "id": "toolu:builtin-module:PostToolUse:push-waiver",
     "sourcePath": "crates/core/engine/src/gates/push_waiver.rs",
     "plugin": "toolu",

@@ -27,6 +27,10 @@ fn the_engine_tables_list_their_gate_modules_in_order() {
         "push-waiver".to_owned(),
         "crates/core/engine/src/gates/push_waiver.rs".to_owned()
       ),
+      (
+        "job-results".to_owned(),
+        "crates/core/engine/src/gates/job_results.rs".to_owned()
+      ),
     ]
   );
   assert!(

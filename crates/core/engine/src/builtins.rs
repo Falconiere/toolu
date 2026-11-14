@@ -10,6 +10,7 @@ use crate::gates::code_edit_rules::CODE_EDIT;
 use crate::gates::commit_gate::COMMIT_GATE;
 use crate::gates::docs_sync::DOCS_SYNC;
 use crate::gates::gate_status::GATE_STATUS;
+use crate::gates::job_results::JOB_RESULTS;
 use crate::gates::mcp_blocker::MCP_BLOCKER;
 use crate::gates::plan_ledger::PLAN_LEDGER;
 use crate::gates::protected_files::PROTECTED;
@@ -31,4 +32,4 @@ pub const PRE_TOOL: &[&dyn Gate] = &[
 ];
 
 /// The `PostToolUse` built-ins, in table order: gate status before push waiver.
-pub const POST_TOOL: &[&dyn Gate] = &[&GATE_STATUS, &PUSH_WAIVER];
+pub const POST_TOOL: &[&dyn Gate] = &[&GATE_STATUS, &PUSH_WAIVER, &JOB_RESULTS];
