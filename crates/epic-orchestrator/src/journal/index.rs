@@ -7,6 +7,8 @@
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::Write;
+#[cfg(target_os = "macos")]
+use std::os::fd::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -87,7 +89,14 @@ fn flush(file: &File) -> Result<(), String> {
       let _prev = sink.fetch_add(1, Ordering::Relaxed);
     }
   });
-  file.sync_all().map_err(|err| err.to_string())
+  #[cfg(target_os = "macos")]
+  {
+    nix::unistd::fsync(file.as_raw_fd()).map_err(|err| err.to_string())
+  }
+  #[cfg(not(target_os = "macos"))]
+  {
+    file.sync_all().map_err(|err| err.to_string())
+  }
 }
 
 /// Record a batch phase label when a test sink is installed.
