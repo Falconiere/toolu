@@ -820,6 +820,26 @@
     "bashRequired": false
   },
   {
+    "id": "toolu:hooks.json:Stop:hook_stop",
+    "sourcePath": "plugins/toolu/hooks/hooks.json",
+    "plugin": "toolu",
+    "kind": "hooks.json",
+    "event": "Stop",
+    "matcher": "",
+    "commandOrModule": "hook stop",
+    "parentId": null,
+    "semantics": "Claude and Muse block one Stop per unread detached job; Cursor sends one follow-up, without claiming the result (#880).",
+    "classification": "port-native",
+    "hostMechanism": "native",
+    "support": "required",
+    "implementationIssue": 880,
+    "implementationStatus": "done",
+    "verificationBaseline": "none",
+    "verificationConformance": "cargo test -p toolu-cli --test tool_hooks",
+    "limits": "",
+    "bashRequired": false
+  },
+  {
     "id": "toolu:hooks.json:UserPromptSubmit:hook_user-prompt-submit",
     "sourcePath": "plugins/toolu/hooks/hooks.json",
     "plugin": "toolu",

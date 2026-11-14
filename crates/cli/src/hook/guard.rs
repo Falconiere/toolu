@@ -49,7 +49,7 @@ pub(super) fn guarded(
 /// `SessionStart` and `PreCompact` give 2 no meaning on Codex, so it is reported.
 fn in_contract(event: &str, exit: Exit) -> bool {
   exit == Exit::Success
-    || (exit == Exit::Blocked && matches!(event, "UserPromptSubmit" | "PostToolUse"))
+    || (exit == Exit::Blocked && matches!(event, "UserPromptSubmit" | "PostToolUse" | "Stop"))
 }
 
 #[cfg(test)]

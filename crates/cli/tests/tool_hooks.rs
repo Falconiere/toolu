@@ -58,10 +58,10 @@ impl Sandbox {
     let path = path.map_or(system.clone(), |first| {
       format!("{}:{system}", first.display())
     });
-    let event = if name == "pre-tools" {
-      "PreToolUse"
-    } else {
-      "PostToolUse"
+    let event = match name {
+      "pre-tools" => "PreToolUse",
+      "stop" => "Stop",
+      _ => "PostToolUse",
     };
     Ok(
       assert_cmd::Command::new(TOOLU)
@@ -71,11 +71,60 @@ impl Sandbox {
         .env("PATH", path)
         .env("HOME", self.root.join("home"))
         .env("CLAUDE_PROJECT_DIR", self.root.join("project"))
+        .env("TOOLU_RESOURCE_HOME", self.root.join("resources"))
         .current_dir(self.root.join("project"))
         .write_stdin(stdin.into())
         .output()?,
     )
   }
+}
+
+#[test]
+fn stop_blocks_once_per_unread_detached_job_and_preserves_delivery() {
+  let sb = Sandbox::new().unwrap();
+  let project = sb.root.join("project");
+  let root = sb.root.join("resources");
+  let init = std::process::Command::new("git")
+    .args(["init", "-q"])
+    .current_dir(&project)
+    .status()
+    .unwrap();
+  assert!(init.success());
+  assert_eq!(
+    streams(&sb.hook("stop", "{}", None).unwrap()),
+    (String::new(), String::new(), Some(0))
+  );
+  let first = toolu_engine::resources::job_results::create(&root, "", &project, "running").unwrap();
+  let blocked = sb.hook("stop", "{}", None).unwrap();
+  assert_eq!(
+    streams(&blocked),
+    (
+      String::new(),
+      format!(
+        "blocked: detached job {} is pending or has an unread result; check it before stopping\n",
+        first.id
+      ),
+      Some(2),
+    )
+  );
+  assert_eq!(
+    streams(&sb.hook("stop", "{}", None).unwrap()),
+    (String::new(), String::new(), Some(0))
+  );
+  let mut done = toolu_engine::resources::job_results::get(&root, &first.id)
+    .unwrap()
+    .unwrap();
+  done.state = "done".to_owned();
+  done.exit_code = Some(0);
+  toolu_engine::resources::job_results::update(&root, &done).unwrap();
+  assert_eq!(
+    toolu_engine::resources::job_results::claim_finished(&root, &project).unwrap()[0].id,
+    first.id
+  );
+  assert_eq!(
+    streams(&sb.hook("stop", "{}", None).unwrap()),
+    (String::new(), String::new(), Some(0))
+  );
 }
 
 fn streams(output: &Output) -> (String, String, Option<i32>) {

@@ -20,6 +20,14 @@ pub(super) fn output(event: HostEvent, normal: Normal<'_>) -> String {
       }
     };
   }
+  if event == HostEvent::Stop {
+    return match normal {
+      Normal::Deny(reason) | Normal::Block(reason) => {
+        Object::new().text("followup_message", reason).line()
+      }
+      Normal::Allow | Normal::Ask(_) | Normal::Advisory(_) => Object::new().line(),
+    };
+  }
   let context = matches!(normal, Normal::Advisory(_) | Normal::Block(_));
   if context && matches!(event, HostEvent::ToolPost | HostEvent::SessionStart) {
     return Object::new()

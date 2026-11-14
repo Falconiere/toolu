@@ -644,6 +644,26 @@
         "hook_event_name": "SessionStart",
         "source": "startup"
       }
+    },
+    "toolu/stop": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "Stop",
+        "stop_hook_active": true
+      }
+    },
+    "muse:toolu/stop": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "Stop",
+        "turn_id": "hook-bench-turn",
+        "stop_hook_active": true
+      }
     }
   }
 }

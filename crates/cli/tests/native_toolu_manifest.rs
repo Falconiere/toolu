@@ -10,7 +10,7 @@ fn root() -> PathBuf {
 
 type Entries = Vec<(&'static str, Option<&'static str>)>;
 
-fn expected() -> [(&'static str, Entries); 5] {
+fn expected() -> [(&'static str, Entries); 6] {
   [
     (
       "SessionStart",
@@ -39,6 +39,7 @@ fn expected() -> [(&'static str, Entries); 5] {
         Some("apply_patch|Edit|Write|MultiEdit|Bash|Shell"),
       )],
     ),
+    ("Stop", vec![("stop", None)]),
   ]
 }
 

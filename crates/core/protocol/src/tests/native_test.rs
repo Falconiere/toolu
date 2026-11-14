@@ -45,6 +45,7 @@ fn cursor_uses_camel_case_and_splits_shell_out_of_pre_tool_use() {
     Some("sessionEnd")
   );
   assert_eq!(native_event(Host::Cursor, PreCompact), Some("preCompact"));
+  assert_eq!(native_event(Host::Cursor, HostEvent::Stop), Some("stop"));
   assert_eq!(native_event(Host::Cursor, PermissionEvaluate), None);
 }
 
@@ -164,7 +165,7 @@ fn muse_shares_pascal_events_but_not_its_extra_events() {
   }
   assert_eq!(native_event(Host::Claude, HostEvent::Stop), Some("Stop"));
   assert_eq!(native_event(Host::Muse, HostEvent::Stop), Some("Stop"));
-  for host in [Host::Codex, Host::Cursor, Host::Hermes, Host::Opencode] {
+  for host in [Host::Codex, Host::Hermes, Host::Opencode] {
     assert_eq!(native_event(host, HostEvent::Stop), None);
   }
 }

@@ -4,7 +4,7 @@
 
 ## Evidence and approach
 
-Issue #880 and merged #872 define the result and hook contracts. `job_results::pending` selects undelivered results by worktree; `with_resource_lock` serializes claims. The epic and ledger detached writers overwrite records they loaded before a Stop, so a separate per-id marker preserves the once-only decision without changing result records. Live Claude Code 2.1.323 and Muse Code 1.4.20 Stop probes blocked with a reason. Other hosts lack that evidence. The installed Jev judgment selected these two hosts and the marker file. Keep ledger step freshness branch-wide by omitting optional `paths` rather than underdeclaring a cross-crate check.
+Issue #880 and merged #872 define the result and hook contracts. `job_results::pending` selects undelivered results by worktree; `with_resource_lock` serializes claims. The epic and ledger detached writers overwrite records they loaded before a Stop, so a separate per-id marker preserves the once-only decision without changing result records. Live Claude Code 2.1.323 and Muse Code 1.4.20 Stop probes blocked with a reason. Cursor Agent 2026.11.13 fired native `stop` interactively and made a second turn for `followup_message`; its headless Stop did not fire in the isolated probe. Codex, Hermes and OpenCode lack verified blocking Stop evidence. Jev selected the marker file and, after the Cursor probe, a Cursor-specific response. Keep ledger step freshness branch-wide by omitting optional `paths` rather than underdeclaring a cross-crate check.
 
 ## Workstream summary
 
@@ -24,10 +24,10 @@ Add the durable marker and protocol mapping, wire the CLI and generated manifest
   {
     "id": "s2",
     "title": "Block the first Stop through the real toolu binary and generated host hooks",
-    "check": "cargo test -p toolu-cli --test tool_hooks && cargo xtask check-hooks && cargo xtask bench-hooks --only toolu/stop --assert && cargo xtask check-changed --base origin/main",
+    "check": "cargo test -p toolu-cli --test tool_hooks && cargo test -p toolu-cli --test stop_hook && cargo xtask check-hooks && cargo build --release --locked --bin toolu && cargo xtask bench-hooks --only toolu/stop --only muse:toolu/stop --assert && cargo xtask check-changed --base origin/main",
     "depends_on": ["s1"],
     "ac_refs": ["AC-1", "AC-2", "AC-4", "AC-5"],
-    "input": "built toolu hook with real worktree binding and result files; generated Claude and Muse Stop hooks; benchmark payloads and budgets for both entries"
+    "input": "built toolu hook with real worktree binding and result files; generated Claude and Muse Stop hooks plus Cursor's shared-manifest mapping; benchmark payloads and budgets for both entries"
   },
   {
     "id": "s3",
@@ -35,7 +35,7 @@ Add the durable marker and protocol mapping, wire the CLI and generated manifest
     "check": "cargo xtask check-markdown-cli && cargo xtask check-hooks",
     "depends_on": ["s2"],
     "ac_refs": ["AC-4", "AC-5"],
-    "input": "plugin hook manifest, generated Muse resolver, user-facing hook documentation and recorded live Claude/Muse Stop probe evidence"
+    "input": "plugin hook manifest, generated Muse resolver, user-facing hook documentation and recorded live Claude/Muse/Cursor Stop probe evidence"
   },
   {
     "id": "s4",
@@ -50,8 +50,12 @@ Add the durable marker and protocol mapping, wire the CLI and generated manifest
 
 ## Critical files
 
-`crates/core/engine/src/resources/job_results.rs` and its sibling test; `crates/core/protocol/src/event.rs`, `native.rs` and their sibling tests; exhaustive `HostEvent` consumers in protocol; `crates/cli/src/hook.rs`, `hook/guard.rs`, their sibling tests and `crates/cli/tests/tool_hooks.rs`; `plugins/toolu/hooks/hooks.json`, `.muse-plugin/plugin.json`, `hooks/muse/stop`; `benchmarks/cases/hooks/payloads.json`, `benchmarks/hook-budgets.json`; `plugins/toolu/README.md` and this spec and plan.
+`crates/core/engine/src/resources/job_results.rs` and its sibling test; `crates/core/protocol/src/event.rs`, `native.rs` and their sibling tests; exhaustive `HostEvent` consumers in protocol; `crates/cli/src/hook.rs`, `hook/guard.rs`, `hook/stop.rs`, their sibling tests, `crates/cli/tests/tool_hooks.rs`, `stop_hook.rs`, and `native_toolu_manifest.rs`; `plugins/toolu/hooks/hooks.json`, `.muse-plugin/plugin.json`, `hooks/muse/stop`; `benchmarks/cases/hooks/payloads.json`, `benchmarks/hook-budgets.json`; `plugins/toolu/README.md`, the coverage inventory and matrix, and this spec and plan.
 
 ## Verification
 
-The real-binary test proves first block, named id, second pass, completed/unclaimed and cross-worktree behavior. The engine test proves concurrency and later delivery after a pending Stop. `check-hooks` and `bench-hooks` prove packaging and latency. Install the generated plugin in an isolated Muse profile and run `muse plugins hook test toolu:stop --fixture <Stop JSON> --json`; require `should_block: true` and the id in `block_reason`. Run Claude Code with the checkout plugin in an isolated Stop-hook session; require an exit-2 reason followed by continuation. Record both observed verdicts in the PR. Run `cargo xtask host-smoke --host both` to check the plugin's real host integration. Fetch and rebase if `origin/main` moves before implementation or push; rerun affected checks. Delivery requires the final ledger `--verify`, complete v2 code review, ready verdict, push and PR; the epic engine takes over after `report babysit`.
+The real-binary tests prove first block, named id, second pass, completed/unclaimed, cross-worktree and Cursor follow-up behavior. The engine test proves concurrency and later delivery after a pending Stop. `check-hooks` and `bench-hooks` prove packaging and latency. Install the generated plugin in an isolated Muse profile and run `muse plugins hook test toolu:stop --fixture <Stop JSON> --json`; require `should_block: true` and the id in `block_reason`. Run Claude Code with the checkout plugin in an isolated Stop-hook session; require an exit-2 reason followed by continuation. Record Cursor's interactive native `followup_message` success and headless gap accurately in the PR. Run `cargo xtask host-smoke --host both` to check the plugin's real host integration. Fetch and rebase if `origin/main` moves before implementation or push; rerun affected checks. Delivery requires the final ledger `--verify`, complete v2 code review, ready verdict, push and PR; the epic engine takes over after `report babysit`.
+
+## Deviations
+
+Cursor's interactive Stop probe established `followup_message` as its blocking response, so s2 now includes Cursor's native mapping and a separate real-binary test. The gate's colocated-test and hook-coverage rules require a sibling Stop module test plus the native manifest and coverage inventory updates.

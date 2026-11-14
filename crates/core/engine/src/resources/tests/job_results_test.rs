@@ -121,7 +121,7 @@ fn stop_blocks_once_without_losing_a_later_result() {
   finish(&root, &record.id, 3);
   assert!(block_stop_once(&root, &tree).unwrap().is_none());
   assert_eq!(claim_finished(&root, &tree).unwrap()[0].id, record.id);
-  assert!(claim_finished(&root, &tree).unwrap().is_empty());
+  assert_eq!(claim_finished(&root, &tree).unwrap(), Vec::new());
 }
 
 #[test]
