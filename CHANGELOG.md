@@ -6,6 +6,38 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [9.1.0](https://github.com/Falconiere/toolu/compare/v9.0.0...v9.1.0) (2026-11-14)
+
+
+### Features
+
+* **ast-grep:** cache outlines by content hash and map repositories ([#884](https://github.com/Falconiere/toolu/issues/884)) ([f96c5c6](https://github.com/Falconiere/toolu/commit/f96c5c66a426843f64023cf18741cd3e7db86fb5))
+* **ast-grep:** look up a symbol's definitions and references ([#868](https://github.com/Falconiere/toolu/issues/868)) ([3540501](https://github.com/Falconiere/toolu/commit/3540501b0e38532d34ca89276f8acc693a81b393))
+* **ast-grep:** outline files and map directories ([#866](https://github.com/Falconiere/toolu/issues/866)) ([c533961](https://github.com/Falconiere/toolu/commit/c533961b286b9fdaf7908c553dc410c05545ed40))
+* **ast-grep:** point agents at outline, symbol and digest ([#886](https://github.com/Falconiere/toolu/issues/886)) ([a4148df](https://github.com/Falconiere/toolu/commit/a4148dfbb53957280ae8393de32399a256b7ddde))
+* **code-review:** digest branch and local changes by file and item ([#883](https://github.com/Falconiere/toolu/issues/883)) ([e724138](https://github.com/Falconiere/toolu/commit/e724138babcef681e257f3a9acfa70ffee9a2204))
+* **epic:** prompt idle workers for finished jobs ([#895](https://github.com/Falconiere/toolu/issues/895)) ([8a33c93](https://github.com/Falconiere/toolu/commit/8a33c93d5f67ae0ade1cb075b9cf9b1906efe54f))
+* **epic:** run toolu epic job detached ([#890](https://github.com/Falconiere/toolu/issues/890)) ([6fc0a65](https://github.com/Falconiere/toolu/commit/6fc0a653ed7e8046a4740d92d861851aeea60f5e))
+* **epic:** wait for detached jobs in one blocking call ([#893](https://github.com/Falconiere/toolu/issues/893)) ([cc8ceea](https://github.com/Falconiere/toolu/commit/cc8ceea9c4cea93be024d66d10b2308870c88aa3))
+* **jev:** send images, accept Box answers and long context ([#885](https://github.com/Falconiere/toolu/issues/885)) ([f91dca2](https://github.com/Falconiere/toolu/commit/f91dca2775f621aed85c58b582497338e8924a25))
+* **ledger:** run plan checks detached ([#894](https://github.com/Falconiere/toolu/issues/894)) ([d73b15d](https://github.com/Falconiere/toolu/commit/d73b15da11cf660fad7ff89ff1edc12b2a1183e5))
+* **quality:** check shell-changed source files ([#882](https://github.com/Falconiere/toolu/issues/882)) ([c439d12](https://github.com/Falconiere/toolu/commit/c439d1291868d96b85ce4fb5f3419173edc369b1))
+* **state:** hash the working tree without touching the index ([#888](https://github.com/Falconiere/toolu/issues/888)) ([d2078c6](https://github.com/Falconiere/toolu/commit/d2078c6c3a74cd1878b6040c068321fe6918ecaa))
+* **toolu:** report finished detached jobs in hooks ([#897](https://github.com/Falconiere/toolu/issues/897)) ([6023a8f](https://github.com/Falconiere/toolu/commit/6023a8f803cce87ad6398b10b68c74cd708ed022))
+* **xtask:** add check-changed scoped pre-check ([#867](https://github.com/Falconiere/toolu/issues/867)) ([6077a93](https://github.com/Falconiere/toolu/commit/6077a935c53fd986904e8f440c0c828ebf13f50e))
+
+
+### Bug Fixes
+
+* **ledger:** carry forward unchanged scoped steps in --verify ([#864](https://github.com/Falconiere/toolu/issues/864)) ([582be1a](https://github.com/Falconiere/toolu/commit/582be1a498d5d0c232f88da6db142f36fc2b55ab))
+
+
+### Performance Improvements
+
+* **epic:** flush once per batch of journal rows ([#891](https://github.com/Falconiere/toolu/issues/891)) ([1df4910](https://github.com/Falconiere/toolu/commit/1df4910068060aed5bcb52494ba237fb8e283e4c))
+* **epic:** flush only the journal record ([#889](https://github.com/Falconiere/toolu/issues/889)) ([fae7514](https://github.com/Falconiere/toolu/commit/fae75144e17336b4d87b1e52e3a4ea8c4548591c))
+* **epic:** read journal rows without JSON trees ([#892](https://github.com/Falconiere/toolu/issues/892)) ([a4d7fa6](https://github.com/Falconiere/toolu/commit/a4d7fa6d6dbc6e659249f87aa7936a5a9162f291))
+
 ## [9.0.0](https://github.com/Falconiere/toolu/compare/v8.13.1...v9.0.0) (2026-11-10)
 
 

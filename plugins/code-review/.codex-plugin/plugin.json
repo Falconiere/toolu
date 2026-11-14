@@ -1,6 +1,6 @@
 {
   "name": "code-review",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "hookProtocol": 3,
   "description": "Native code review of branch and uncommitted changes with host CLIs and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
   "skills": "./skills/"
