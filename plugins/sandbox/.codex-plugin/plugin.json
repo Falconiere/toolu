@@ -1,6 +1,6 @@
 {
   "name": "sandbox",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "hookProtocol": 3,
   "description": "A Linux sandbox for builds, gates and agent CLIs: a Lima VM on macOS that mounts only the project, this machine on Linux. `toolu sandbox setup` provisions the toolchain, and `toolu sandbox run` runs any command there at the same path. Standalone, no dependencies.",
   "skills": "./skills/"

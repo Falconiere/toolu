@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "documentation-gate",
   "displayName": "documentation-gate",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "description": "Keep documentation accurate with a Jev-routed editing sub-agent and native review records.",
   "compat": {
     "source": "native",
