@@ -337,7 +337,10 @@ job owner is reconciled only after its recorded group is gone; agent ownership
 is never freed merely because its launcher exited.
 
 For a detached command, `toolu epic job --detach -- <command> <args...>` prints
-its result ID immediately. From the same Git worktree, run
+its result ID immediately. In a bound worktree, enabled post-tool and prompt
+hooks can claim finished results and report them once; failed results include
+recorded output. A result reported by a hook cannot be claimed again by wait.
+To wait before it is reported, from the same Git worktree run
 `toolu epic job --wait <id>` to block once and claim that result. Omitting the ID
 selects the oldest undelivered result, including one still waiting for admission;
 when none exists, it succeeds immediately with no output. Only the selected

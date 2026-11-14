@@ -110,10 +110,12 @@ each fix round. Background children keep occupying capacity until they exit.
 Phase reports describe meaningful progress; job heartbeats only establish
 liveness.
 
-If a previous call returned a detached job ID, recover its result with one
-`toolu epic job --wait <id>` call from this worktree. Without an ID, `--wait`
-selects the oldest undelivered result and claims only that result. The default
-wait is 5400 seconds (`--max-seconds <N>` overrides it); a timeout lists pending
+If a previous call returned a detached job ID, use its completion notice if
+already reported by a hook; that notice has claimed the result. Otherwise,
+recover it with one `toolu epic job --wait <id>` call from this worktree.
+Without an ID, `--wait` selects the oldest undelivered result and claims only
+that result. The default wait is 5400 seconds (`--max-seconds <N>` overrides
+it); a timeout lists pending
 IDs and leaves the jobs available, so retry the same ID instead of launching
 the check again. The wait replays the command's stored output and returns 0 for
 success or 1 for failure, even after the resource binding is gone.

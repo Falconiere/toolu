@@ -20,8 +20,9 @@ re-runs them all.
 
 Add `--detach` to return a job id while a native copy runs the same checks. Relative
 plan paths resolve from the launch directory, and checks in a bound worktree
-still acquire job capacity automatically. Read the saved result described in the
-[toolu plugin guide](../../../../toolu/README.md); launch success only confirms
+still acquire job capacity automatically. Enabled post-tool or prompt hooks in
+a bound worktree report a finished result once. Read the saved result described
+in the [toolu plugin guide](../../../../toolu/README.md); launch success only confirms
 that the copy started. Before writing the ledger, the copy compares the working
 tree with its starting contents, including untracked files that Git does not
 ignore. A changed tree produces `stale: true` and `exit_code: 2`, preserving the

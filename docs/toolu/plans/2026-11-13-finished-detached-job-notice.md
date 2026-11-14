@@ -46,7 +46,7 @@ Shared claim and post-tool delivery, then prompt delivery and user docs, followe
     "ac_refs": ["AC-5"],
     "depends_on": ["docs"],
     "input": "The final branch diff and real hook benchmark fixtures",
-    "check": "cargo xtask bench-hooks --only toolu/post-tools --only toolu/user-prompt-submit && cargo xtask gate"
+    "check": "env -u PUSH_REVIEW_BASE sh -c 'cargo xtask bench-hooks --only toolu/post-tools --only toolu/user-prompt-submit && cargo xtask gate'"
   }
 ]
 ```
@@ -69,3 +69,4 @@ The post-tool test must assert the exact one-time host advisory line, an empty s
 - The hook benchmark needed a release binary first. Separated prompt CPU readings were 15.5 ms for `origin/main` and 17.8 ms for this branch against a 16 ms budget. A candidate fast path did not improve the measurement and was removed. A paired run under heavier host load read 27.0 ms for `origin/main` and 26.2 ms for this branch, so the host load dominates this benchmark evidence.
 - The local plan check no longer asserts the Linux CPU budget on macOS. `docs/resource-budgets.md` explicitly assigns `--assert` to Linux CI and reports without it on macOS; the local check still measures both hooks and runs the complete gate.
 - Native review found that a later block without a string reason hid a claimed notice. The real post-tool regression test now covers that form, and the fold adds the notice as its reason.
+- The `origin/main` ledger-base override leaked into isolated golden-gate test repositories, where that ref does not exist. The gate check clears it only for its child commands while the ledger retains the correct base.

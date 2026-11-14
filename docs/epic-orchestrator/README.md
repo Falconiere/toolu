@@ -84,10 +84,12 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 
 `toolu epic job --detach -- <command>` returns a job id while the bound
-worktree's job runs. Once it finishes, the next edit or shell tool call, or a
-normal prompt, tells the agent `job <id> finished: exit <code>: <label>` once.
-Failed jobs include their recorded output after that line. A worker does not
-need to poll for the result.
+worktree's job runs. Once it finishes, an enabled post-tool hook after an edit
+or shell call, or an enabled prompt hook on a normal prompt, tells the agent
+`job <id> finished: exit <code>: <label>` once. Failed jobs include their
+recorded output after that line; stale results are marked. The notice and
+`--wait` claim the same result, so a result already reported cannot be claimed
+again. A worker does not need to poll for the result.
 
 For GitHub epics, the tracker uses body and labels from a native sub-issue
 listing when they are present. If the native list omits either field, it fetches
