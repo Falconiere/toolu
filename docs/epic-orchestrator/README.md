@@ -87,8 +87,9 @@ Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 worktree's job runs. Once it finishes, an enabled post-tool hook after an edit
 or shell call, or an enabled prompt hook on a normal prompt, tells the agent
 `job <id> finished: exit <code>: <label>` once. Failed jobs include their
-recorded output after that line; stale results are marked. The notice and
-`--wait` claim the same result, so a result already reported cannot be claimed
+recorded output after that line; stale results are marked. The engine can also
+prompt a live idle worker with the result. Engine prompts, hook notices and
+`--wait` share the same claim, so a result already reported cannot be claimed
 again. A worker does not need to poll for the result.
 
 For GitHub epics, the tracker uses body and labels from a native sub-issue

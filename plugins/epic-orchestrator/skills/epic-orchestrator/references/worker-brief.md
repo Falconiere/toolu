@@ -111,7 +111,8 @@ Phase reports describe meaningful progress; job heartbeats only establish
 liveness.
 
 If a previous call returned a detached job ID, use its completion notice if
-already reported by a hook; that notice has claimed the result. Otherwise,
+already reported by a hook or an engine prompt to a live idle worker; that
+notice has claimed the result. Otherwise,
 recover it with one `toolu epic job --wait <id>` call from this worktree.
 Without an ID, `--wait` selects the oldest undelivered result and claims only
 that result. The default wait is 5400 seconds (`--max-seconds <N>` overrides
