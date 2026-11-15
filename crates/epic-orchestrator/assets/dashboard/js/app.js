@@ -42,10 +42,12 @@ function paint(draw = () => {}) {
   restoreControl(focus);
 }
 
+// Always paints: the sidebar and controls are drawn even before the first documents load.
 function repaint() {
-  if (!state.docs) return paint();
   const live = state.peer ? null : state.live;
-  return paint(() => renderDashboard(state.docs, live, state.peer, state.sampledAt, selected()));
+  paint(() => {
+    if (state.docs) renderDashboard(state.docs, live, state.peer, state.sampledAt, selected());
+  });
 }
 
 function navigate(view) {
@@ -180,7 +182,7 @@ document.addEventListener("visibilitychange", () => {
 
 setInterval(() => {
   if (!document.hidden && state.docs) {
-    paint(() => renderTick(state.docs, state.peer ? null : state.live, state.sampledAt));
+    paint(() => renderTick(state.docs, state.live, state.sampledAt));
   }
 }, 1000);
 setInterval(() => {

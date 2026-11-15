@@ -20,10 +20,10 @@
   <body>
     <div class="shell">
       <header class="topbar">
-        <h1 class="brand"><strong>toolu</strong><span>EPIC ENGINE</span></h1>
+        <div class="brand"><strong>toolu</strong><span>EPIC ENGINE</span></div>
         <nav id="machines" class="machines" aria-label="Machines"></nav>
         <div id="top-controls" class="top-controls">
-          <p id="connection" class="connection" role="status">◷ CONNECTING</p>
+          <p id="connection" class="connection" role="status" hidden>◷ CONNECTING</p>
           <button
             id="pause-all"
             class="control-button"
@@ -71,7 +71,7 @@
           <div id="workspace" class="workspace">
             <section id="view-overview" class="view" aria-labelledby="overview-title">
               <header class="section-heading">
-                <h2 id="overview-title">Overview</h2>
+                <h1 id="overview-title">Overview</h1>
                 <span id="sampled">LIVE · POLLED 3S</span>
               </header>
               <dl class="tiles">
@@ -124,7 +124,7 @@
             </section>
             <section id="view-hosts" class="view panel" aria-labelledby="hosts-title" hidden>
               <header class="section-heading">
-                <h2 id="hosts-title">Hosts</h2>
+                <h1 id="hosts-title">Hosts</h1>
                 <span>AGENT ROTATION</span>
               </header>
               <div id="hosts" class="host-list"></div>
@@ -139,7 +139,7 @@
               hidden
             >
               <header class="section-heading">
-                <h2 id="journal-title">Journal</h2>
+                <h1 id="journal-title">Journal</h1>
                 <span>STREAM</span>
               </header>
               <ol id="journal" class="journal-list"></ol>
@@ -151,7 +151,7 @@
                   <span id="drawer-paused" class="state state-paused" hidden>
                     <span class="glyph">‖</span><span class="state-word">PAUSED</span>
                   </span>
-                  <h2 id="drawer-title">Worker</h2>
+                  <h1 id="drawer-title">Worker</h1>
                 </div>
                 <button id="drawer-close" class="drawer-close" type="button">← BACK</button>
                 <dl id="drawer-meta" class="drawer-meta"></dl>
@@ -186,7 +186,7 @@
                 aria-labelledby="drawer-screen-tab"
               >
                 <header class="section-heading">
-                  <h3 id="drawer-screen-title">SCREEN</h3>
+                  <h2 id="drawer-screen-title">SCREEN</h2>
                   <span id="drawer-screen-meta"></span>
                 </header>
                 <div id="drawer-notice" class="drawer-notice" hidden>
@@ -221,7 +221,7 @@
                 hidden
               >
                 <header class="section-heading">
-                  <h3>LOGS</h3>
+                  <h2>LOGS</h2>
                   <span>POLLED 1S · LOCAL ONLY</span>
                 </header>
                 <p id="drawer-logs-note" class="drawer-note" role="status"></p>
@@ -239,7 +239,7 @@
                 hidden
               >
                 <header class="section-heading">
-                  <h3 id="drawer-plan-title">PLAN</h3>
+                  <h2 id="drawer-plan-title">PLAN</h2>
                   <span id="drawer-plan-line"></span>
                 </header>
                 <progress id="drawer-plan-bar" aria-label="Plan steps green" hidden></progress>
@@ -254,7 +254,7 @@
                 aria-labelledby="drawer-phases-tab"
                 hidden
               >
-                <header class="section-heading"><h3 id="drawer-phases-title">PHASES</h3></header>
+                <header class="section-heading"><h2 id="drawer-phases-title">PHASES</h2></header>
                 <ol id="drawer-phase-list" class="drawer-phase-list"></ol>
               </section>
             </aside>

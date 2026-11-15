@@ -184,6 +184,8 @@ export function showError(error) {
   target.textContent = error ? `Status unavailable: ${error.message}. The page will retry.` : "";
 }
 
+// Hidden in the markup until the first status read settles either way.
 export function showConnection(connected) {
+  $("connection").hidden = false;
   text("connection", connected ? "● LIVE" : "◷ RECONNECTING");
 }

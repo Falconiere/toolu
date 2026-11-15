@@ -32,7 +32,7 @@
 .drawer-identity .state {
   margin-left: 10px;
 }
-.drawer-identity h2 {
+.drawer-identity h1 {
   margin: 0;
   font-family: Archivo, system-ui, sans-serif;
   font-size: 18px;
@@ -96,9 +96,10 @@
   padding: 16px 20px;
   border-bottom: 1px solid var(--line);
 }
-.drawer-section h3 {
+.drawer-section h2 {
   margin: 0;
   font-size: 12px;
+  line-height: inherit;
   font-weight: 600;
   letter-spacing: 0.08em;
 }

@@ -47,10 +47,6 @@ a {
   align-items: baseline;
   gap: 12px;
   flex: none;
-  margin: 0;
-  font-size: inherit;
-  font-weight: inherit;
-  line-height: inherit;
 }
 .brand strong {
   color: var(--acid);
@@ -128,6 +124,7 @@ main {
   min-width: 0;
   padding: 28px 0 48px;
 }
+h1,
 h2,
 h3,
 p {

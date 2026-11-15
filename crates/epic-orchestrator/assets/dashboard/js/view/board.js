@@ -138,7 +138,7 @@ function epicHeader(board, slot) {
     const name = `Open epic ${board.key} in its tracker`;
     identity.append(external("epic-link", href, { label: "TRACKER ↗", name, id: board.key }));
   }
-  identity.append(element("h2", "", board.title || board.key));
+  identity.append(element("h1", "", board.title || board.key));
   slot.dataset.epic = board.key;
   header.append(identity, element("p", "wave-line", waveLine(board)), slot);
   return header;
@@ -204,8 +204,9 @@ export function showBoardMessage(message) {
   }
 }
 
+// Bound to the workspace, which no render ever replaces.
 export function bindBoard() {
-  $("board").addEventListener("click", (event) => {
+  $("workspace").addEventListener("click", (event) => {
     const summary = event.target.closest?.("summary[data-wave]");
     if (summary) toggled.set(summary.dataset.wave, !summary.parentElement.open);
   });
