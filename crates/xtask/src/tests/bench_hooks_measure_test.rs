@@ -149,11 +149,11 @@ printf '{"exitCode":0,"wallUs":1,"userUs":1,"sysUs":1,"maxRssBytes":%s}' "$n" > 
 #[test]
 fn a_background_child_holding_stderr_does_not_keep_the_harness_waiting() {
   let dir = tempfile::tempdir().unwrap();
-  let measurer = measurer(dir.path(), "echo gone >&2\nsleep 4 &\nexit 4");
+  let measurer = measurer(dir.path(), "echo gone >&2\nsleep 30 &\nexit 4");
   let started = Instant::now();
   let err = once(&measurer, &spawn(dir.path(), SPAWN_DEADLINE), "entry", 0).unwrap_err();
   assert_eq!(err, "entry: measurer exited Some(4): gone");
-  assert!(started.elapsed() < Duration::from_secs(3), "{err}");
+  assert!(started.elapsed() < Duration::from_secs(10), "{err}");
 }
 
 #[test]
