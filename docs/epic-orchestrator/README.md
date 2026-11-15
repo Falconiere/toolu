@@ -92,6 +92,14 @@ prompt a live idle worker with the result. Engine prompts, hook notices and
 `--wait` share the same claim, so a result already reported cannot be claimed
 again. A worker does not need to poll for the result.
 
+Epic workers keep focused checks blocking. For the full gate, run
+`toolu ledger run <doc> --step <n> --detach` in a plan, or
+`toolu epic job --detach -- <command>` outside a plan. While it runs, do only
+read-only or out-of-tree work: do not edit tracked files or run cargo in the
+worktree. The result arrives at the next tool call or as a pane prompt. If
+nothing useful remains, call `toolu epic job --wait` once. Never sleep and
+retry around admission or poll for completion.
+
 For GitHub epics, the tracker uses body and labels from a native sub-issue
 listing when they are present. If the native list omits either field, it fetches
 that child once for the missing details. Task-list children reuse their initial
