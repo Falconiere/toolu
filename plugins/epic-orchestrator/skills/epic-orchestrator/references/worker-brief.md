@@ -96,19 +96,25 @@ directly.
 {{PROMPTED}}
 ## Never lose progress
 
-This worktree is bound to shared machine resources. Plan-ledger checks acquire
-an expensive-job lease automatically and wait for it. Run other full gates and
-test jobs as one blocking call: `toolu epic job -- <command> <args...>` waits
-for admission itself (up to 30 min), then runs the command; never sleep and
-retry around it, and never bypass it. Give that call a long tool timeout: on
-Claude Code pass `timeout` up to 90 min; on Codex poll the still-running
-session with the maximum yield (an empty `write_stdin` poll of 300 s), not
-`sleep` or short waits. A failed job prints its last 80 log lines and the
-`full log` path, so do not redirect its output to a file and tail it. Run
-crate-scoped checks per step and the full gate once before push and once after
-each fix round. Background children keep occupying capacity until they exit.
-Phase reports describe meaningful progress; job heartbeats only establish
-liveness.
+This worktree is bound to shared machine resources. Focused checks still block.
+Plan-ledger checks acquire an expensive-job lease automatically and wait for it.
+Run the full gate detached: in a plan, use
+`toolu ledger run <doc> --step <n> --detach`; outside a plan, use
+`toolu epic job --detach -- <command>`. These commands wait for admission (up
+to 30 min) and return a job ID; never sleep and
+retry around admission, and never bypass it. While the gate runs, do
+only read-only or out-of-tree work:
+do not edit tracked files or run cargo in this worktree.
+The result arrives at the next tool call or as a pane prompt.
+If nothing useful remains, call `toolu epic job --wait` once. Give a blocking
+wait a long tool timeout: on Claude Code pass `timeout` up to 90 min; on Codex
+poll the still-running session with the maximum yield (an empty `write_stdin`
+poll of 300 s), not `sleep` or short waits. A failed job prints its last 80
+log lines and the `full log` path, so do not redirect its output to a file and
+tail it. Run crate-scoped checks per step and the full gate once before push
+and once after each fix round. Background children keep occupying capacity
+until they exit. Phase reports describe meaningful progress; job heartbeats
+only establish liveness.
 
 If a previous call returned a detached job ID, use its completion notice if
 already reported by a hook or an engine prompt to a live idle worker; that

@@ -143,7 +143,18 @@ fn the_brief_fills_every_placeholder_for_each_host_and_tracker() {
       text.contains("toolu epic report <phase> --status-file "),
       "{kind}"
     );
-    assert!(text.contains("toolu epic job -- "), "{kind}");
+    for phrase in [
+      "toolu ledger run <doc> --step <n> --detach",
+      "toolu epic job --detach -- <command>",
+      "toolu epic job --wait` once",
+      "Focused checks still block",
+      "only read-only or out-of-tree work",
+      "do not edit tracked files or run cargo in this worktree",
+      "never sleep and\nretry",
+    ] {
+      assert!(text.contains(phrase), "{kind}: missing {phrase}");
+    }
+    assert!(!text.contains("Run other full gates and\ntest jobs as one blocking call"));
     let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
     assert!(
       flat.contains("`report babysit --pr <number>` instead and stop"),
@@ -155,4 +166,8 @@ fn the_brief_fills_every_placeholder_for_each_host_and_tracker() {
   assert!(jira.contains("`toolu epic jira issue get Falconiere/comemory#255`"));
   let linear = brief(&home, "claude", Some("linear")).unwrap();
   assert!(!linear.contains("{{") && !linear.contains("gh issue view"));
+  for text in [&jira, &linear] {
+    assert!(text.contains("toolu epic job --detach -- <command>"));
+    assert!(text.contains("toolu epic job --wait` once"));
+  }
 }
