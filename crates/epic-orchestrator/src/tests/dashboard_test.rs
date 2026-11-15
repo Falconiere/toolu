@@ -54,15 +54,11 @@ fn assert_asset(
   assert!(headers.contains("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"), "{path}");
 }
 
-#[test]
-fn dashboard_asset_routes_match_embedded_bytes_and_security_headers() {
-  let temp = tempfile::tempdir().expect("temp root");
-  let (running, stop) = listener(temp.path(), config(0, Vec::new(), Secrets::none()));
-  let version = env!("CARGO_PKG_VERSION");
+/// The page, then every embedded asset with the media type its extension calls for.
+fn assert_every_asset(addr: std::net::SocketAddr, version: &str) {
   let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/dashboard");
   let page = ("/", "index.html", "text/html", "no-store");
-  assert_asset(running.addr, version, &assets, page);
-  // Every embedded asset, with the media type its extension calls for.
+  assert_asset(addr, version, &assets, page);
   for (file, _, _) in super::ASSETS {
     let kind = match file.rsplit('.').next() {
       Some("css") => "text/css",
@@ -70,12 +66,7 @@ fn dashboard_asset_routes_match_embedded_bytes_and_security_headers() {
       _ => "font/woff2",
     };
     let route = format!("/{file}");
-    assert_asset(
-      running.addr,
-      version,
-      &assets,
-      (&route, file, kind, ASSET_CACHE),
-    );
+    assert_asset(addr, version, &assets, (&route, file, kind, ASSET_CACHE));
   }
   for file in [
     "sidebar.css",
@@ -88,6 +79,14 @@ fn dashboard_asset_routes_match_embedded_bytes_and_security_headers() {
       "{file}"
     );
   }
+}
+
+#[test]
+fn dashboard_asset_routes_match_embedded_bytes_and_security_headers() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let (running, stop) = listener(temp.path(), config(0, Vec::new(), Secrets::none()));
+  let version = env!("CARGO_PKG_VERSION");
+  assert_every_asset(running.addr, version);
   let (headers, _) = request(
     running.addr,
     "GET",
