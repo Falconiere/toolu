@@ -39,7 +39,10 @@ fn empty_registered_epic_still_has_a_status_board() {
 
 /// The epic #248 graph, changed by `edit`, saved under `root` and loaded by
 /// the engine's snapshot.
-fn board(root: &std::path::Path, edit: impl FnOnce(&mut crate::graph::Graph)) -> (Paths, World) {
+pub(super) fn board(
+  root: &std::path::Path,
+  edit: impl FnOnce(&mut crate::graph::Graph),
+) -> (Paths, World) {
   let paths = Paths::at(root.join("resources"));
   let state = root.join("state");
   let mut graph = crate::support::graph_248();
