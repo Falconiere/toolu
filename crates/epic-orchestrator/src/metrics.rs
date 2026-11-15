@@ -78,3 +78,10 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/metrics_scenario_test.rs"]
 mod scenario_tests;
+
+#[cfg(test)]
+#[path = "metrics/tests/usage_test.rs"]
+mod usage_history_tests;
+#[cfg(test)]
+#[path = "metrics/tests/usage_report_test.rs"]
+mod usage_report_tests;

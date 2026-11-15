@@ -68,3 +68,25 @@ fn the_closing_section_has_no_tokens_and_an_unknown_epic_fails() {
   let err = report(&paths, "nope", 0, None).unwrap_err();
   assert!(err.contains("unknown epic nope"), "{err}");
 }
+
+#[test]
+fn usage_summary_exposes_coverage_and_attempts_but_closing_omits_them() {
+  let root = root();
+  let claude = tokens_state().join("../claude");
+  let env = Env::from_pairs([
+    ("HOME", "/nonexistent"),
+    ("CLAUDE_CONFIG_DIR", claude.to_str().unwrap()),
+  ]);
+  let paths = Paths::at(root.path());
+  let report = report(&paths, "e", 0, Some(&env)).unwrap();
+  assert_eq!(report["usage"]["schema"], 1);
+  assert_eq!(report["usage"]["coverage"], "partial");
+  assert!(!report["usage"]["attempts"].as_array().unwrap().is_empty());
+  let text = markdown(&report).to_lowercase();
+  assert!(text.contains("partial"), "{text}");
+  assert!(text.contains("attempt"), "{text}");
+  let public = closing(&paths, &tokens_state(), 0).unwrap().to_lowercase();
+  assert!(!public.contains("usage"), "{public}");
+  assert!(!public.contains("attempt"), "{public}");
+  assert!(!public.contains("token"), "{public}");
+}
