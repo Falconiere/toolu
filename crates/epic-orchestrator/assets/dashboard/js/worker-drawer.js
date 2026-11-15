@@ -35,6 +35,7 @@ const replaceHash = (hash) =>
 const setHash = (key) => replaceHash(withIssue(location.hash, key));
 
 const find = (key) => findIssue(current().docs?.boards, key);
+const shown = (node) => node?.isConnected && node.checkVisibility?.() !== false;
 
 function render() {
   const found = find(drawer.key);
@@ -224,8 +225,9 @@ export function closeDrawer(restoreFocus = false) {
   setHash(null);
   navigated();
   if (!restoreFocus) return;
+  // Closing lands on the epic's view, so an opener in another view is hidden by now.
   const rows = [...document.querySelectorAll("#board button[data-issue]")];
-  (opener?.isConnected ? opener : rows.find((row) => row.dataset.issue === key))?.focus();
+  [opener, rows.find((row) => row.dataset.issue === key)].find(shown)?.focus();
 }
 
 // After each dashboard render: refresh the open drawer, or open the deep-linked one.

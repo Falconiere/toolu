@@ -37,7 +37,8 @@ function external(className, href, { label, name, id }) {
   link.href = href;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.dataset.link = id;
+  // Apart from the row's own key, so a rebuild returns focus to the link, not the row.
+  link.dataset.link = `link ${id}`;
   link.setAttribute("aria-label", name);
   return link;
 }
