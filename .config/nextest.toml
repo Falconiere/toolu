@@ -34,6 +34,12 @@ threads-required = 'num-test-threads'
 filter = 'binary(golden_quality) & test(=ts_quality_replays_every_golden_case)'
 threads-required = 'num-test-threads'
 
+# The Rust quality replays also run real hook subprocesses with a fixed Git
+# deadline; one timed out only beside other workspace tests.
+[[profile.default.overrides]]
+filter = 'binary(golden_quality) & test(=rust_quality_replays_every_golden_case)'
+threads-required = 'num-test-threads'
+
 # The 180-case hook replay runs up to six real hook processes at once. Beside
 # other workspace tests, its 30 s subprocess deadline expired under load.
 [[profile.default.overrides]]
