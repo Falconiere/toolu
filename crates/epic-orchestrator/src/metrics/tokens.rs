@@ -166,10 +166,7 @@ fn claude_usage(
   partial: &mut bool,
 ) -> Result<(), &'static str> {
   let mut seen = false;
-  for line in text.lines() {
-    let Some(entry) = parse_line(line, partial) else {
-      continue;
-    };
+  for entry in parse_lines(text, partial) {
     if let (Some("assistant"), Some(id), Some(usage)) = (
       entry.get("type").and_then(Value::as_str),
       entry.pointer("/message/id").and_then(Value::as_str),
@@ -192,17 +189,22 @@ fn claude_usage(
   Ok(())
 }
 
-/// Parse a log line and remember malformed JSON for snapshot coverage.
-pub(super) fn parse_line(line: &str, partial: &mut bool) -> Option<Value> {
-  if line.trim().is_empty() {
-    return None;
-  }
-  if let Ok(entry) = serde_json::from_str(line) {
-    Some(entry)
-  } else {
-    *partial = true;
-    None
-  }
+/// Parse log records and remember malformed JSON for snapshot coverage.
+pub(super) fn parse_lines<'a>(
+  text: &'a str,
+  partial: &'a mut bool,
+) -> impl DoubleEndedIterator<Item = Value> + 'a {
+  text.lines().filter_map(move |line| {
+    if line.trim().is_empty() {
+      return None;
+    }
+    if let Ok(entry) = serde_json::from_str(line) {
+      Some(entry)
+    } else {
+      *partial = true;
+      None
+    }
+  })
 }
 
 /// Input and output must be recorded; optional known counters must be unsigned.
@@ -276,10 +278,7 @@ fn codex(
   let path = find_file(&home.join("sessions"), &suffix, 4).ok_or("no rollout for the session")?;
   let text = std::fs::read_to_string(path).map_err(|_err| "the rollout cannot be read")?;
   let mut latest = None;
-  for line in text.lines().rev() {
-    let Some(entry) = parse_line(line, partial) else {
-      continue;
-    };
+  for entry in parse_lines(&text, partial).rev() {
     if latest.is_none()
       && entry.pointer("/payload/type").and_then(Value::as_str) == Some("token_count")
     {

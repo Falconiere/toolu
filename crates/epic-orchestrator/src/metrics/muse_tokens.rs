@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 use toolu_runtime::env::Env;
 
-use super::tokens::{field_totals, parse_line, valid_counts};
+use super::tokens::{field_totals, parse_lines, valid_counts};
 use crate::launch::muse_session::data_root;
 
 const FIELDS: [&str; 4] = [
@@ -72,10 +72,7 @@ fn reported(
   partial: &mut bool,
 ) -> Result<(), &'static str> {
   let mut seen = false;
-  for line in text.lines() {
-    let Some(entry) = parse_line(line, partial) else {
-      continue;
-    };
+  for entry in parse_lines(text, partial) {
     if entry.pointer("/payload/event/kind").and_then(Value::as_str)
       != Some("goal_usage_attribution")
     {
