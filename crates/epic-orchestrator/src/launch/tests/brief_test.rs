@@ -36,6 +36,7 @@ fn every_placeholder_is_filled_with_toolu_epic_commands() {
   for phrase in [
     "`toolu ledger run <doc> --step <n> --detach`",
     "`toolu epic job --detach -- <command>`",
+    "The launch returns a job ID at once",
     "`toolu epic job --wait` once",
     "scoped pre-check",
     "Focused checks still block",

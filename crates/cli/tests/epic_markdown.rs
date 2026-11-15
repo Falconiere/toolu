@@ -146,6 +146,7 @@ fn the_brief_fills_every_placeholder_for_each_host_and_tracker() {
     for phrase in [
       "toolu ledger run <doc> --step <n> --detach",
       "toolu epic job --detach -- <command>",
+      "The launch returns a job ID at once",
       "toolu epic job --wait` once",
       "Focused checks still block",
       "only read-only or out-of-tree work",

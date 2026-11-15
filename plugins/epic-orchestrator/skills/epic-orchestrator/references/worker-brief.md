@@ -100,8 +100,8 @@ This worktree is bound to shared machine resources. Focused checks still block.
 Plan-ledger checks acquire an expensive-job lease automatically and wait for it.
 Run the full gate detached: in a plan, use
 `toolu ledger run <doc> --step <n> --detach`; outside a plan, use
-`toolu epic job --detach -- <command>`. These commands wait for admission (up
-to 30 min) and return a job ID; never sleep and
+`toolu epic job --detach -- <command>`. The launch returns a job ID at once;
+the detached copy waits for admission (up to 30 min); never sleep and
 retry around admission, and never bypass it. While the gate runs, do
 only read-only or out-of-tree work:
 do not edit tracked files or run cargo in this worktree.
