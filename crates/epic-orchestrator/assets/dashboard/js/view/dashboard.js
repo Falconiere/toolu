@@ -1,14 +1,5 @@
-import {
-  agentState,
-  hostNote,
-  hostState,
-  issueRows,
-  liveTitle,
-  phaseLine,
-  statusTitle,
-  tiles,
-  waveLine,
-} from "../logic/status.js";
+import { hostNote, hostState, tiles } from "../logic/status.js";
+import { renderEpic, renderLive, showBoardMessage } from "./board.js";
 import { $, element, mark, text } from "./dom.js";
 
 // Rebuilt rows take their old action slots back, so a button mid-click survives a render.
@@ -43,7 +34,7 @@ export function renderMachines(fleet, selected, select) {
   }
 }
 
-function renderTiles(docs, sampledAt, now) {
+function renderTiles(docs, live, sampledAt, now) {
   const elapsed = Math.max(0, now - sampledAt);
   const attention = {
     items: (docs.attention.items ?? []).map((item) => ({
@@ -51,7 +42,7 @@ function renderTiles(docs, sampledAt, now) {
       age_ms: (item.age_ms ?? 0) + elapsed,
     })),
   };
-  const totals = tiles(docs.boards, docs.hosts, attention, now);
+  const totals = tiles(docs.boards, docs.hosts, attention, now, live);
   for (const [id, value] of Object.entries({
     "tile-workers": totals.workers,
     "tile-workers-note": totals.workerNote,
@@ -63,117 +54,6 @@ function renderTiles(docs, sampledAt, now) {
   }))
     text(id, value);
   return attention;
-}
-
-function epicHeader(board, slots) {
-  const header = element("header", "epic-header");
-  const identity = element("div", "epic-identity");
-  identity.append(element("span", "eyebrow", `EPIC #${board.key.split("-").at(-1)}`));
-  if (board.paused) identity.append(mark({ kind: "paused", label: "‖ PAUSED" }));
-  identity.append(element("h3", "", board.title || board.key));
-  header.append(identity, element("p", "wave-line", waveLine(board)));
-  const slot = slots.get(board.key) ?? element("div", "epic-control-slot");
-  slot.dataset.epic = board.key;
-  header.append(slot);
-  return header;
-}
-
-function rowLine(issue, live, peer) {
-  if (peer) return "live status on peer";
-  if (!issue.stage && issue.open_blockers?.length) {
-    return `blocked by ${issue.open_blockers.join(", ")}`;
-  }
-  const state = agentState(issue, live?.agent_status);
-  return statusTitle(live, issue.key)
-    ? `${state.kind} · ${liveTitle(live.host || issue.host, live.title)}`
-    : state.kind;
-}
-
-function planCell(issue) {
-  const cell = element("span", "issue-plan");
-  const plan = issue.plan_summary;
-  if (!plan || plan.error) {
-    cell.append(element("span", "", plan?.error ? "UNREADABLE" : "—"));
-    return cell;
-  }
-  cell.append(element("span", "", `${plan.green ?? 0}/${plan.total ?? 0}`));
-  if (plan.total > 0) {
-    const bar = element("progress");
-    bar.max = plan.total;
-    bar.value = Math.min(plan.green ?? 0, plan.total);
-    bar.setAttribute("aria-label", "Plan steps green");
-    cell.append(bar);
-  }
-  return cell;
-}
-
-function issueButton(issue, live, attention, peer) {
-  const title = issue.title || "Untitled issue";
-  const button = element("button", "issue-row");
-  button.type = "button";
-  button.dataset.issue = issue.key;
-  button.setAttribute("aria-label", `Open ${issue.key}: ${title}`);
-  button.append(mark(agentState(issue, live?.agent_status)));
-  const identity = element("span", "issue-identity");
-  identity.append(element("strong", "", issue.key), element("span", "issue-title", title));
-  identity.append(element("small", "issue-live", rowLine(issue, live, peer)));
-  button.append(identity);
-  button.append(
-    element(
-      "span",
-      "issue-host",
-      issue.host ? `${issue.host} · ${issue.model || "model unknown"}` : "—",
-    ),
-  );
-  button.append(planCell(issue));
-  button.append(element("span", "issue-phase", phaseLine(issue, issue.wave)));
-  const count = (attention.items ?? []).filter((item) => item.key === issue.key).length;
-  button.append(element("span", "issue-attention", count ? `▲ ${count}` : "—"));
-  return button;
-}
-
-function renderBoards(boards, live, attention, peer) {
-  const target = $("board");
-  // Attention keys carry `data-issue` too; restore focus only to a board row.
-  const focused = target.contains(document.activeElement) && document.activeElement.dataset.issue;
-  const scrolls = new Map(
-    [...target.querySelectorAll(".table-scroll")].map((node) => [
-      node.dataset.epic,
-      node.scrollLeft,
-    ]),
-  );
-  const slots = slotsBy(target, ".epic-control-slot", (data) => data.epic);
-  target.replaceChildren();
-  if (!boards.length) {
-    target.append(element("p", "empty", "No registered epics yet."));
-    return;
-  }
-  const liveByKey = new Map((live?.items ?? []).map((item) => [item.key, item]));
-  for (const board of boards) {
-    const section = element("section", "epic");
-    section.append(epicHeader(board, slots));
-    const scroll = element("div", "table-scroll");
-    scroll.dataset.epic = board.key;
-    const table = element("div", "issue-table");
-    for (const label of ["AGENT", "ISSUE", "HOST", "PLAN", "PHASE", "ATTN"]) {
-      table.append(element("span", "column-label", label));
-    }
-    for (const issue of issueRows(board)) {
-      table.append(issueButton(issue, liveByKey.get(issue.key), attention, peer));
-    }
-    if (!board.graph?.issues?.length) {
-      table.append(element("p", "empty", "No issues in this epic yet."));
-    }
-    scroll.append(table);
-    section.append(scroll);
-    target.append(section);
-    scroll.scrollLeft = scrolls.get(board.key) ?? 0;
-  }
-  if (focused) {
-    [...target.querySelectorAll("button[data-issue]")]
-      .find((button) => button.dataset.issue === focused)
-      ?.focus({ preventScroll: true });
-  }
 }
 
 const HOST_NAMES = {
@@ -265,9 +145,12 @@ function renderJournal(events, peer) {
   if (!target.children.length) target.append(element("li", "empty", "No recent events."));
 }
 
-export function renderDashboard(docs, live, peer, sampledAt, now = Date.now()) {
-  const attention = renderTiles(docs, sampledAt, now);
-  renderBoards(docs.boards, live, attention, peer);
+// `view` picks the epic board to draw; every other section is drawn whatever is selected.
+export function renderDashboard(docs, live, peer, sampledAt, view, now = Date.now()) {
+  const attention = renderTiles(docs, live, sampledAt, now);
+  const board = view.kind === "epic" && docs.boards.find((item) => item.key === view.key);
+  renderEpic(board || null, live, attention, peer);
+  renderLive(docs.boards, live, attention, peer);
   renderHosts(docs.hosts, now);
   renderAttention(attention, docs.boards);
   renderJournal(docs.events, peer);
@@ -277,14 +160,14 @@ export function renderDashboard(docs, live, peer, sampledAt, now = Date.now()) {
   );
 }
 
-export function renderTick(docs, sampledAt, now = Date.now()) {
-  const attention = renderTiles(docs, sampledAt, now);
+export function renderTick(docs, live, sampledAt, now = Date.now()) {
+  const attention = renderTiles(docs, live, sampledAt, now);
   renderHosts(docs.hosts, now);
   renderAttention(attention, docs.boards);
 }
 
 export function renderUnavailable(message) {
-  $("board").replaceChildren(element("p", "empty", message));
+  showBoardMessage(message);
   for (const id of ["tile-workers", "tile-attention", "tile-hosts", "tile-plans"]) text(id, "—");
   for (const id of ["tile-workers-note", "tile-attention-note", "tile-plans-note"])
     text(id, message);

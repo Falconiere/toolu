@@ -20,7 +20,7 @@
   color: var(--acid);
 }
 .drawer-log-list {
-  max-height: 180px;
+  max-height: 150px;
   overflow-y: auto;
   margin: 0 0 10px;
   padding: 0;

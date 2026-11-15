@@ -1,6 +1,10 @@
 import { readDashboard, readFleet, readLive } from "./api.js";
-import { peerMachine } from "./logic/status.js";
+import { resolveView } from "./logic/board.js";
+import { fragmentIssue, fragmentView, withView } from "./logic/fragment.js";
+import { findIssue, peerMachine } from "./logic/status.js";
+import { bindBoard } from "./view/board.js";
 import { renderPeer } from "./view/peer.js";
+import { bindSidebar, renderSidebar, showView } from "./view/sidebar.js";
 import {
   renderDashboard,
   renderMachines,
@@ -18,12 +22,42 @@ const state = { peer: null, fleet: null, docs: null, live: null, sampledAt: 0, r
 let stream;
 let refreshTimer;
 
+// The selected view comes from the URL fragment on every paint; nothing else stores it.
+const selected = () => resolveView(fragmentView(location.hash), state.docs?.epics?.items);
+
+function renderNav() {
+  const view = selected();
+  // An open worker belongs to its epic, whatever view it was opened from.
+  const epic = findIssue(state.docs?.boards, fragmentIssue(location.hash))?.board.key;
+  renderSidebar(state.docs, epic ? { kind: "epic", key: epic } : view);
+  showView(view);
+}
+
 // Renders rebuild the rows that hold action buttons; keep keyboard focus on the same control.
 function paint(draw = () => {}) {
   const focus = focusedControl();
   draw();
+  renderNav();
   renderControls({ ...controlState(), docs: state.docs, now: Date.now() });
   restoreControl(focus);
+}
+
+function repaint() {
+  if (!state.docs) return paint();
+  const live = state.peer ? null : state.live;
+  return paint(() => renderDashboard(state.docs, live, state.peer, state.sampledAt, selected()));
+}
+
+function navigate(view) {
+  closeDrawer();
+  closeAnswer();
+  history.replaceState(
+    null,
+    "",
+    `${location.pathname}${location.search}${withView(location.hash, view)}`,
+  );
+  repaint();
+  scrollTo({ top: 0 });
 }
 
 initControl(
@@ -33,7 +67,10 @@ initControl(
     syncDrawer();
   },
 );
-initDrawer(() => state);
+initDrawer(() => state, repaint);
+bindSidebar(navigate);
+bindBoard();
+window.addEventListener("hashchange", repaint);
 
 function stopStream() {
   stream?.close();
@@ -71,7 +108,7 @@ async function refresh() {
     if (request !== state.request) return;
     state.docs = docs;
     state.sampledAt = Date.now();
-    paint(() => renderDashboard(docs, state.peer ? null : state.live, state.peer, state.sampledAt));
+    repaint();
     syncDrawer();
     showError(null);
     showConnection(true);
@@ -103,7 +140,7 @@ async function sampleLive() {
     if (state.peer || document.hidden) return;
     state.live = live;
     if (state.docs) {
-      paint(() => renderDashboard(state.docs, state.live, null, state.sampledAt));
+      repaint();
       syncDrawer();
     }
   } catch {
@@ -142,7 +179,9 @@ document.addEventListener("visibilitychange", () => {
 });
 
 setInterval(() => {
-  if (!document.hidden && state.docs) paint(() => renderTick(state.docs, state.sampledAt));
+  if (!document.hidden && state.docs) {
+    paint(() => renderTick(state.docs, state.peer ? null : state.live, state.sampledAt));
+  }
 }, 1000);
 setInterval(() => {
   if (!document.hidden) {

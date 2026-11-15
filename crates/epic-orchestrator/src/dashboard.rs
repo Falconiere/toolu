@@ -10,7 +10,7 @@ const JS: &str = "text/javascript";
 const FONT: &str = "font/woff2";
 
 /// Every served asset: its path under [`ASSET_PREFIX`], bytes and media type.
-const ASSETS: [(&str, &[u8], &str); 25] = [
+const ASSETS: [(&str, &[u8], &str); 29] = [
   (
     "tokens.css",
     include_bytes!("../assets/dashboard/tokens.css"),
@@ -24,6 +24,11 @@ const ASSETS: [(&str, &[u8], &str); 25] = [
   (
     "board-layout.css",
     include_bytes!("../assets/dashboard/board-layout.css"),
+    CSS,
+  ),
+  (
+    "sidebar.css",
+    include_bytes!("../assets/dashboard/sidebar.css"),
     CSS,
   ),
   (
@@ -77,6 +82,11 @@ const ASSETS: [(&str, &[u8], &str); 25] = [
     JS,
   ),
   (
+    "js/logic/board.js",
+    include_bytes!("../assets/dashboard/js/logic/board.js"),
+    JS,
+  ),
+  (
     "js/logic/drawer.js",
     include_bytes!("../assets/dashboard/js/logic/drawer.js"),
     JS,
@@ -107,6 +117,11 @@ const ASSETS: [(&str, &[u8], &str); 25] = [
     JS,
   ),
   (
+    "js/view/board.js",
+    include_bytes!("../assets/dashboard/js/view/board.js"),
+    JS,
+  ),
+  (
     "js/view/dom.js",
     include_bytes!("../assets/dashboard/js/view/dom.js"),
     JS,
@@ -124,6 +139,11 @@ const ASSETS: [(&str, &[u8], &str); 25] = [
   (
     "js/view/peer.js",
     include_bytes!("../assets/dashboard/js/view/peer.js"),
+    JS,
+  ),
+  (
+    "js/view/sidebar.js",
+    include_bytes!("../assets/dashboard/js/view/sidebar.js"),
     JS,
   ),
   (
