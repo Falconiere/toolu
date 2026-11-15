@@ -281,3 +281,7 @@ mod legacy_tests;
 #[cfg(test)]
 #[path = "tests/usage_incomplete_test.rs"]
 mod incomplete_tests;
+
+#[cfg(test)]
+#[path = "tests/usage_cache_test.rs"]
+mod cache_tests;
