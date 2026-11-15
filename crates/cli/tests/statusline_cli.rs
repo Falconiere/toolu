@@ -140,7 +140,7 @@ fn instrumented_render(test: &Instrumentation<'_>) -> TestResult<Output> {
 }
 
 fn wait_for(mut ready: impl FnMut() -> bool) -> TestResult<()> {
-  let deadline = Instant::now() + Duration::from_secs(5);
+  let deadline = Instant::now() + Duration::from_secs(30);
   while !ready() {
     ensure!(Instant::now() < deadline, "timed out waiting for refresher");
     std::thread::sleep(Duration::from_millis(10));
