@@ -7,6 +7,7 @@ import {
   stepMark,
   screenNotice,
   prUrl,
+  prLink,
   planLine,
   phaseTimeline,
   nextStep,
@@ -69,6 +70,10 @@ test("notices follow peer, queue, finish, token and screen replies in order", ()
   assert.equal(
     screenNotice({ issue: { open_blockers: [] } }).text,
     "Queued. The screen appears once a host claims it.",
+  );
+  assert.equal(
+    screenNotice({ issue: { closed: true, open_blockers: [] }, token }).text,
+    "Finished · closed before launch.",
   );
   assert.equal(
     screenNotice({ issue: { stage: "merged", phase: "babysit" }, token }).text,
@@ -138,6 +143,20 @@ test("pull request links derive from the issue URL and refuse other shapes", () 
   assert.equal(prUrl(url.replace(/^https?:/, "ftp:"), 3), null);
   assert.equal(prUrl(url.replace("/issues/", "/pull/"), 3), null);
   assert.equal(prUrl("not a url", 3), null);
+});
+
+test("a pull request link prefers the issue's repository over the epic's", () => {
+  const board = { url: captured.board.url };
+  const pull = (repo) => board.url.replace(/\/o\/r\/issues\/\d+$/, `/o/${repo}/pull/12`);
+  const other = board.url.replace("/o/r/", "/o/other/");
+  assert.equal(prLink({ url: other, pr: 12 }, board), pull("other"));
+  // A tracker that is not a GitHub issue URL names no repository: the epic's stands.
+  const tracker = board.url.replace(/\/o\/r\/issues\/\d+$/, "/browse/ENG-1");
+  assert.equal(prLink({ url: tracker, pr: 12 }, board), pull("r"));
+  assert.equal(prLink({ url: null, pr: 12 }, board), pull("r"));
+  assert.equal(prLink({ url: tracker, pr: 12 }, { url: null }), null);
+  assert.equal(prLink({ url: other, pr: null }, board), null);
+  assert.equal(prLink(undefined, undefined), null);
 });
 
 test("attention, epic and clock lines", () => {

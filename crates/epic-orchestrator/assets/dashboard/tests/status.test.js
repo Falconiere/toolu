@@ -10,6 +10,7 @@ import {
   hostResumable,
   hostState,
   issueRows,
+  linkUrl,
   liveTitle,
   peerDashboardUrl,
   peerMachine,
@@ -143,4 +144,57 @@ test("findIssue merges the graph node with its issue record", () => {
   assert.equal(found.row.stage, captured.board.issues.find((issue) => issue.key === key)?.stage);
   assert.equal(findIssue([captured.board], "missing"), null);
   assert.equal(findIssue(undefined, key), null);
+});
+
+test("tiles count what each live worker's agent is doing now", () => {
+  const [issue] = captured.board.issues;
+  assert.equal(issue.agent_status, "unknown");
+  const live = { items: [{ key: issue.key, agent_status: "working" }] };
+  const now = Date.now();
+  const summary = tiles([captured.board], captured.hosts, captured.attention, now, live);
+  assert.equal(summary.workerNote, "1 working, 0 blocked, 0 idle.");
+  // Live status unavailable, as in the capture: the board's own status stands.
+  assert.equal(captured.live.available, false);
+  const fallback = tiles([captured.board], captured.hosts, captured.attention, now, captured.live);
+  assert.equal(fallback.workerNote, "0 working, 0 blocked, 0 idle.");
+});
+
+test("links are served only for plain http and https URLs", () => {
+  const url = captured.board.graph.issues[0].url;
+  assert.match(url, /^https:\/\/github\.com\/o\/r\/issues\/10$/);
+  assert.equal(linkUrl(url), url);
+  const plain = url.replace(/^https:/, "http:");
+  assert.equal(linkUrl(plain), plain);
+  for (const hostile of [
+    ["javascript", "alert(1)"].join(":"),
+    url.replace("//", "//user@"),
+    url.replace("//", "//user:pw@"),
+    url.replace(/^https:/, "ftp:"),
+    "not a url",
+    "",
+    null,
+    undefined,
+    7,
+    {},
+  ]) {
+    assert.equal(linkUrl(hostile), null, String(hostile));
+  }
+});
+
+test("an issue closed before launch reads as done, not queued", () => {
+  const board = structuredClone(captured.board);
+  board.graph.issues.push({ ...board.graph.issues[0], key: "next-2", wave: 2 });
+  board.graph.issues.unshift({ ...board.graph.issues[0], key: "old-1", wave: 1 });
+  board.graph.issues[1].wave = 2;
+  Object.assign(board, { current_wave: 2, waves_total: 2 });
+  const rows = issueRows(board);
+  assert.deepEqual(
+    rows.map((row) => [row.key, row.closed, agentState(row).label, phaseLine(row, row.wave)]),
+    [
+      ["old-1", true, "✓ DONE", "CLOSED BEFORE LAUNCH"],
+      ["local-658", false, "? UNKNOWN", phaseLine(captured.board.issues[0], 2)],
+      ["next-2", false, "○ QUEUED", "QUEUED · WAVE 2"],
+    ],
+  );
+  assert.equal(findIssue([board], "old-1").row.closed, true);
 });
