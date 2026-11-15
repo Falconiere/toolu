@@ -97,7 +97,9 @@ export function phaseTimeline(history, issue) {
     phase: (row.phase || "—").toUpperCase(),
     at: clock(row.at),
   }));
-  if (!rows.length && !issue?.stage) rows.push({ phase: "QUEUED", at: "—" });
+  if (!rows.length && !issue?.stage) {
+    rows.push({ phase: issue?.closed ? "CLOSED BEFORE LAUNCH" : "QUEUED", at: "—" });
+  }
   return rows.map((row, index) => ({ ...row, current: index === rows.length - 1 }));
 }
 

@@ -132,6 +132,9 @@ test("phase timeline lists history with the last phase current, or QUEUED", () =
   assert.equal(rows.at(-1).current, true);
   assert.match(rows[0].at, /^\d\d:\d\d$/);
   assert.deepEqual(phaseTimeline([], queued), [{ phase: "QUEUED", at: "—", current: true }]);
+  assert.deepEqual(phaseTimeline([], { ...queued, closed: true }), [
+    { phase: "CLOSED BEFORE LAUNCH", at: "—", current: true },
+  ]);
   assert.deepEqual(phaseTimeline(undefined, issue), []);
 });
 
