@@ -175,7 +175,11 @@ fn claude_usage(
       entry.pointer("/message/id").and_then(Value::as_str),
       entry.pointer("/message/usage"),
     ) {
-      if strict && !valid_counts(usage, &CLAUDE_FIELDS) {
+      if strict
+        && !CLAUDE_FIELDS
+          .iter()
+          .all(|field| usage.get(field).and_then(Value::as_u64).is_some())
+      {
         return Err("transcript usage counters cannot be read");
       }
       into.insert(id.to_owned(), usage.clone());
