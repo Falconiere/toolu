@@ -19,6 +19,11 @@ fn dashboard_drawer_has_regions_step_marks_notices_and_attach_block() {
     "drawer-copy",
     "drawer-phases",
     "drawer-actions",
+    "drawer-issue",
+    "drawer-screen-tab",
+    "drawer-logs-tab",
+    "drawer-plan-tab",
+    "drawer-phases-tab",
   ] {
     assert!(page.contains(&format!("id=\"{id}\"")), "{id}");
   }
