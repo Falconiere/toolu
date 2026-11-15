@@ -229,8 +229,9 @@ pub(super) fn refresh(
     worktree: item.worktree.clone(),
     launches: 1,
   };
-  let row = tokens::row(&agent, env);
-  if row.get("status").and_then(Value::as_str) == Some("unavailable") {
+  let row = tokens::snapshot(&agent, env);
+  let incomplete = row.get("status").is_some();
+  if incomplete && (item.row.get("tokens").is_some() || row.get("tokens").is_none()) {
     unavailable(item, row)?;
   } else {
     let fields = row
@@ -242,7 +243,7 @@ pub(super) fn refresh(
     }
     item.row = row;
     item.observed_at = Some(toolu_state::time::iso_millis(SystemTime::now()));
-    item.finalized = finalized;
+    item.finalized = finalized && !incomplete;
   }
   Ok(())
 }
@@ -276,3 +277,7 @@ mod edge_tests;
 #[cfg(test)]
 #[path = "tests/usage_legacy_test.rs"]
 mod legacy_tests;
+
+#[cfg(test)]
+#[path = "tests/usage_incomplete_test.rs"]
+mod incomplete_tests;

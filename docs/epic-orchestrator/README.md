@@ -377,7 +377,10 @@ subtotal, even when several attempts reference it.
 Local epic launches retain compact `usage_history` snapshots in their issue
 records. Toolu checkpoints before replacement, after launch acknowledgement,
 and after the agent stops but before removing its worktree. Final snapshots
-survive native-log deletion. A failed refresh keeps prior counters, their
+survive native-log deletion. Empty or unreadable native logs (including child
+logs) are unavailable. Recognized quantities from a partly malformed log remain
+partial and cannot be finalized as complete; legacy token rows keep their
+existing permissive parsing. A failed refresh keeps prior counters, their
 observation time and a stale reason. Malformed history or a failed persistence
 write stops the affected lifecycle operation rather than discarding evidence.
 The report itself does not write records.
