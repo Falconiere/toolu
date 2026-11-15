@@ -81,19 +81,13 @@ export function waveLine(board) {
   return `WAVE ${board.current_wave ?? "—"} OF ${board.waves_total ?? "—"} · ${tail}`;
 }
 
-// `current_wave` is the lowest wave still holding work, so a never-launched issue in an
-// earlier wave was closed before launch.
-const passed = (board, wave) =>
-  Boolean(board.waves_total) &&
-  wave != null &&
-  (board.current_wave == null || wave < board.current_wave);
-
-// Each graph node merged with its issue record.
+// Each graph node merged with its issue record. A never-launched issue the tracker already
+// closed (`done`) was closed before launch; the engine leaves it out of `queued` too.
 export function issueRows(board) {
   const issues = new Map((board.issues ?? []).map((issue) => [issue.key, issue]));
   return (board.graph?.issues ?? []).map((node) => {
     const issue = issues.get(node.key);
-    return { ...node, ...issue, closed: !issue?.stage && passed(board, node.wave) };
+    return { ...node, ...issue, closed: !issue?.stage && Boolean(node.done) };
   });
 }
 

@@ -8,6 +8,7 @@
     "graph": {
       "issues": [
         {
+          "done": false,
           "key": "local-658",
           "open_blockers": [],
           "title": "Fleet",
@@ -80,16 +81,16 @@
   "events": {
     "events": [
       {
-        "at": "2026-11-15T20:17:44.657Z",
+        "at": "2026-11-15T21:24:20.857Z",
         "epic": "",
         "key": "",
         "kind": "action",
         "name": "engine-usage",
-        "note": "{\"cpu_ms\":16,\"event\":\"start\",\"max_rss_bytes\":15466496}",
+        "note": "{\"cpu_ms\":17,\"event\":\"start\",\"max_rss_bytes\":15466496}",
         "seq": 1
       },
       {
-        "at": "2026-11-15T20:17:44.668Z",
+        "at": "2026-11-15T21:24:20.868Z",
         "epic": "local-649",
         "key": "local-658",
         "kind": "transition",
@@ -159,7 +160,7 @@
           }
         ],
         "journal_seq": 0,
-        "last_seen": "2026-11-15T20:17:44.675Z",
+        "last_seen": "2026-11-15T21:24:20.877Z",
         "local": true,
         "name": "local",
         "paused": true,
@@ -167,12 +168,12 @@
         "state": "ok"
       },
       {
-        "age_ms": 12,
+        "age_ms": 15,
         "attention_count": 0,
         "counts": {
           "running": 1
         },
-        "dashboard_url": "http://127.0.0.1:51346/",
+        "dashboard_url": "http://127.0.0.1:56677/",
         "engine": "running",
         "epics": [
           {
@@ -221,7 +222,7 @@
           }
         ],
         "journal_seq": 0,
-        "last_seen": "2026-11-15T20:17:44.663Z",
+        "last_seen": "2026-11-15T21:24:20.862Z",
         "local": false,
         "name": "build-mini",
         "paused": true,
@@ -278,7 +279,7 @@
       },
       {
         "cap": 3,
-        "cooldown_until": "2026-11-15T20:58:44.671Z",
+        "cooldown_until": "2026-11-15T22:05:20.872Z",
         "host": "codex",
         "paused": false,
         "paused_at": null,
@@ -301,7 +302,7 @@
         "cooldown_until": null,
         "host": "muse",
         "paused": true,
-        "paused_at": "2026-11-15T20:17:44.671Z",
+        "paused_at": "2026-11-15T21:24:20.872Z",
         "paused_by": "user",
         "reason": null,
         "running": 0
@@ -334,7 +335,7 @@
     "phase_age_ms": 0,
     "phase_history": [
       {
-        "at": "2026-11-15T20:17:44Z",
+        "at": "2026-11-15T21:24:20Z",
         "note": "fleet",
         "phase": "execution"
       }
@@ -407,7 +408,7 @@
     "queue_position": null,
     "recent_events": [
       {
-        "at": "2026-11-15T20:17:44.668Z",
+        "at": "2026-11-15T21:24:20.868Z",
         "epic": "local-649",
         "key": "local-658",
         "kind": "transition",
@@ -423,7 +424,7 @@
     "available": false,
     "items": [],
     "reason": "off",
-    "sampled_at": "2026-11-15T20:17:44.677Z",
+    "sampled_at": "2026-11-15T21:24:20.879Z",
     "schema": 1
   },
   "overview": {
@@ -556,6 +557,7 @@
     "graph": {
       "issues": [
         {
+          "done": false,
           "key": "peer-658",
           "open_blockers": [],
           "title": "Fleet",
@@ -613,7 +615,7 @@
     "phase_age_ms": 0,
     "phase_history": [
       {
-        "at": "2026-11-15T20:17:44Z",
+        "at": "2026-11-15T21:24:20Z",
         "note": "fleet",
         "phase": "execution"
       }
@@ -623,7 +625,7 @@
     "queue_position": null,
     "recent_events": [
       {
-        "at": "2026-11-15T20:17:44.649Z",
+        "at": "2026-11-15T21:24:20.851Z",
         "epic": "peer-649",
         "key": "peer-658",
         "kind": "transition",

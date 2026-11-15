@@ -21,15 +21,22 @@ const [epic] = captured.epics.items;
 const [worker] = captured.board.issues;
 
 // The captured board grown to three waves: wave 1 merged and closed before launch,
-// wave 2 the captured running worker beside a never-launched issue, wave 3 queued.
+// wave 2 the captured running worker beside a never-launched issue and one the tracker
+// closed before launch, wave 3 queued.
 function threeWaves() {
   const board = structuredClone(captured.board);
-  const node = (key, wave) => ({ ...board.graph.issues[0], key, wave, title: key });
-  board.graph.issues = [node("a-1", 1), node("b-2", 1), node(worker.key, 2), node("c-3", 2)];
-  board.graph.issues.push(node("d-4", 3));
+  const node = (key, wave, done = false) => ({
+    ...board.graph.issues[0],
+    key,
+    wave,
+    done,
+    title: key,
+  });
+  board.graph.issues = [node("a-1", 1, true), node("b-2", 1, true), node(worker.key, 2)];
+  board.graph.issues.push(node("c-3", 2), node("e-5", 2, true), node("d-4", 3));
   board.graph.waves = [
     { wave: 1, issues: ["a-1", "b-2"] },
-    { wave: 2, issues: [worker.key, "c-3"] },
+    { wave: 2, issues: [worker.key, "c-3", "e-5"] },
     { wave: 3, issues: ["d-4"] },
   ];
   board.issues.push({ ...worker, key: "a-1", stage: "merged" });
@@ -112,16 +119,21 @@ test("wave groups follow the graph waves and open only the current one", () => {
     ]),
     [
       [1, false, false, 2, 0, 0, 2],
-      [2, true, true, 0, 1, 1, 2],
+      [2, true, true, 1, 1, 1, 3],
       [3, false, false, 0, 0, 1, 1],
     ],
   );
   assert.deepEqual(groups.map(waveLabel), [
     "WAVE 1 · 2 DONE",
-    "WAVE 2 · CURRENT · 1 LIVE · 1 QUEUED",
+    "WAVE 2 · CURRENT · 1 LIVE · 1 QUEUED · 1 DONE",
     "WAVE 3 · 1 QUEUED",
   ]);
-  // A never-launched issue in a wave the epic has passed was closed before launch.
+  // The queued counts add up to the header's: the engine leaves closed issues out of it.
+  assert.equal(
+    groups.reduce((sum, group) => sum + group.queued, 0),
+    threeWaves().queued,
+  );
+  // A never-launched issue the tracker closed was closed before launch.
   assert.deepEqual(
     groups[0].rows.map((row) => [row.key, row.closed]),
     [

@@ -183,16 +183,23 @@ test("links are served only for plain http and https URLs", () => {
 
 test("an issue closed before launch reads as done, not queued", () => {
   const board = structuredClone(captured.board);
-  board.graph.issues.push({ ...board.graph.issues[0], key: "next-2", wave: 2 });
-  board.graph.issues.unshift({ ...board.graph.issues[0], key: "old-1", wave: 1 });
+  const [node] = board.graph.issues;
+  assert.equal(node.done, false);
+  // The tracker closed `old-1` and `gone-2`; `gone-2` sits in the current wave.
+  board.graph.issues.unshift({ ...node, key: "old-1", wave: 1, done: true });
+  board.graph.issues.push({ ...node, key: "gone-2", wave: 2, done: true });
+  board.graph.issues.push({ ...node, key: "next-2", wave: 2 });
   board.graph.issues[1].wave = 2;
   Object.assign(board, { current_wave: 2, waves_total: 2 });
+  // A launched worker keeps its own stage even after the tracker closes its issue.
+  board.graph.issues[1].done = true;
   const rows = issueRows(board);
   assert.deepEqual(
     rows.map((row) => [row.key, row.closed, agentState(row).label, phaseLine(row, row.wave)]),
     [
       ["old-1", true, "✓ DONE", "CLOSED BEFORE LAUNCH"],
       ["local-658", false, "? UNKNOWN", phaseLine(captured.board.issues[0], 2)],
+      ["gone-2", true, "✓ DONE", "CLOSED BEFORE LAUNCH"],
       ["next-2", false, "○ QUEUED", "QUEUED · WAVE 2"],
     ],
   );

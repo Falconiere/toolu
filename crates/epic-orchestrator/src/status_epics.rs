@@ -237,7 +237,8 @@ pub(crate) fn hold(issue: &Issue, secrets: &Secrets) -> Value {
 
 /// The graph's issues and waves. With the engine's stable waves, a merged
 /// issue keeps its wave here too, matching `current_wave`. Each issue carries
-/// its tracker `url` under the epic URL's rule.
+/// its tracker `url` under the epic URL's rule, and `done` once the tracker
+/// closed it: the fact behind the header's `queued` count.
 fn project_graph(
   graph: &Value,
   stable: Option<&BTreeMap<String, u64>>,
@@ -266,6 +267,7 @@ fn project_graph(
       "url": row.get("url").and_then(Value::as_str).and_then(|url| link(url, secrets)),
       "wave": wave,
       "open_blockers": safe_strings(row.get("open_blockers")),
+      "done": row.get("status").and_then(Value::as_str) == Some("done"),
     }));
   }
   let waves = waves

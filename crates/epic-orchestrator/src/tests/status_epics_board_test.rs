@@ -109,3 +109,42 @@ fn graph_issues_carry_their_tracker_url_redacted_or_null() {
   assert_eq!(urls[3], json!(kept));
   assert_eq!(urls[4].as_str().map(|url| url.chars().count()), Some(160));
 }
+
+#[test]
+fn graph_issues_say_which_the_tracker_already_closed() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let graph = crate::support::graph_248();
+  let closed = graph
+    .issues
+    .iter()
+    .filter(|issue| issue.status == "done")
+    .map(|issue| issue.key.clone())
+    .collect::<Vec<_>>();
+  // Five of epic #248's issues were closed before the run.
+  assert_eq!(closed.len(), 5);
+  let (paths, world) = super::tests::board(temp.path(), |_| {});
+  let detail = route(
+    &world,
+    &paths,
+    "/api/v1/epics/comemory-248",
+    0,
+    &Secrets::none(),
+  )
+  .expect("route")
+  .expect("document");
+  let served = detail["graph"]["issues"]
+    .as_array()
+    .expect("graph issues")
+    .iter()
+    .filter(|node| node["done"] == true)
+    .map(|node| node["key"].as_str().expect("key").to_owned())
+    .collect::<Vec<_>>();
+  assert_eq!(served, closed);
+  let open = detail["graph"]["issues"]
+    .as_array()
+    .expect("graph issues")
+    .iter()
+    .filter(|node| node["done"] == false)
+    .count();
+  assert_eq!(open, graph.issues.len() - 5);
+}
