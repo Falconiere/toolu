@@ -61,7 +61,7 @@ test("tiles aggregate the captured board, plan, hosts, and empty attention", () 
   assert.equal(summary.workerNote, "0 working, 0 blocked, 0 idle.");
   assert.equal(summary.attention, "0 OPEN");
   assert.equal(summary.attentionNote, "Nothing waiting on you.");
-  assert.equal(summary.hosts, "2 / 4");
+  assert.equal(summary.hosts, "3 / 5");
   const plan = captured.board.issues[0].plan_summary;
   assert.equal(summary.plans, `${plan.green} / ${plan.total}`);
   assert.equal(summary.planNote, "Across 1 worker plans.");

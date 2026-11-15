@@ -11,6 +11,7 @@
           "key": "local-658",
           "open_blockers": [],
           "title": "Fleet",
+          "url": "https://github.com/o/r/issues/10",
           "wave": 1
         }
       ],
@@ -79,16 +80,16 @@
   "events": {
     "events": [
       {
-        "at": "2026-10-27T21:43:39.753Z",
+        "at": "2026-11-15T20:17:44.657Z",
         "epic": "",
         "key": "",
         "kind": "action",
         "name": "engine-usage",
-        "note": "{\"cpu_ms\":15,\"event\":\"start\",\"max_rss_bytes\":13795328}",
+        "note": "{\"cpu_ms\":16,\"event\":\"start\",\"max_rss_bytes\":15466496}",
         "seq": 1
       },
       {
-        "at": "2026-10-27T21:43:39.766Z",
+        "at": "2026-11-15T20:17:44.668Z",
         "epic": "local-649",
         "key": "local-658",
         "kind": "transition",
@@ -121,7 +122,7 @@
             "paused": true
           }
         ],
-        "hostname": "macmini",
+        "hostname": "192",
         "hosts": [
           {
             "cap": 3,
@@ -141,6 +142,11 @@
           {
             "cap": 3,
             "host": "muse",
+            "running": 0
+          },
+          {
+            "cap": 3,
+            "host": "grok",
             "running": 0
           }
         ],
@@ -153,7 +159,7 @@
           }
         ],
         "journal_seq": 0,
-        "last_seen": "2026-10-27T21:43:39.775Z",
+        "last_seen": "2026-11-15T20:17:44.675Z",
         "local": true,
         "name": "local",
         "paused": true,
@@ -161,12 +167,12 @@
         "state": "ok"
       },
       {
-        "age_ms": 13,
+        "age_ms": 12,
         "attention_count": 0,
         "counts": {
           "running": 1
         },
-        "dashboard_url": "http://127.0.0.1:59600/",
+        "dashboard_url": "http://127.0.0.1:51346/",
         "engine": "running",
         "epics": [
           {
@@ -178,7 +184,7 @@
             "paused": true
           }
         ],
-        "hostname": "macmini",
+        "hostname": "192",
         "hosts": [
           {
             "cap": 3,
@@ -199,6 +205,11 @@
             "cap": 3,
             "host": "muse",
             "running": 0
+          },
+          {
+            "cap": 3,
+            "host": "grok",
+            "running": 0
           }
         ],
         "in_flight": [
@@ -210,7 +221,7 @@
           }
         ],
         "journal_seq": 0,
-        "last_seen": "2026-10-27T21:43:39.762Z",
+        "last_seen": "2026-11-15T20:17:44.663Z",
         "local": false,
         "name": "build-mini",
         "paused": true,
@@ -239,6 +250,11 @@
         },
         {
           "cap": 6,
+          "host": "grok",
+          "running": 0
+        },
+        {
+          "cap": 6,
           "host": "muse",
           "running": 0
         }
@@ -262,7 +278,7 @@
       },
       {
         "cap": 3,
-        "cooldown_until": "2026-10-27T22:24:39.771Z",
+        "cooldown_until": "2026-11-15T20:58:44.671Z",
         "host": "codex",
         "paused": false,
         "paused_at": null,
@@ -285,8 +301,18 @@
         "cooldown_until": null,
         "host": "muse",
         "paused": true,
-        "paused_at": "2026-10-27T21:43:39.771Z",
+        "paused_at": "2026-11-15T20:17:44.671Z",
         "paused_by": "user",
+        "reason": null,
+        "running": 0
+      },
+      {
+        "cap": 3,
+        "cooldown_until": null,
+        "host": "grok",
+        "paused": false,
+        "paused_at": null,
+        "paused_by": null,
         "reason": null,
         "running": 0
       }
@@ -308,7 +334,7 @@
     "phase_age_ms": 0,
     "phase_history": [
       {
-        "at": "2026-10-27T21:43:39Z",
+        "at": "2026-11-15T20:17:44Z",
         "note": "fleet",
         "phase": "execution"
       }
@@ -381,7 +407,7 @@
     "queue_position": null,
     "recent_events": [
       {
-        "at": "2026-10-27T21:43:39.766Z",
+        "at": "2026-11-15T20:17:44.668Z",
         "epic": "local-649",
         "key": "local-658",
         "kind": "transition",
@@ -397,7 +423,7 @@
     "available": false,
     "items": [],
     "reason": "off",
-    "sampled_at": "2026-10-27T21:43:39.776Z",
+    "sampled_at": "2026-11-15T20:17:44.677Z",
     "schema": 1
   },
   "overview": {
@@ -436,7 +462,7 @@
         "rate": null
       }
     },
-    "hostname": "macmini",
+    "hostname": "192",
     "hosts": {
       "items": [
         {
@@ -451,12 +477,12 @@
         },
         {
           "cap": 3,
-          "cooldown_until": "2026-10-27T22:24:39.771Z",
+          "cooldown_until": null,
           "host": "codex",
           "paused": false,
           "paused_at": null,
           "paused_by": null,
-          "reason": "usage limit",
+          "reason": null,
           "running": 0
         },
         {
@@ -473,9 +499,19 @@
           "cap": 3,
           "cooldown_until": null,
           "host": "muse",
-          "paused": true,
-          "paused_at": "2026-10-27T21:43:39.771Z",
-          "paused_by": "user",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
+          "reason": null,
+          "running": 0
+        },
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "grok",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
           "reason": null,
           "running": 0
         }
@@ -523,6 +559,7 @@
           "key": "peer-658",
           "open_blockers": [],
           "title": "Fleet",
+          "url": "https://github.com/o/r/issues/10",
           "wave": 1
         }
       ],
@@ -576,7 +613,7 @@
     "phase_age_ms": 0,
     "phase_history": [
       {
-        "at": "2026-10-27T21:43:39Z",
+        "at": "2026-11-15T20:17:44Z",
         "note": "fleet",
         "phase": "execution"
       }
@@ -586,7 +623,7 @@
     "queue_position": null,
     "recent_events": [
       {
-        "at": "2026-10-27T21:43:39.746Z",
+        "at": "2026-11-15T20:17:44.649Z",
         "epic": "peer-649",
         "key": "peer-658",
         "kind": "transition",
@@ -634,7 +671,7 @@
         "rate": null
       }
     },
-    "hostname": "macmini",
+    "hostname": "192",
     "hosts": {
       "items": [
         {
@@ -671,6 +708,16 @@
           "cap": 3,
           "cooldown_until": null,
           "host": "muse",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
+          "reason": null,
+          "running": 0
+        },
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "grok",
           "paused": false,
           "paused_at": null,
           "paused_by": null,
