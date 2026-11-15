@@ -285,3 +285,7 @@ mod incomplete_tests;
 #[cfg(test)]
 #[path = "tests/usage_cache_test.rs"]
 mod cache_tests;
+
+#[cfg(test)]
+#[path = "tests/usage_optional_test.rs"]
+mod optional_tests;
