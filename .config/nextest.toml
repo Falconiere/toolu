@@ -34,6 +34,12 @@ threads-required = 'num-test-threads'
 filter = 'binary(golden_quality) & test(=ts_quality_replays_every_golden_case)'
 threads-required = 'num-test-threads'
 
+# The 180-case hook replay runs up to six real hook processes at once. Beside
+# other workspace tests, its 30 s subprocess deadline expired under load.
+[[profile.default.overrides]]
+filter = 'binary(golden_gates) & test(=modules_c_replay_all_180_golden_cases)'
+threads-required = 'num-test-threads'
+
 # fixture_cases replays fixtures/shell/issue-283.json, whose latency case bounds
 # one analysis of a long command at 50 ms of wall time. Beside the whole
 # workspace it measured 539 ms and alone about 5 ms, so it keeps every test
