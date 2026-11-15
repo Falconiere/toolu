@@ -1,5 +1,5 @@
 import { attentionOpen } from "./control.js";
-import { LIVE_STAGES, agentState, epicComplete, hostState, issueRows } from "./status.js";
+import { DONE_STAGES, LIVE_STAGES, epicComplete, hostState, issueRows } from "./status.js";
 
 const count = (value) => (Number.isFinite(value) && value > 0 ? value : 0);
 const joined = (parts) => parts.filter(Boolean).join(" · ");
@@ -65,7 +65,8 @@ function waveGroup(wave, rows, current) {
     current: isCurrent,
     // Rows the graph gives no wave have no summary to reopen them from.
     open: isCurrent || wave == null,
-    done: tally((row) => agentState(row).kind === "done"),
+    // By stage, not by the agent's badge: an agent reports `done` after every turn.
+    done: tally((row) => DONE_STAGES.includes(row.stage) || row.closed),
     live: tally((row) => LIVE_STAGES.includes(row.stage)),
     queued: tally((row) => !row.stage && !row.closed),
     total: rows.length,

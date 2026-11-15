@@ -131,6 +131,15 @@ test("wave groups follow the graph waves and open only the current one", () => {
   );
 });
 
+test("a running worker whose agent ended a turn is live, not done", () => {
+  // Codex, Cursor, Muse and Grok report `done` after every turn.
+  const board = structuredClone(captured.board);
+  board.issues[0].agent_status = "done";
+  const [group] = waveGroups(board);
+  assert.deepEqual([group.live, group.done], [1, 0]);
+  assert.equal(waveLabel(group), "WAVE 1 · CURRENT · 1 LIVE");
+});
+
 test("a board without waves is one open group and a complete board opens none", () => {
   const loose = structuredClone(captured.board);
   loose.graph.waves = [];
