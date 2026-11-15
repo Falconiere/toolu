@@ -155,7 +155,7 @@ fn claude(
   }
   Ok((
     "claude-code transcript",
-    field_totals(&last, &CLAUDE_FIELDS),
+    field_totals(&last, &CLAUDE_FIELDS, strict),
   ))
 }
 
@@ -216,9 +216,12 @@ pub(super) fn valid_counts(value: &Value, fields: &[&str]) -> bool {
       .all(|field| value.get(field).is_none_or(|v| v.as_u64().is_some()))
 }
 
-/// Each of `fields` summed over every usage object, saturating; a missing
-/// field counts as zero.
-pub(super) fn field_totals(usages: &BTreeMap<String, Value>, fields: &[&str]) -> Value {
+/// Sum native fields, omitting unknown quantities in strict snapshots.
+pub(super) fn field_totals(
+  usages: &BTreeMap<String, Value>,
+  fields: &[&str],
+  strict: bool,
+) -> Value {
   let sum = |field: &str| -> u64 {
     usages
       .values()
@@ -227,6 +230,7 @@ pub(super) fn field_totals(usages: &BTreeMap<String, Value>, fields: &[&str]) ->
   };
   let tokens: serde_json::Map<String, Value> = fields
     .iter()
+    .filter(|field| !strict || usages.values().all(|usage| usage.get(**field).is_some()))
     .map(|field| ((*field).to_owned(), json!(sum(field))))
     .collect();
   Value::Object(tokens)
@@ -253,7 +257,10 @@ fn grok(
     return Err("the usage record has no valid token counts");
   }
   let totals = BTreeMap::from([(session.to_owned(), usage)]);
-  Ok(("grok usage record", field_totals(&totals, &GROK_FIELDS)))
+  Ok((
+    "grok usage record",
+    field_totals(&totals, &GROK_FIELDS, strict),
+  ))
 }
 
 fn codex(

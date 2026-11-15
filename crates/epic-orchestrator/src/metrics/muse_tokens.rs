@@ -131,7 +131,7 @@ pub(super) fn read(
       Err(_err) => return Err("a subagent log cannot be read"),
     }
   }
-  Ok(("muse session log", field_totals(&usage, &FIELDS)))
+  Ok(("muse session log", field_totals(&usage, &FIELDS, strict)))
 }
 
 #[cfg(test)]
