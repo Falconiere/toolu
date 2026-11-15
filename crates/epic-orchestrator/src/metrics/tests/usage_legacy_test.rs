@@ -31,15 +31,16 @@ fn usage_legacy_uncertain_launch_without_session_remains_visible() {
       .as_str()
       .is_some_and(|s| !s.is_empty())
   );
-  assert!(!report["reasons"].as_array().unwrap().is_empty());
+  assert_ne!(
+    report["reasons"].as_array().unwrap(),
+    &[] as &[serde_json::Value]
+  );
 
   let mut fresh = json!({"backend":"herdr"}).as_object().unwrap().clone();
   usage::enroll(&mut fresh, &env).unwrap();
   assert_eq!(fresh["usage_history"]["legacy_gap"], false);
-  assert!(
-    fresh["usage_history"]["attempts"]
-      .as_array()
-      .unwrap()
-      .is_empty()
+  assert_eq!(
+    fresh["usage_history"]["attempts"].as_array().unwrap(),
+    &[] as &[serde_json::Value]
   );
 }

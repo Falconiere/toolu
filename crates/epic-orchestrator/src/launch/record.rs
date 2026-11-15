@@ -126,6 +126,7 @@ pub(crate) fn load_launch_record(path: &Path) -> Result<Record, String> {
   {
     return Err(invalid(&format!("unknown stage {stage}")));
   }
+  crate::metrics::usage::validate_record(&record)?;
   check_numbers(&record, &invalid)?;
   check_identity(&record, &invalid)?;
   Ok(record)

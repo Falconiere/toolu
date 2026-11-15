@@ -101,10 +101,12 @@ impl<'g> Attempt<'g> {
     }
   }
 
+  /// The epic's durable state directory.
   pub(super) fn state(&self) -> &Path {
     Path::new(&self.graph.state_dir)
   }
 
+  /// Save this attempt with its existing lease ownership.
   pub(super) fn persist(&self, record: &mut Record, stage: &str) -> Result<(), Failure> {
     match &self.owner {
       Some(owner) => persist_attempt(self.state(), &self.issue.key, owner, record, stage),
@@ -119,6 +121,15 @@ impl<'g> Attempt<'g> {
   pub(super) fn reserve(&mut self, record: &mut Record, ctx: &mut Ctx<'_>) -> Result<(), Failure> {
     if self.opts.dry_run {
       return Ok(());
+    }
+    crate::metrics::usage::enroll(record, ctx.env)?;
+    crate::metrics::usage::checkpoint(record, ctx.env, false)?;
+    let path = self
+      .state()
+      .join("issues")
+      .join(format!("{}.json", self.issue.key));
+    if record.contains_key("key") {
+      write_record(&path, record)?;
     }
     let input = Reserve {
       state: Path::new(&self.graph.state_dir),
@@ -178,7 +189,10 @@ impl<'g> Attempt<'g> {
     write_record(&path, record)?;
     Ok(true)
   }
+}
 
+impl Attempt<'_> {
+  /// Start the durable attempt before preparing its workspace.
   pub(super) fn initialize(&self, record: &mut Record) -> Result<(), Failure> {
     let issue = self.issue;
     for (key, value) in [
@@ -194,6 +208,9 @@ impl<'g> Attempt<'g> {
       ("attempt_started_at", json!(iso_millis(self.started_at))),
     ] {
       record.insert(key.to_owned(), value);
+    }
+    if self.owner.is_some() {
+      crate::metrics::usage::begin(record, self.host.kind.name(), &iso_millis(self.started_at))?;
     }
     self.persist(record, "starting")
   }
@@ -281,3 +298,7 @@ impl<'g> Attempt<'g> {
 #[cfg(test)]
 #[path = "tests/attempt_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/attempt_usage_test.rs"]
+mod usage_tests;

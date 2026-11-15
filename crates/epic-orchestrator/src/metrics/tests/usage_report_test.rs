@@ -43,7 +43,10 @@ fn usage_report_preserves_native_counters_and_reports_partial_known_subtotals() 
   let report = usage_report::report(tmp.path(), &env()).unwrap();
   assert_eq!(report["schema"], 1);
   assert_eq!(report["coverage"], "partial");
-  assert!(!report["reasons"].as_array().unwrap().is_empty());
+  assert_ne!(
+    report["reasons"].as_array().unwrap(),
+    &[] as &[serde_json::Value]
+  );
   assert_eq!(report["attempts"].as_array().unwrap().len(), 6);
   assert_eq!(report["sessions"].as_array().unwrap().len(), 4);
   assert_eq!(report["totals"]["input_tokens"], 766_568);
@@ -86,7 +89,10 @@ fn usage_report_missing_source_and_null_session_do_not_invent_zero_totals() {
   }
   let report = usage_report::report(tmp.path(), &env).unwrap();
   assert_eq!(report["coverage"], "unavailable");
-  assert!(!report["reasons"].as_array().unwrap().is_empty());
+  assert_ne!(
+    report["reasons"].as_array().unwrap(),
+    &[] as &[serde_json::Value]
+  );
   assert_eq!(report["attempts"].as_array().unwrap().len(), 2);
   assert_eq!(report["sessions"].as_array().unwrap().len(), 0);
   assert!(report["totals"]["input_tokens"].is_null());

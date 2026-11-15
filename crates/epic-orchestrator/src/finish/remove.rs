@@ -149,6 +149,9 @@ impl Teardown<'_> {
     exit_agent(ctx, record, shell)?;
     await_quiet(ctx, &worktree, shell, &owned, absent)?;
     verify_no_jobs(ownership, &worktree)?;
+    crate::metrics::usage::enroll(record, ctx.env)?;
+    crate::metrics::usage::checkpoint(record, ctx.env, true)?;
+    write_record(self.path, record)?;
     let (wip_ref, dirty) = capture_work(ctx, record, &worktree, absent, self.abandon)?;
     if !absent && !owned_workload(Path::new(&worktree), shell)?.is_empty() {
       return Err(format!(

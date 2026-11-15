@@ -47,9 +47,16 @@ pub(crate) fn report(
       .collect(),
     _ => Vec::new(),
   };
-  Ok(json!({
+  let mut report = json!({
     "schema": 1, "epic": epic, "rows": rows, "budgets": budget_rows(&doc), "tokens": token_rows,
-  }))
+  });
+  if let (Some(env), Some(dir)) = (env, state_dir(paths, epic)) {
+    let usage = super::usage_report::report(&dir, env)?;
+    if let Some(object) = report.as_object_mut() {
+      object.insert("usage".to_owned(), usage);
+    }
+  }
+  Ok(report)
 }
 
 /// The summary as Markdown; the token table only when the report has rows.
@@ -97,6 +104,9 @@ pub(crate) fn markdown(report: &Value) -> String {
       let line = [text(&row, "key"), text(&row, "host"), tokens, source].join(" | ");
       let _written = writeln!(out, "| {line} |");
     }
+  }
+  if let Some(usage) = report.get("usage") {
+    super::usage_report::markdown(usage, &mut out);
   }
   out
 }

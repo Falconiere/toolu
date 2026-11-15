@@ -300,6 +300,8 @@ fn migrate(
       "old host workload remains; replacement refused",
     ));
   }
+  crate::metrics::usage::enroll(record, input.env)?;
+  crate::metrics::usage::checkpoint(record, input.env, true)?;
   persist_attempt(input.state, input.key, owner, record, "replacing")?;
   migrate_agent_lease(
     &owner.root,

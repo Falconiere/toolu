@@ -20,10 +20,14 @@ mod muse_tokens;
 mod ready;
 mod scope;
 mod stats;
+/// Private and public epic summary rendering.
 pub(crate) mod summary;
 mod text;
 mod timeline;
 mod tokens;
+/// Durable per-attempt worker usage.
+pub(crate) mod usage;
+mod usage_report;
 
 use std::time::Duration;
 
@@ -78,10 +82,3 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/metrics_scenario_test.rs"]
 mod scenario_tests;
-
-#[cfg(test)]
-#[path = "metrics/tests/usage_test.rs"]
-mod usage_history_tests;
-#[cfg(test)]
-#[path = "metrics/tests/usage_report_test.rs"]
-mod usage_report_tests;

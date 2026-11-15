@@ -81,7 +81,10 @@ fn usage_summary_exposes_coverage_and_attempts_but_closing_omits_them() {
   let report = report(&paths, "e", 0, Some(&env)).unwrap();
   assert_eq!(report["usage"]["schema"], 1);
   assert_eq!(report["usage"]["coverage"], "partial");
-  assert!(!report["usage"]["attempts"].as_array().unwrap().is_empty());
+  assert_ne!(
+    report["usage"]["attempts"].as_array().unwrap(),
+    &[] as &[serde_json::Value]
+  );
   let text = markdown(&report).to_lowercase();
   assert!(text.contains("partial"), "{text}");
   assert!(text.contains("attempt"), "{text}");

@@ -364,8 +364,39 @@ Real runs report the same table: `toolu epic summary <epic>` prints it with the
 measures beside the baseline and token use per worker (Claude Code
 transcripts, Codex rollouts, Muse session logs and Grok usage records; OpenCode and Cursor rows say
 `unavailable`).
-The engine appends the same section, without token rows, to the epic's
-closing comment.
+The engine appends the same section, without token rows or usage history, to the
+epic's closing comment.
+
+The private summary also reports **Agent usage**: each launch attempt, its
+captured session, last observation, final-snapshot flag and native counters.
+JSON adds a versioned `usage` object with `attempts`, deduplicated `sessions`,
+known `totals`, `coverage` and gap `reasons`; existing `tokens` rows retain their
+original latest-session meaning. A resumed session counts once in the known
+subtotal, even when several attempts reference it.
+
+Local epic launches retain compact `usage_history` snapshots in their issue
+records. Toolu checkpoints before replacement, after launch acknowledgement,
+and after the agent stops but before removing its worktree. Final snapshots
+survive native-log deletion. A failed refresh keeps prior counters, their
+observation time and a stale reason. Malformed history or a failed persistence
+write stops the affected lifecycle operation rather than discarding evidence.
+The report itself does not write records.
+
+Coverage is `complete` only when all attributed sessions have final counters
+and there are no known gaps; live or stale snapshots and legacy relaunch gaps
+are `partial`. With no measurable sessions it is `unavailable`, and totals are
+`null`. Known subtotals do not estimate missing sessions. Earlier attempts that
+predate history capture cannot be reconstructed. These reports cover local epic
+workers, not every session on a machine or non-epic Toolu calls.
+
+Normalized input includes Claude's separate cache-read and cache-write counters.
+Codex, Muse and Grok input already includes their cached-input component. Output
+already includes reasoning where the host reports it that way: cache and
+reasoning details remain in native counters and are not added again to the
+input-plus-output total. These are session token counts, not dollar costs or a
+ranking of agent productivity. Existing journal lead time ends at cleanup;
+it is not a new launch-to-merge measurement.
+
 
 The baseline is `benchmarks/epic-baseline.json`, derived from the TypeScript
 watcher's state directories as of 2026-10-04:

@@ -32,13 +32,15 @@ fn refused_first_launch_leaves_no_record_and_existing_snapshot_is_saved() {
     ..LaunchOpts::default()
   };
   let path = issues.join("comemory-255.json");
-  let refused = launch_issue(
-    &graph,
-    issue,
-    &opts,
-    &mut Ctx::live(&env, &paths, Err("no GitHub".into())),
-  )
-  .unwrap_err();
+  let launch = || {
+    launch_issue(
+      &graph,
+      issue,
+      &opts,
+      &mut Ctx::live(&env, &paths, Err("no GitHub".into())),
+    )
+  };
+  let refused = launch().unwrap_err();
   assert!(refused.message.contains("pool.json"), "{}", refused.message);
   assert!(
     !path.exists(),
@@ -48,13 +50,7 @@ fn refused_first_launch_leaves_no_record_and_existing_snapshot_is_saved() {
 
   let existing = json!({"key":"comemory-255", "kind":"codex", "worktree":"/w/b", "launches":1, "session_id":"22222222-2222-4222-8222-222222222222"});
   std::fs::write(&path, existing.to_string()).unwrap();
-  let refused = launch_issue(
-    &graph,
-    issue,
-    &opts,
-    &mut Ctx::live(&env, &paths, Err("no GitHub".into())),
-  )
-  .unwrap_err();
+  let refused = launch().unwrap_err();
   assert!(refused.message.contains("pool.json"), "{}", refused.message);
   let saved = crate::launch::record::load_launch_record(&path).unwrap();
   assert_eq!(

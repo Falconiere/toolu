@@ -47,6 +47,10 @@ impl Attempt<'_> {
     self.initialize(record)?;
     let (wt, base) = self.prepare(record, ctx)?;
     let start = self.start(record, &wt, ctx)?;
+    if !self.opts.dry_run {
+      crate::metrics::usage::attach(record, ctx.env)?;
+      self.persist(record, "starting")?;
+    }
     let paths = BriefPaths::of(self.state(), &self.issue.key, &wt.path);
     let host = BriefHost::at(self.host.kind, self.opts.safe, self.state());
     let brief =
@@ -100,6 +104,7 @@ impl Attempt<'_> {
       )?;
       record.insert("session_id".to_owned(), json!(id));
     }
+    crate::metrics::usage::attach(record, ctx.env)?;
     let fallback = match (start.resumed, start.started) {
       (true, _) => Outcome::Resumed,
       (false, true) => Outcome::Started,

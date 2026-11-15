@@ -37,16 +37,12 @@ fn usage_edge_stale_live_snapshot_retains_observation_and_terminal_snapshot_surv
   write_record(&path, &record).unwrap();
   std::fs::remove_file(&source).unwrap();
   let stale = usage_report::report(tmp.path(), &env).unwrap();
-  assert_eq!(stale["coverage"], "partial");
-  assert_eq!(stale["totals"]["total_tokens"], 550);
-  assert_eq!(stale["attempts"][0]["observed_at"], observed);
-  assert_eq!(stale["attempts"][0]["row"]["status"], "stale");
-  assert!(
-    stale["attempts"][0]["row"]["reason"]
-      .as_str()
-      .is_some_and(|s| !s.is_empty())
+  assert_stale(&stale, &observed);
+  assert_ne!(stale["attempts"][0]["row"]["reason"].as_str().unwrap(), "");
+  assert_ne!(
+    stale["reasons"].as_array().unwrap(),
+    &[] as &[serde_json::Value]
   );
-  assert!(!stale["reasons"].as_array().unwrap().is_empty());
   std::fs::copy(fixture, &source).unwrap();
   usage::checkpoint(&mut record, &env, true).unwrap();
   write_record(&path, &record).unwrap();
@@ -55,10 +51,21 @@ fn usage_edge_stale_live_snapshot_retains_observation_and_terminal_snapshot_surv
   assert_eq!(terminal["coverage"], "complete");
   assert_eq!(terminal["totals"]["total_tokens"], 550);
   assert_eq!(terminal["attempts"][0]["final"], true);
+  invalid_history_is_rejected(&path);
+}
+
+fn assert_stale(stale: &serde_json::Value, observed: &serde_json::Value) {
+  assert_eq!(stale["coverage"], "partial");
+  assert_eq!(stale["totals"]["total_tokens"], 550);
+  assert_eq!(&stale["attempts"][0]["observed_at"], observed);
+  assert_eq!(stale["attempts"][0]["row"]["status"], "stale");
+}
+
+fn invalid_history_is_rejected(path: &Path) {
   let invalid =
     json!({"key":"b", "usage_history":{"schema":99,"legacy_gap":false,"attempts":[]}}).to_string();
-  std::fs::write(&path, &invalid).unwrap();
-  let error = load_launch_record(&path).unwrap_err();
+  std::fs::write(path, &invalid).unwrap();
+  let error = load_launch_record(path).unwrap_err();
   assert!(error.contains("usage history"), "{error}");
   assert_eq!(std::fs::read_to_string(path).unwrap(), invalid);
 }
