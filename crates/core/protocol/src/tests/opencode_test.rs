@@ -56,6 +56,10 @@ fn opencode_never_asks_and_hooks_write_claude_shapes_for_the_bridge() {
   };
   for event in HostEvent::ALL {
     assert!(!supports_ask(Host::Opencode, event), "{event:?}");
+    if event == HostEvent::Stop {
+      assert!(encode(Host::Opencode, event, &deny).is_err());
+      continue;
+    }
     assert_eq!(
       encode(Host::Opencode, event, &deny),
       encode(Host::Claude, event, &deny),

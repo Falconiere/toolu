@@ -2,7 +2,7 @@
 //! on stdout or with a blank stderr, and it reads context only at exit 0. So
 //! no path through `run_hook_io` may end that way on Muse. That covers every
 //! decision, a panic, an internal error, an unreadable payload, a lost stdout
-//! write and every `Raw` shape, on all 8 host events.
+//! write and every `Raw` shape, on all 9 host events.
 
 use std::io::{self, Read, Write};
 use std::process::ExitCode;
@@ -173,7 +173,7 @@ fn no_muse_path_exits_2_with_stdout_or_a_blank_stderr() {
       checked += 1;
     }
   }
-  assert_eq!(checked, 8 * 30);
+  assert_eq!(checked, 9 * 30);
 }
 
 #[test]
@@ -199,6 +199,7 @@ fn a_failure_on_an_enforcing_event_blocks_with_a_stderr_line() {
   for (event, native) in [
     (HostEvent::ToolPre, "PreToolUse"),
     (HostEvent::PermissionEvaluate, "PermissionRequest"),
+    (HostEvent::Stop, "Stop"),
   ] {
     let paths = every_path(event, Box::new(|| panic!("boom"))).unwrap();
     for (label, tail) in [

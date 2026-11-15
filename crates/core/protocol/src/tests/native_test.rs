@@ -45,6 +45,7 @@ fn cursor_uses_camel_case_and_splits_shell_out_of_pre_tool_use() {
     Some("sessionEnd")
   );
   assert_eq!(native_event(Host::Cursor, PreCompact), Some("preCompact"));
+  assert_eq!(native_event(Host::Cursor, HostEvent::Stop), Some("stop"));
   assert_eq!(native_event(Host::Cursor, PermissionEvaluate), None);
 }
 
@@ -127,6 +128,10 @@ fn pascal_case_names_belong_to_claude_codex_muse_and_opencode() {
 #[test]
 fn opencode_speaks_claude_names_through_its_bridge() {
   for event in HostEvent::ALL {
+    if event == HostEvent::Stop {
+      assert_eq!(native_event(Host::Opencode, event), None);
+      continue;
+    }
     assert_eq!(
       native_event(Host::Opencode, event),
       native_event(Host::Claude, event),
@@ -155,7 +160,12 @@ fn muse_shares_pascal_events_but_not_its_extra_events() {
   for event in HostEvent::ALL {
     assert_eq!(native_event(muse, event), native_event(Host::Claude, event));
   }
-  for name in ["Stop", "Notification", "SubagentStop", "PostToolUseFailure"] {
+  for name in ["Notification", "SubagentStop", "PostToolUseFailure"] {
     assert_eq!(canonical_event(muse, name), None, "{name}");
+  }
+  assert_eq!(native_event(Host::Claude, HostEvent::Stop), Some("Stop"));
+  assert_eq!(native_event(Host::Muse, HostEvent::Stop), Some("Stop"));
+  for host in [Host::Codex, Host::Hermes, Host::Opencode] {
+    assert_eq!(native_event(host, HostEvent::Stop), None);
   }
 }

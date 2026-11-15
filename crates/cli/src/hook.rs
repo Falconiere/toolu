@@ -33,6 +33,7 @@ use crate::{Context, VERSION};
 
 mod guard;
 mod plugins;
+mod stop;
 
 /// What a native hook decided before the prelude's advisory is added.
 struct HookResult {
@@ -55,7 +56,15 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
 fn run_unguarded(request: &HookRequest, context: &Context<'_>, enforcing: bool) -> Outcome {
   let exe = (context.exe)();
   let upgrade = exe.as_deref().map_or(INSTALLER, upgrade_command);
-  let skew = match &request.plugin_root {
+  let env = (context.env)();
+  let plugin_root = request.plugin_root.as_deref().map(|root| {
+    if root.is_empty() && detect(&env, None).host == toolu_protocol::host::Host::Cursor {
+      env.get("CURSOR_PLUGIN_ROOT").unwrap_or(root)
+    } else {
+      root
+    }
+  });
+  let skew = match plugin_root {
     Some(root) => {
       let caller = Caller {
         plugin: &request.plugin,
@@ -81,7 +90,6 @@ fn run_unguarded(request: &HookRequest, context: &Context<'_>, enforcing: bool) 
   if let Some(outcome) = plugins::dispatch(request, context, advisory.as_ref()) {
     return outcome;
   }
-  let env = (context.env)();
   let call = HookCall {
     request,
     stdin: context.stdin,
@@ -158,6 +166,9 @@ fn toolu_hook(call: &HookCall<'_>) -> Option<Outcome> {
   let name = call.request.name.as_str();
   if name == "check-binary" {
     return Some(check_binary(call));
+  }
+  if name == "stop" {
+    return Some(stop::run(call));
   }
   if !matches!(name, "session-start" | "user-prompt-submit" | "pre-compact") {
     return None;

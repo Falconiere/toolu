@@ -30,6 +30,10 @@
       "maxRssMiB": 8,
       "cpuMs": 43
     },
+    "toolu/stop": {
+      "maxRssMiB": 8,
+      "cpuMs": 18
+    },
     "toolu/user-prompt-submit": {
       "maxRssMiB": 9,
       "cpuMs": 16
@@ -125,6 +129,10 @@
     "muse:toolu/session-start": {
       "maxRssMiB": 10,
       "cpuMs": 30
+    },
+    "muse:toolu/stop": {
+      "maxRssMiB": 9,
+      "cpuMs": 25
     },
     "muse:toolu/user-prompt-submit": {
       "maxRssMiB": 8,

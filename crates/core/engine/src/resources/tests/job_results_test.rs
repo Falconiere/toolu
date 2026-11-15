@@ -2,7 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use super::{announce, claim_finished, claim_one, create, get, line, pending, update};
+use super::{
+  announce, block_stop_once, claim_finished, claim_one, create, get, line, pending, update,
+};
 
 fn finish(root: &Path, id: &str, code: i64) -> super::Record {
   let mut record = get(root, id).unwrap().unwrap();
@@ -103,4 +105,39 @@ fn claim_one_preserves_other_results_and_rejects_a_foreign_worktree() {
   assert!(claim_one(&root, &tree, &first.id).unwrap().is_some());
   assert!(claim_one(&root, &tree, &first.id).unwrap().is_none());
   assert_eq!(pending(&root, &tree).unwrap()[0].id, second.id);
+}
+
+#[test]
+fn stop_blocks_once_without_losing_a_later_result() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("resources");
+  let tree = dir.path().join("tree");
+  let record = create(&root, "k", &tree, "cargo test").unwrap();
+  assert_eq!(
+    block_stop_once(&root, &tree).unwrap().unwrap().id,
+    record.id
+  );
+  assert!(block_stop_once(&root, &tree).unwrap().is_none());
+  finish(&root, &record.id, 3);
+  assert!(block_stop_once(&root, &tree).unwrap().is_none());
+  assert_eq!(claim_finished(&root, &tree).unwrap()[0].id, record.id);
+  assert_eq!(claim_finished(&root, &tree).unwrap(), Vec::new());
+}
+
+#[test]
+fn stop_ignores_foreign_and_delivered_results_and_serializes_two_hooks() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("resources");
+  let tree = dir.path().join("tree");
+  let other = dir.path().join("other");
+  let record = create(&root, "k", &tree, "gate").unwrap();
+  assert!(block_stop_once(&root, &other).unwrap().is_none());
+  std::thread::scope(|scope| {
+    let a = scope.spawn(|| block_stop_once(&root, &tree).unwrap().is_some());
+    let b = scope.spawn(|| block_stop_once(&root, &tree).unwrap().is_some());
+    assert_ne!(a.join().unwrap(), b.join().unwrap());
+  });
+  finish(&root, &record.id, 0);
+  claim_finished(&root, &tree).unwrap();
+  assert!(block_stop_once(&root, &tree).unwrap().is_none());
 }

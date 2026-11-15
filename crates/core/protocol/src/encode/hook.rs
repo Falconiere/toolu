@@ -54,7 +54,7 @@ fn refuse(native: &str, event: HostEvent, normal: Normal<'_>, reason: &str) -> S
       )
       .line();
   }
-  if event == HostEvent::Prompt {
+  if matches!(event, HostEvent::Prompt | HostEvent::Stop) {
     return block(reason);
   }
   let specific = Object::new()

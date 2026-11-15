@@ -69,6 +69,15 @@ fn a_block_and_a_prompt_deny_are_decision_block() {
 }
 
 #[test]
+fn a_stop_deny_blocks_with_its_reason() {
+  let out = output("Stop", HostEvent::Stop, Normal::Deny("job 123 is unread"));
+  assert_eq!(
+    parsed(&out),
+    json!({ "decision": "block", "reason": "job 123 is unread" })
+  );
+}
+
+#[test]
 fn permission_request_denies_with_behavior_and_leaves_ask_to_the_host() {
   let out = output(
     "PermissionRequest",

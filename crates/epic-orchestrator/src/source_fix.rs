@@ -167,6 +167,8 @@ fn stream_events(mut stream: UnixStream, script: &Script, id: &Value) {
   if script.drop_after_subscribe {
     return;
   }
+  // A slow event callback must not turn a quiet subscription into a reconnect.
+  let _cleared = stream.set_read_timeout(None);
   while read_line(&mut stream).is_ok_and(|line| !line.is_empty()) {}
 }
 

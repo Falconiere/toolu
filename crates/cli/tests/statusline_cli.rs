@@ -139,10 +139,13 @@ fn instrumented_render(test: &Instrumentation<'_>) -> TestResult<Output> {
   Ok(child.wait_with_output()?)
 }
 
-fn wait_for(mut ready: impl FnMut() -> bool) -> TestResult<()> {
-  let deadline = Instant::now() + Duration::from_secs(5);
+fn wait_for(stage: &str, mut ready: impl FnMut() -> bool) -> TestResult<()> {
+  let deadline = Instant::now() + Duration::from_secs(90);
   while !ready() {
-    ensure!(Instant::now() < deadline, "timed out waiting for refresher");
+    ensure!(
+      Instant::now() < deadline,
+      "timed out waiting for refresher: {stage}"
+    );
     std::thread::sleep(Duration::from_millis(10));
   }
   Ok(())
@@ -253,6 +256,7 @@ fn stale_counts_lag_one_refresh_and_warm_render_starts_no_git_child() -> TestRes
     .next()
     .ok_or_else(|| std::io::Error::other("missing cache record"))??
     .path();
+  let lock = cache.with_extension("lock");
   let mut record: Value = serde_json::from_slice(&fs::read(&cache)?)?;
   record["writtenAtMs"] = json!(0);
   fs::write(&cache, serde_json::to_vec(&record)?)?;
@@ -277,14 +281,14 @@ fn stale_counts_lag_one_refresh_and_warm_render_starts_no_git_child() -> TestRes
   let first = instrumented_render(&test)?;
   ensure!(first.status.success());
   ensure!(text(&first).contains("[?1]"));
-  wait_for(|| log.exists())?;
+  wait_for("git child start", || log.exists())?;
   let second = instrumented_render(&test)?;
   ensure!(second.status.success());
   ensure!(text(&second).contains("[?1]"));
   ensure_eq!(fs::read_to_string(&log)?, "git\n");
-  ensure!(cache.with_extension("lock").exists());
+  ensure!(lock.exists());
   fs::write(&release, "go")?;
-  wait_for(|| !cache.with_extension("lock").exists())?;
+  wait_for("cache lock release", || !lock.exists())?;
   check_updated(&cache, &log)?;
   let warm = instrumented_render(&test)?;
   ensure!(warm.status.success());

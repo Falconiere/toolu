@@ -102,7 +102,7 @@ fn pre_action(event: HostEvent) -> bool {
 
 /// The events whose hook can refuse.
 fn blocking(event: HostEvent) -> bool {
-  pre_action(event) || event == HostEvent::PermissionEvaluate
+  pre_action(event) || matches!(event, HostEvent::PermissionEvaluate | HostEvent::Stop)
 }
 
 /// The events that only take context.

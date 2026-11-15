@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Events whose hook can prevent the action: a missing, crashed or incompatible
 /// binary must block them. The same set as `ENFORCING_EVENTS` in
 /// `packages/toolu-core/src/launcher/launcher.ts`.
-pub const ENFORCING_EVENTS: &[&str] = &["PreToolUse", "PermissionRequest"];
+pub const ENFORCING_EVENTS: &[&str] = &["PreToolUse", "PermissionRequest", "Stop"];
 
 /// Whether a hook registered under `event` enforces (blocks on failure).
 pub fn is_enforcing(event: &str) -> bool {
@@ -34,11 +34,13 @@ pub enum HostEvent {
   ShellPre,
   /// After a tool call (`tool/post`).
   ToolPost,
+  /// The agent is about to end its turn (`stop`).
+  Stop,
 }
 
 impl HostEvent {
   /// Every host event, in `HOST_EVENTS` order.
-  pub const ALL: [HostEvent; 8] = [
+  pub const ALL: [HostEvent; 9] = [
     HostEvent::SessionStart,
     HostEvent::SessionUnload,
     HostEvent::Prompt,
@@ -47,6 +49,7 @@ impl HostEvent {
     HostEvent::ToolPre,
     HostEvent::ShellPre,
     HostEvent::ToolPost,
+    HostEvent::Stop,
   ];
 
   /// The canonical slug, for example `tool/pre`.
@@ -60,6 +63,7 @@ impl HostEvent {
       HostEvent::ToolPre => "tool/pre",
       HostEvent::ShellPre => "shell/pre",
       HostEvent::ToolPost => "tool/post",
+      HostEvent::Stop => "stop",
     }
   }
 

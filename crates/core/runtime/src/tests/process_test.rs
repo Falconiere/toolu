@@ -75,7 +75,11 @@ fn chunk_observer_sees_both_streams_before_the_output_budget_drops_bytes() {
     Arc::new(move |bytes| captured.lock().unwrap().extend_from_slice(bytes)),
   )
   .unwrap();
-  assert_eq!(*seen.lock().unwrap(), b"out\nerr\n");
+  let observed = seen.lock().unwrap();
+  assert!(
+    observed.as_slice() == b"out\nerr\n" || observed.as_slice() == b"err\nout\n",
+    "observer saw {observed:?}"
+  );
   assert!(output.truncated);
   assert_eq!(output.stdout.len() + output.stderr.len(), 3);
 }

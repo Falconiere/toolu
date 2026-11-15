@@ -157,6 +157,15 @@
           "hooks/muse/post-tools"
         ],
         "timeoutMs": 60000
+      },
+      {
+        "id": "stop",
+        "event": "Stop",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/stop"
+        ],
+        "timeoutMs": 60000
       }
     ],
     "mcpServers": [],

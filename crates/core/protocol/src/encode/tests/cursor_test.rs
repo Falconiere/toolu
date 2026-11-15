@@ -39,6 +39,15 @@ fn prompts_continue_or_stop() {
 }
 
 #[test]
+fn stop_follows_up_once_with_the_reason() {
+  assert_eq!(
+    parsed(&output(HostEvent::Stop, Normal::Deny("job 123 is unread"))),
+    json!({ "followup_message": "job 123 is unread" })
+  );
+  assert_eq!(parsed(&output(HostEvent::Stop, Normal::Allow)), json!({}));
+}
+
+#[test]
 fn post_and_session_hooks_take_additional_context_and_the_rest_get_an_empty_object() {
   assert_eq!(
     parsed(&output(HostEvent::ToolPost, Normal::Block("lint failed"))),

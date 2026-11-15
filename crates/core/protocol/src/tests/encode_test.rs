@@ -124,6 +124,9 @@ fn ask_survives_where_the_host_prompts_and_other_decisions_pass_through() {
 fn allow_is_silent_success_on_every_claude_and_codex_event() {
   for host in [Host::Claude, Host::Codex] {
     for event in HostEvent::ALL {
+      if native_event(host, event).is_none() {
+        continue;
+      }
       assert_eq!(
         stdout(host, event, &allow()),
         json!(""),

@@ -51,6 +51,7 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | `toolu:hooks.json:PreToolUse:hook_pre-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #258/done | native | no | — |
 | `toolu:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #443/done | native | no | — |
 | `toolu:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #263/done | native | no | — |
+| `toolu:hooks.json:Stop:hook_stop` | `plugins/toolu/hooks/hooks.json` | toolu | Stop | port-native | required | #880/done | native | no | — |
 | `toolu:hooks.json:UserPromptSubmit:hook_user-prompt-submit` | `plugins/toolu/hooks/hooks.json` | toolu | UserPromptSubmit | port-native | required | #263/done | native | no | — |
 | `ts-quality:hooks.json:SessionStart:hook_check-toolu:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
 | `ts-quality:hooks.json:SessionStart:hook_register:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |

@@ -60,6 +60,11 @@ fn path(root: &Path, id: &str) -> Result<PathBuf, String> {
   Ok(dir(root).join(format!("{id}.json")))
 }
 
+fn stop_marker(root: &Path, id: &str) -> Result<PathBuf, String> {
+  path(root, id)?;
+  Ok(dir(root).join("stop-blocked").join(id))
+}
+
 fn text(value: &Value, key: &str) -> Option<String> {
   value.get(key).and_then(Value::as_str).map(str::to_owned)
 }
@@ -206,6 +211,28 @@ pub fn pending(root: &Path, worktree: &Path) -> Result<Vec<Record>, String> {
       .filter(|record| record.worktree == worktree && record.delivered_at.is_none())
       .collect(),
   )
+}
+
+/// Mark the oldest undelivered result as Stop-blocked once, without changing
+/// its record or later completion claim. A separate marker survives updates by
+/// detached writers that loaded the record before this call.
+///
+/// # Errors
+/// The resource lock, result read, marker read or marker write fails.
+pub fn block_stop_once(root: &Path, worktree: &Path) -> Result<Option<Record>, String> {
+  with_resource_lock(root, || {
+    for record in pending(root, worktree)? {
+      let marker = stop_marker(root, &record.id)?;
+      match std::fs::metadata(&marker) {
+        Ok(_) => continue,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+        Err(err) => return Err(io(&marker, err)),
+      }
+      replace_atomic(&marker, "").map_err(|err| io(&marker, err))?;
+      return Ok(Some(record));
+    }
+    Ok(None)
+  })
 }
 
 /// Claim `worktree`'s finished records: each is marked delivered under the

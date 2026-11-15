@@ -139,8 +139,8 @@ fn the_fixture_covers_every_event_decision_and_failure() {
       .filter(|case| case.reply.get(key).is_some())
       .count()
   };
-  assert_eq!(cases.len(), 98);
-  assert_eq!(count("decision"), 64);
+  assert_eq!(cases.len(), 106);
+  assert_eq!(count("decision"), 72);
   assert_eq!((count("panic"), count("error"), count("raw")), (8, 8, 18));
   for event in HostEvent::ALL {
     let decisions = cases
@@ -211,6 +211,7 @@ fn each_row_of_the_epic_contract_has_its_case() {
     "tool/pre: deny",
     "permission/evaluate: deny",
     "prompt: deny",
+    "stop: deny",
   ] {
     let (expect, muse) = named(name).unwrap();
     assert_eq!(expect, json!({ "stdout": block, "stderr": "", "exit": 0 }));
