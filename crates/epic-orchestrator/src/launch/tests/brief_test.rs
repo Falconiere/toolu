@@ -33,11 +33,11 @@ fn every_placeholder_is_filled_with_toolu_epic_commands() {
     text.contains("`gh issue view https://github.com/Falconiere/comemory/issues/255 --comments`")
   );
   assert!(text.contains("| `toolu epic report <phase> --status-file /state/status/comemory-255.json`, adding `--pr N` or `--note \"...\"` where a step asks |"));
-  assert!(text.contains("`toolu ledger run <doc> --step <n> --detach`"));
-  assert!(text.contains("`toolu epic job --detach -- <command>`"));
-  assert!(text.contains("`toolu epic job --wait` once"));
-  assert!(text.contains("scoped pre-check"));
   for phrase in [
+    "`toolu ledger run <doc> --step <n> --detach`",
+    "`toolu epic job --detach -- <command>`",
+    "`toolu epic job --wait` once",
+    "scoped pre-check",
     "Focused checks still block",
     "only read-only or out-of-tree work",
     "do not edit tracked files or run cargo in this worktree",
@@ -48,9 +48,14 @@ fn every_placeholder_is_filled_with_toolu_epic_commands() {
   ] {
     assert!(text.contains(phrase), "{phrase}");
   }
-  assert!(!text.contains("Run other full gates and\ntest jobs as one blocking call"));
-  assert!(!text.contains("wait and retry"));
-  assert!(!text.contains("bun") && !text.contains("scripts/"));
+  for phrase in [
+    "Run other full gates and\ntest jobs as one blocking call",
+    "wait and retry",
+    "bun",
+    "scripts/",
+  ] {
+    assert!(!text.contains(phrase), "{phrase}");
+  }
   for phase in [
     "report brainstorm",
     "report spec-review",
