@@ -63,8 +63,10 @@ memory comes from `vm_stat` (free + inactive + speculative pages), and
 `"pressure": false` in the resource root's `policy.json` disables the hold.
 
 A binding in the worktree's Git directory automatically admits plan-ledger checks
-through `toolu_engine::resources`. Workers use `toolu epic job -- <command>`
-for other expensive commands. These limits cover managed commands; native
+through `toolu_engine::resources`. Workers use `toolu epic job` for other
+expensive commands, keeping focused checks blocking and detaching full gates;
+the [worker guidance](epic-orchestrator/README.md) describes both forms. These
+limits cover managed commands; native
 host tools outside that path are checked through workload inventory at teardown.
 Uncertain launches and incomplete cleanup retain ownership. See the
 [epic orchestrator contract](../plugins/epic-orchestrator/README.md) for policy,
