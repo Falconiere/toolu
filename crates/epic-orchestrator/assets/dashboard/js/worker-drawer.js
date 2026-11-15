@@ -227,7 +227,9 @@ export function closeDrawer(restoreFocus = false) {
   if (!restoreFocus) return;
   // Closing lands on the epic's view, so an opener in another view is hidden by now.
   const rows = [...document.querySelectorAll("#board button[data-issue]")];
-  [opener, rows.find((row) => row.dataset.issue === key)].find(shown)?.focus();
+  const row = rows.find((item) => item.dataset.issue === key);
+  // A row in a collapsed wave cannot take focus; its wave's summary can.
+  [opener, row, row?.closest("details")?.querySelector("summary")].find(shown)?.focus();
 }
 
 // After each dashboard render: refresh the open drawer, or open the deep-linked one.
