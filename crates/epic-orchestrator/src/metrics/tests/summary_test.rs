@@ -80,7 +80,7 @@ fn usage_summary_exposes_coverage_and_attempts_but_closing_omits_them() {
   let paths = Paths::at(root.path());
   let report = report(&paths, "e", 0, Some(&env)).unwrap();
   assert_eq!(report["usage"]["schema"], 1);
-  assert_eq!(report["usage"]["coverage"], "partial");
+  assert_eq!(report["usage"]["coverage"], json!("partial"));
   assert_ne!(
     report["usage"]["attempts"].as_array().unwrap(),
     &[] as &[serde_json::Value]

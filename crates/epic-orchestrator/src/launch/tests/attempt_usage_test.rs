@@ -53,8 +53,9 @@ fn refused_first_launch_leaves_no_record_and_existing_snapshot_is_saved() {
   let refused = launch().unwrap_err();
   assert!(refused.message.contains("pool.json"), "{}", refused.message);
   let saved = crate::launch::record::load_launch_record(&path).unwrap();
+  // The fixture ends with 500 input and 50 output tokens.
   assert_eq!(
     saved["usage_history"]["attempts"][0]["row"]["tokens"]["total_tokens"],
-    550
+    json!(550)
   );
 }
