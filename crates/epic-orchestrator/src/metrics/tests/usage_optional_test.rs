@@ -70,9 +70,7 @@ fn remove_fields(path: &Path, case: &Case) {
           .pointer_mut("/payload/event/record/quantity")
           .and_then(Value::as_object_mut)
         {
-          for &field in case.fields {
-            quantity.remove(field);
-          }
+          quantity.retain(|field, _| !case.fields.contains(&field.as_str()));
         }
         doc.to_string()
       })
