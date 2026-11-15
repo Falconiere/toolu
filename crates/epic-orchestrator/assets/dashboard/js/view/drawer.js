@@ -157,9 +157,11 @@ export function renderDrawer(model) {
   renderPhases(issue);
 }
 
-// The worker page replaces the view it was opened from, so start at its top.
+// The worker page replaces the view it was opened from: start at its top, and move focus
+// from the row that is now hidden to the page's back link.
 export function revealDrawer() {
   scrollTo({ top: 0 });
+  $("drawer-close").focus({ preventScroll: true });
 }
 
 export function hideDrawer() {
