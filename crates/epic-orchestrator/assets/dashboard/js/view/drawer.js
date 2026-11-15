@@ -155,11 +155,6 @@ export function renderDrawer(model) {
   renderScreen(model, issue);
   renderLogs(model);
   renderPhases(issue);
-  // Attention keys carry `data-issue` too; only the board row is the current one.
-  for (const row of document.querySelectorAll("#board button[data-issue]")) {
-    if (row.dataset.issue === model.key) row.setAttribute("aria-current", "true");
-    else row.removeAttribute("aria-current");
-  }
 }
 
 // The worker page replaces the view it was opened from, so start at its top.
@@ -175,9 +170,6 @@ export function hideDrawer() {
   $("drawer-screen-text").textContent = "";
   $("drawer-log-text").textContent = "";
   $("drawer-log-text").dataset.selected = "";
-  for (const row of document.querySelectorAll("button[aria-current]")) {
-    row.removeAttribute("aria-current");
-  }
 }
 
 export function bindDrawer(onClose, onTab, onLog) {
