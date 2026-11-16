@@ -1,6 +1,6 @@
 {
   "name": "rust-quality",
-  "version": "9.1.0",
+  "version": "10.0.0",
   "hookProtocol": 4,
   "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",
   "author": {

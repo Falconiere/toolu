@@ -1,6 +1,6 @@
 {
   "name": "documentation-gate",
-  "version": "9.1.0",
+  "version": "10.0.0",
   "hookProtocol": 4,
   "description": "Keep documentation accurate with a Jev-routed editing sub-agent and native review records.",
   "skills": "./skills/",

@@ -6,6 +6,22 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [10.0.0](https://github.com/Falconiere/toolu/compare/v9.1.0...v10.0.0) (2026-11-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sandbox:** remove the sandbox plugin ([#904](https://github.com/Falconiere/toolu/issues/904))
+
+### Features
+
+* **epic:** add a dashboard sidebar, views and worker page ([#901](https://github.com/Falconiere/toolu/issues/901)) ([baf5db4](https://github.com/Falconiere/toolu/commit/baf5db4a7488dd34ce5a25c4eded1086f692a8c8))
+* **epic:** apply a scope-preserving size split without a person ([#911](https://github.com/Falconiere/toolu/issues/911)) ([b58e4e4](https://github.com/Falconiere/toolu/commit/b58e4e494917a937d8d54960a0792155d088bc54))
+* **epic:** preserve agent usage across attempts ([#902](https://github.com/Falconiere/toolu/issues/902)) ([ffe57d0](https://github.com/Falconiere/toolu/commit/ffe57d0f7229fb2c4cbb955b10105b36b5033107))
+* **epic:** refuse to merge a pull request over its size budget ([#910](https://github.com/Falconiere/toolu/issues/910)) ([53f9d05](https://github.com/Falconiere/toolu/commit/53f9d051b73d7742600d214d723b595f97c5316d))
+* **gates:** hold pushed branches to a PR size budget ([#909](https://github.com/Falconiere/toolu/issues/909)) ([a93e0c8](https://github.com/Falconiere/toolu/commit/a93e0c81efe0e41f82e54fe4056d49a893f6fb33))
+* **sandbox:** remove the sandbox plugin ([#904](https://github.com/Falconiere/toolu/issues/904)) ([5840715](https://github.com/Falconiere/toolu/commit/58407151709e2af6f48d54f9ca324ca4163009fd))
+
 ## [9.1.0](https://github.com/Falconiere/toolu/compare/v9.0.0...v9.1.0) (2026-11-15)
 
 
