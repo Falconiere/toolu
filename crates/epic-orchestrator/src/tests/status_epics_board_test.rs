@@ -76,3 +76,75 @@ fn board_header_follows_the_waves_of_a_real_epic_run() {
   merge(&scenario, &mut engine, 5);
   assert_eq!(header(&engine), json!([3, null, 0, 0]));
 }
+
+#[test]
+fn graph_issues_carry_their_tracker_url_redacted_or_null() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let secret = "URL-SECRET-901";
+  let kept = crate::support::graph_248().issues[3].url.clone();
+  let (paths, world) = super::tests::board(temp.path(), |graph| {
+    graph.issues[0].url = format!("https://tracker.example/{secret}/issues/1");
+    graph.issues[1].url = String::new();
+    graph.issues[2].url = format!("https://t.example/{}", "a".repeat(143));
+    graph.issues[4].url = format!("https://t.example/{}", "a".repeat(142));
+  });
+  let tokens = json!({"peer": secret}).to_string();
+  let secrets = crate::fleet_rig::secrets_of(temp.path(), &[("TOOLU_EPIC_PEER_TOKENS", &tokens)]);
+  let detail = route(&world, &paths, "/api/v1/epics/comemory-248", 0, &secrets)
+    .expect("route")
+    .expect("document");
+  let urls = detail["graph"]["issues"]
+    .as_array()
+    .expect("graph issues")
+    .iter()
+    .map(|node| node["url"].clone())
+    .collect::<Vec<_>>();
+  assert_eq!(
+    urls[0],
+    json!("https://tracker.example/<redacted>/issues/1")
+  );
+  // Empty, and one character past the 160 limit: a cut URL is a broken link.
+  assert_eq!((&urls[1], &urls[2]), (&Value::Null, &Value::Null));
+  assert!(kept.starts_with("https://github.com/"), "{kept}");
+  assert_eq!(urls[3], json!(kept));
+  assert_eq!(urls[4].as_str().map(|url| url.chars().count()), Some(160));
+}
+
+#[test]
+fn graph_issues_say_which_the_tracker_already_closed() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let graph = crate::support::graph_248();
+  let closed = graph
+    .issues
+    .iter()
+    .filter(|issue| issue.status == "done")
+    .map(|issue| issue.key.clone())
+    .collect::<Vec<_>>();
+  // Five of epic #248's issues were closed before the run.
+  assert_eq!(closed.len(), 5);
+  let (paths, world) = super::tests::board(temp.path(), |_| {});
+  let detail = route(
+    &world,
+    &paths,
+    "/api/v1/epics/comemory-248",
+    0,
+    &Secrets::none(),
+  )
+  .expect("route")
+  .expect("document");
+  let served = detail["graph"]["issues"]
+    .as_array()
+    .expect("graph issues")
+    .iter()
+    .filter(|node| node["done"] == true)
+    .map(|node| node["key"].as_str().expect("key").to_owned())
+    .collect::<Vec<_>>();
+  assert_eq!(served, closed);
+  let open = detail["graph"]["issues"]
+    .as_array()
+    .expect("graph issues")
+    .iter()
+    .filter(|node| node["done"] == false)
+    .count();
+  assert_eq!(open, graph.issues.len() - 5);
+}

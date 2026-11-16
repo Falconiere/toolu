@@ -7,107 +7,6 @@ use toolu_runtime::config::secrets::Secrets;
 use crate::fleet_rig::{config, listener};
 
 const ASSET_CACHE: &str = "public, max-age=31536000, immutable";
-const ASSET_ROUTES: [(&str, &str, &str, &str); 23] = [
-  ("/", "index.html", "text/html", "no-store"),
-  ("/tokens.css", "tokens.css", "text/css", ASSET_CACHE),
-  ("/board.css", "board.css", "text/css", ASSET_CACHE),
-  (
-    "/board-layout.css",
-    "board-layout.css",
-    "text/css",
-    ASSET_CACHE,
-  ),
-  ("/panels.css", "panels.css", "text/css", ASSET_CACHE),
-  ("/drawer.css", "drawer.css", "text/css", ASSET_CACHE),
-  ("/control.css", "control.css", "text/css", ASSET_CACHE),
-  ("/js/app.js", "js/app.js", "text/javascript", ASSET_CACHE),
-  ("/js/api.js", "js/api.js", "text/javascript", ASSET_CACHE),
-  (
-    "/js/logic/status.js",
-    "js/logic/status.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/view/dashboard.js",
-    "js/view/dashboard.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/view/peer.js",
-    "js/view/peer.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/worker-drawer.js",
-    "js/worker-drawer.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/logic/drawer.js",
-    "js/logic/drawer.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/logic/fragment.js",
-    "js/logic/fragment.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/view/dom.js",
-    "js/view/dom.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/view/drawer.js",
-    "js/view/drawer.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/control.js",
-    "js/control.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/answer-dialog.js",
-    "js/answer-dialog.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/logic/control.js",
-    "js/logic/control.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/js/view/controls.js",
-    "js/view/controls.js",
-    "text/javascript",
-    ASSET_CACHE,
-  ),
-  (
-    "/fonts/archivo.woff2",
-    "fonts/archivo.woff2",
-    "font/woff2",
-    ASSET_CACHE,
-  ),
-  (
-    "/fonts/jetbrains-mono.woff2",
-    "fonts/jetbrains-mono.woff2",
-    "font/woff2",
-    ASSET_CACHE,
-  ),
-];
-
 fn request(addr: std::net::SocketAddr, method: &str, path: &str) -> (String, Vec<u8>) {
   let mut stream = TcpStream::connect(addr).expect("connect");
   write!(
@@ -155,15 +54,39 @@ fn assert_asset(
   assert!(headers.contains("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"), "{path}");
 }
 
+/// The page, then every embedded asset with the media type its extension calls for.
+fn assert_every_asset(addr: std::net::SocketAddr, version: &str) {
+  let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/dashboard");
+  let page = ("/", "index.html", "text/html", "no-store");
+  assert_asset(addr, version, &assets, page);
+  for (file, _, _) in super::ASSETS {
+    let kind = match file.rsplit('.').next() {
+      Some("css") => "text/css",
+      Some("js") => "text/javascript",
+      _ => "font/woff2",
+    };
+    let route = format!("/{file}");
+    assert_asset(addr, version, &assets, (&route, file, kind, ASSET_CACHE));
+  }
+  for file in [
+    "sidebar.css",
+    "js/logic/board.js",
+    "js/view/board.js",
+    "js/view/sidebar.js",
+  ] {
+    assert!(
+      super::ASSETS.iter().any(|(name, _, _)| *name == file),
+      "{file}"
+    );
+  }
+}
+
 #[test]
 fn dashboard_asset_routes_match_embedded_bytes_and_security_headers() {
   let temp = tempfile::tempdir().expect("temp root");
   let (running, stop) = listener(temp.path(), config(0, Vec::new(), Secrets::none()));
   let version = env!("CARGO_PKG_VERSION");
-  let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/dashboard");
-  for spec in ASSET_ROUTES {
-    assert_asset(running.addr, version, &assets, spec);
-  }
+  assert_every_asset(running.addr, version);
   let (headers, _) = request(
     running.addr,
     "GET",
@@ -256,6 +179,12 @@ fn dashboard_page_has_the_board_panels_and_accessible_states() {
     "tile-attention",
     "tile-hosts",
     "tile-plans",
+    "sidebar",
+    "view-overview",
+    "view-epic",
+    "view-hosts",
+    "view-journal",
+    "live",
     "board",
     "hosts",
     "attention",

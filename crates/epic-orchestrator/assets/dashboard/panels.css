@@ -1,11 +1,6 @@
-.panels {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-}
 .panel {
   min-width: 0;
-  min-height: 260px;
+  margin-bottom: 20px;
   padding: 19px 20px;
   border: 1px solid var(--line-strong);
   background: var(--surface);
@@ -23,6 +18,11 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.host-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0 28px;
 }
 .host-row {
   padding: 10px 0;
@@ -129,15 +129,11 @@ footer {
     padding: 0 10px;
   }
   main {
-    padding: 28px 0 36px;
+    padding: 20px 0 36px;
   }
-  .heading {
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 24px;
-  }
-  .connection {
-    margin: 0;
+  .top-controls {
+    flex-wrap: wrap;
+    padding-bottom: 10px;
   }
   .peer-banner {
     display: block;
@@ -148,35 +144,22 @@ footer {
   }
   .tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1px;
-    margin-bottom: 32px;
   }
   .tile {
-    min-height: 137px;
-    padding: 15px 13px;
-  }
-  .tile dd {
-    margin-top: 14px;
-    font-size: 24px;
-  }
-  .tile p {
-    font-size: 12px;
+    padding: 12px 13px;
   }
   .epic-header {
-    align-items: start;
+    align-items: stretch;
     flex-direction: column;
     gap: 7px;
     padding: 15px;
   }
-  .epic h3 {
+  .epic h1 {
     font-size: 16px;
+    white-space: normal;
   }
-  .panels {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-  .panel {
-    min-height: 0;
+  .epic-control-slot {
+    justify-content: flex-start;
   }
   .section-heading > span {
     font-size: 11px;

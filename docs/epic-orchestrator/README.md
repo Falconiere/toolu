@@ -253,20 +253,27 @@ finish later. Stopping the engine joins incomplete request readers; accepted
 reply workers keep their existing lifetime. [Release resource
 measurements](evidence/control-request-deadline.md) show the before/after
 thread and descriptor counts for stalled peers.
-The engine starts its dashboard at `http://127.0.0.1:7717/` by default.
-It shows registered epics,
-workers, hosts, jobs, machine capacity, queue and attention, and follows the
-journal without polling. `toolu epic status --json <key>` returns
+The engine starts its dashboard at `http://127.0.0.1:7717/` by default. A
+sidebar lists the overview, each registered epic, hosts and the journal, and
+the page shows the selected one. The overview has the counters, the attention
+items and the workers running now in every epic. An epic shows its issues
+grouped by wave: the current wave is open, and each other wave is one line
+with its counts that opens on a click. Each row links to the issue in its
+tracker. The journal is followed without polling. `#epic=<key>`, `#view=hosts`
+and `#view=journal` link to a view. `toolu epic status --json <key>` returns
 one epic or worker through the local control socket.
-Selecting a worker opens its drawer: plan ledger steps, agent status, phase
-history and Screen and Logs tabs. With the token, Screen reads the agent's live
-pane every 2 seconds while selected and visible; a blocked agent shows the
-`herdr agent attach` command to copy. Logs lists this worker's managed jobs and
-Claude Code task output, follows the selected log every second while selected
-and visible, and offers a jump to the latest output after scrolling up. The
-list distinguishes running and done sources and reports empty or unreadable
-logs. `#issue=<key>` links to a drawer. Logs are local to the serving machine;
-the peer dashboard link opens that machine's logs.
+
+Selecting a worker opens its page beside the sidebar: agent status, links to
+its tracker issue and pull request, and Screen, Logs, Plan and Phases tabs.
+With the token, Screen reads the agent's live pane every 2 seconds while
+selected and visible; a blocked agent shows the `herdr agent attach` command to
+copy. Logs lists this worker's managed jobs and Claude Code task output,
+follows the selected log every second while selected and visible, and offers a
+jump to the latest output after scrolling up. The list distinguishes running
+and done sources and reports empty or unreadable logs. Plan lists the plan
+ledger steps and Phases the phase history. `#issue=<key>` links to a worker
+page, and its back link returns to the worker's epic. Logs are local to the
+serving machine; the peer dashboard link opens that machine's logs.
 
 ### Dashboard control
 

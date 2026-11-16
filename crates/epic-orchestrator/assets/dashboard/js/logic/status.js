@@ -15,6 +15,7 @@ const HOSTS = {
 };
 
 export const DONE_STAGES = ["merged", "cleaning", "cleanup-incomplete", "abandoned"];
+export const LIVE_STAGES = ["running", "awaiting_merge"];
 
 const pad = (value) => String(value).padStart(2, "0");
 
@@ -28,7 +29,7 @@ export function clock(iso, seconds = false) {
 const count = (value) => (Number.isFinite(value) && value > 0 ? value : 0);
 
 export function agentState(issue, fallback) {
-  if (DONE_STAGES.includes(issue?.stage)) {
+  if (DONE_STAGES.includes(issue?.stage) || issue?.closed) {
     return AGENTS.done;
   }
   if (!issue?.stage) return AGENTS.queued;
@@ -67,37 +68,41 @@ export function hostNote(host, now = Date.now()) {
 export const hostResumable = (host, now = Date.now()) =>
   hostPaused(host) || Boolean(cooldown(host.cooldown_until, now));
 
+// Every wave done: the engine reports no current wave, nothing live and nothing queued.
+export const epicComplete = (epic) =>
+  Boolean(epic?.waves_total) &&
+  epic.current_wave == null &&
+  count(epic.live) === 0 &&
+  count(epic.queued) === 0;
+
 export function waveLine(board) {
-  const live = count(board.live);
-  const queued = count(board.queued);
-  const tail = `${live} LIVE · ${queued} QUEUED`;
-  if (board.waves_total && board.current_wave == null && live === 0 && queued === 0) {
-    return `WAVES COMPLETE · ${tail}`;
-  }
+  const tail = `${count(board.live)} LIVE · ${count(board.queued)} QUEUED`;
+  if (epicComplete(board)) return `WAVES COMPLETE · ${tail}`;
   return `WAVE ${board.current_wave ?? "—"} OF ${board.waves_total ?? "—"} · ${tail}`;
 }
 
+// Each graph node merged with its issue record. A never-launched issue the tracker already
+// closed (`done`) was closed before launch; the engine leaves it out of `queued` too.
 export function issueRows(board) {
   const issues = new Map((board.issues ?? []).map((issue) => [issue.key, issue]));
-  return (board.graph?.issues ?? []).map((node) => ({
-    ...node,
-    ...issues.get(node.key),
-  }));
+  return (board.graph?.issues ?? []).map((node) => {
+    const issue = issues.get(node.key);
+    return { ...node, ...issue, closed: !issue?.stage && Boolean(node.done) };
+  });
 }
 
-// One worker's board row: its graph node merged with its issue record, plus its board.
+// One worker's board row, plus its board.
 export function findIssue(boards, key) {
   for (const board of boards ?? []) {
-    const node = (board.graph?.issues ?? []).find((issue) => issue.key === key);
-    if (node) {
-      return { board, row: { ...node, ...board.issues?.find((issue) => issue.key === key) } };
-    }
+    const row = issueRows(board).find((issue) => issue.key === key);
+    if (row) return { board, row };
   }
   return null;
 }
 
 export function phaseLine(issue, wave) {
   if (issue.hold) return `HELD · with ${issue.hold.with ?? "another worker"}`;
+  if (issue.closed) return "CLOSED BEFORE LAUNCH";
   if (!issue.stage) return `QUEUED · WAVE ${wave ?? "—"}`;
   const phase = issue.phase?.toUpperCase() || issue.stage.toUpperCase();
   return issue.phase_age_ms == null
@@ -118,16 +123,12 @@ export function peerMachine(fleet, name) {
   return fleet?.machines?.find((machine) => !machine.local && machine.name === name);
 }
 
-export function peerDashboardUrl(raw) {
-  if (!raw) return null;
+// A link the page may render: plain http or https, with no credentials.
+export function linkUrl(raw) {
+  if (typeof raw !== "string") return null;
   try {
     const url = new URL(raw);
-    return ["http:", "https:"].includes(url.protocol) &&
-      !url.username &&
-      !url.password &&
-      url.pathname === "/" &&
-      !url.search &&
-      !url.hash
+    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password
       ? url.href
       : null;
   } catch {
@@ -135,14 +136,23 @@ export function peerDashboardUrl(raw) {
   }
 }
 
-export function tiles(boards, hosts, attention, now = Date.now()) {
+export function peerDashboardUrl(raw) {
+  const href = linkUrl(raw);
+  if (!href) return null;
+  const url = new URL(href);
+  return url.pathname === "/" && !url.search && !url.hash ? href : null;
+}
+
+// `live` is the live-agent document; a worker it does not list keeps the board's own status.
+export function tiles(boards, hosts, attention, now = Date.now(), live = null) {
+  const sampled = new Map((live?.items ?? []).map((item) => [item.key, item.agent_status]));
   const issues = boards.flatMap((board) => board.issues ?? []);
-  const live = issues.filter((issue) => ["running", "awaiting_merge"].includes(issue.stage));
+  const running = issues.filter((issue) => LIVE_STAGES.includes(issue.stage));
   const total = boards.reduce(
     (sum, board) => sum + (board.graph?.issues?.length ?? board.issues?.length ?? 0),
     0,
   );
-  const states = live.map((issue) => agentState(issue).kind);
+  const states = running.map((issue) => agentState(issue, sampled.get(issue.key)).kind);
   const plans = issues
     .map((issue) => issue.plan_summary)
     .filter((plan) => Number.isFinite(plan?.total));
@@ -150,7 +160,7 @@ export function tiles(boards, hosts, attention, now = Date.now()) {
   const attentionItems = attention.items ?? [];
   const oldest = Math.max(0, ...attentionItems.map((item) => count(item.age_ms)));
   return {
-    workers: `${live.length} / ${total} ISSUES`,
+    workers: `${running.length} / ${total} ISSUES`,
     workerNote: `${states.filter((state) => state === "working").length} working, ${states.filter((state) => state === "blocked").length} blocked, ${states.filter((state) => state === "idle").length} idle.`,
     attention: `${attentionItems.length} OPEN`,
     attentionNote: attentionItems.length

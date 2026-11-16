@@ -3,7 +3,7 @@ import { controlState, readToken, rotated } from "./control.js";
 import { keyAttention } from "./logic/control.js";
 import { wantsScreen } from "./logic/drawer.js";
 import { appendPage, wantsLogs } from "./logic/logs.js";
-import { fragmentIssue, withIssue } from "./logic/fragment.js";
+import { fragmentIssue, withIssue, withView } from "./logic/fragment.js";
 import { findIssue, peerMachine } from "./logic/status.js";
 import { renderDrawerActions } from "./view/controls.js";
 import { bindDrawer, hideDrawer, renderDrawer, revealDrawer } from "./view/drawer.js";
@@ -28,12 +28,14 @@ let inflight = -1;
 let logTimer;
 let logRequest = 0;
 let current = () => ({});
+let navigated = () => {};
 
 const replaceHash = (hash) =>
   history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
 const setHash = (key) => replaceHash(withIssue(location.hash, key));
 
 const find = (key) => findIssue(current().docs?.boards, key);
+const shown = (node) => node?.isConnected && node.checkVisibility?.() !== false;
 
 function render() {
   const found = find(drawer.key);
@@ -201,7 +203,9 @@ export function openDrawer(key, opener) {
   }
   drawer.key = key;
   drawer.opener = opener;
-  setHash(key);
+  // The page opens over its epic's view, so closing it lands there.
+  replaceHash(withIssue(withView(location.hash, { kind: "epic", key: find(key).board.key }), key));
+  navigated();
   clearInterval(drawer.timer);
   drawer.timer = setInterval(tick, POLL_MS);
   render();
@@ -219,9 +223,13 @@ export function closeDrawer(restoreFocus = false) {
   drawer.seq += 1;
   hideDrawer();
   setHash(null);
+  navigated();
   if (!restoreFocus) return;
+  // Closing lands on the epic's view, so an opener in another view is hidden by now.
   const rows = [...document.querySelectorAll("#board button[data-issue]")];
-  (opener?.isConnected ? opener : rows.find((row) => row.dataset.issue === key))?.focus();
+  const row = rows.find((item) => item.dataset.issue === key);
+  // A row in a collapsed wave cannot take focus; its wave's summary can.
+  [opener, row, row?.closest("details")?.querySelector("summary")].find(shown)?.focus();
 }
 
 // After each dashboard render: refresh the open drawer, or open the deep-linked one.
@@ -236,8 +244,10 @@ export function syncDrawer() {
   if (key && !openDrawer(key, null)) setHash(null);
 }
 
-export function initDrawer(state) {
+// `onNavigate` repaints the sidebar and the view after the page opens or closes.
+export function initDrawer(state, onNavigate) {
   current = state;
+  navigated = onNavigate;
   bindDrawer(() => closeDrawer(true), setTab, selectLog);
   document.addEventListener("click", (event) => {
     const button = event.target.closest?.("button[data-issue]");

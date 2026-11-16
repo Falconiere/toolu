@@ -55,6 +55,7 @@ export function nextStep(plan) {
 const blocker = (ref) => (ref.includes("#") ? ref.slice(ref.lastIndexOf("#")) : ref);
 
 function stoppedNotice(issue) {
+  if (issue?.closed) return { ...NOTICES.closed, text: "Finished · closed before launch." };
   if (!issue?.stage) {
     const blockers = (issue?.open_blockers ?? []).map(blocker);
     const wait = blockers.length ? `Queued until ${blockers.join(", ")} merges.` : "Queued.";
@@ -96,11 +97,13 @@ export function phaseTimeline(history, issue) {
     phase: (row.phase || "—").toUpperCase(),
     at: clock(row.at),
   }));
-  if (!rows.length && !issue?.stage) rows.push({ phase: "QUEUED", at: "—" });
+  if (!rows.length && !issue?.stage) {
+    rows.push({ phase: issue?.closed ? "CLOSED BEFORE LAUNCH" : "QUEUED", at: "—" });
+  }
   return rows.map((row, index) => ({ ...row, current: index === rows.length - 1 }));
 }
 
-// shortcut: the board names only the epic's repository, so a PR in another repository links there; pass the issue's repository once the API serves it.
+// The pull request of a GitHub issue URL's repository.
 export function prUrl(issueUrl, pr) {
   if (!Number.isInteger(pr) || pr <= 0 || !issueUrl) return null;
   try {
@@ -113,6 +116,10 @@ export function prUrl(issueUrl, pr) {
     return null;
   }
 }
+
+// The issue's own repository first; a tracker URL that names none falls back to the epic's.
+export const prLink = (issue, board) =>
+  prUrl(issue?.url, issue?.pr) ?? prUrl(board?.url, issue?.pr);
 
 export function attentionLine(item, now = Date.now(), sampledAt = now) {
   const age = Math.max(0, (item.age_ms ?? 0) + now - sampledAt);

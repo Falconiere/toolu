@@ -9,14 +9,17 @@ import {
   nextStep,
   phaseTimeline,
   planLine,
-  prUrl,
+  prLink,
   screenNotice,
   stepMark,
 } from "../logic/drawer.js";
-import { agentState, liveTitle, phaseLine, statusTitle } from "../logic/status.js";
-import { $, element, mark, text } from "./dom.js";
+import { shortKey } from "../logic/board.js";
+import { agentState, linkUrl, liveTitle, phaseLine, statusTitle } from "../logic/status.js";
+import { $, element, mark, showLink, text } from "./dom.js";
 import { bindLogs, renderLogs } from "./logs.js";
 import { showPeerLink } from "./peer.js";
+
+const TABS = ["screen", "logs", "plan", "phases"];
 
 const show = (id, visible) => {
   $(id).hidden = !visible;
@@ -48,13 +51,9 @@ function renderHeader(model, issue) {
     meta.append(pair);
   }
   text("drawer-phase", phaseLine(issue, issue.wave));
-  const link = $("drawer-pr");
-  const href = prUrl(model.board?.url, issue.pr);
-  link.hidden = !href;
-  if (href) {
-    link.href = href;
-    link.textContent = `PR #${issue.pr} ↗`;
-  }
+  text("drawer-close", `← EPIC ${shortKey(model.board?.key)}`);
+  showLink($("drawer-issue"), linkUrl(issue.url), "ISSUE ↗");
+  showLink($("drawer-pr"), prLink(issue, model.board), `PR #${issue.pr} ↗`);
 }
 
 function renderStatus(model, issue) {
@@ -146,7 +145,7 @@ export function renderDrawer(model) {
   renderStatus(model, issue);
   renderAttention(model);
   renderPlan(model.doc?.plan, Boolean(model.doc), model.docFailed);
-  for (const tab of ["screen", "logs"]) {
+  for (const tab of TABS) {
     const selected = model.tab === tab;
     const button = $(`drawer-${tab}-tab`);
     button.setAttribute("aria-selected", String(selected));
@@ -156,15 +155,13 @@ export function renderDrawer(model) {
   renderScreen(model, issue);
   renderLogs(model);
   renderPhases(issue);
-  // Attention keys carry `data-issue` too; only the board row is the current one.
-  for (const row of document.querySelectorAll("#board button[data-issue]")) {
-    if (row.dataset.issue === model.key) row.setAttribute("aria-current", "true");
-    else row.removeAttribute("aria-current");
-  }
 }
 
+// The worker page replaces the view it was opened from: start at its top, and move focus
+// from the row that is now hidden to the page's back link.
 export function revealDrawer() {
-  if (matchMedia("(max-width: 900px)").matches) $("drawer").scrollIntoView({ block: "start" });
+  scrollTo({ top: 0 });
+  $("drawer-close").focus({ preventScroll: true });
 }
 
 export function hideDrawer() {
@@ -175,20 +172,19 @@ export function hideDrawer() {
   $("drawer-screen-text").textContent = "";
   $("drawer-log-text").textContent = "";
   $("drawer-log-text").dataset.selected = "";
-  for (const row of document.querySelectorAll("button[aria-current]")) {
-    row.removeAttribute("aria-current");
-  }
 }
 
 export function bindDrawer(onClose, onTab, onLog) {
   $("drawer-close").addEventListener("click", onClose);
-  for (const tab of ["screen", "logs"]) {
+  for (const [index, tab] of TABS.entries()) {
     const button = $(`drawer-${tab}-tab`);
+    button.setAttribute("aria-controls", `drawer-${tab}`);
     button.addEventListener("click", () => onTab(tab));
     button.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+      if (!step) return;
       event.preventDefault();
-      const next = tab === "screen" ? "logs" : "screen";
+      const next = TABS[(index + step + TABS.length) % TABS.length];
       onTab(next);
       $(`drawer-${next}-tab`).focus();
     });

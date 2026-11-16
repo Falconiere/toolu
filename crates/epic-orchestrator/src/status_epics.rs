@@ -104,10 +104,7 @@ fn header(world: &World, key: &str, issues: &[&Issue], secrets: &Secrets) -> Map
     issue.stage.is_empty() && !launching(issue) && !done.contains(issue.key.as_str())
   });
   let title = graph.and_then(|graph| cut(&secrets::redact_text(&graph.epic.title, secrets)));
-  // A cut URL is a broken link, so a longer one is left out.
-  let url = graph
-    .map(|graph| secrets::redact_text(&graph.epic.url, secrets))
-    .filter(|url| !url.is_empty() && url.chars().count() <= TEXT_LIMIT);
+  let url = graph.and_then(|graph| link(&graph.epic.url, secrets));
   let waves_total = waves
     .into_iter()
     .flat_map(BTreeMap::values)
@@ -142,6 +139,13 @@ fn cut(text: &str) -> Option<String> {
   (!text.is_empty()).then(|| text.chars().take(TEXT_LIMIT).collect())
 }
 
+/// `url` redacted, or `None` when it is empty or longer than 160 characters:
+/// a cut URL is a broken link, so a longer one is left out.
+fn link(url: &str, secrets: &Secrets) -> Option<String> {
+  Some(secrets::redact_text(url, secrets))
+    .filter(|url| !url.is_empty() && url.chars().count() <= TEXT_LIMIT)
+}
+
 /// One epic's safe graph, live issues and its merge-queue entries.
 ///
 /// # Errors
@@ -161,7 +165,7 @@ pub(crate) fn detail(
   };
   let graph = read_value(&dir.join("graph.json"))?;
   let stable = world.epics.get(key).map(|epic| &epic.waves);
-  let (nodes, waves) = project_graph(&graph, stable);
+  let (nodes, waves) = project_graph(&graph, stable, secrets);
   let issues = epic_issues(world, key);
   let rows = issues
     .iter()
@@ -232,10 +236,13 @@ pub(crate) fn hold(issue: &Issue, secrets: &Secrets) -> Value {
 }
 
 /// The graph's issues and waves. With the engine's stable waves, a merged
-/// issue keeps its wave here too, matching `current_wave`.
+/// issue keeps its wave here too, matching `current_wave`. Each issue carries
+/// its tracker `url` under the epic URL's rule, and `done` once the tracker
+/// closed it: the fact behind the header's `queued` count.
 fn project_graph(
   graph: &Value,
   stable: Option<&BTreeMap<String, u64>>,
+  secrets: &Secrets,
 ) -> (Vec<Value>, Vec<Value>) {
   let mut nodes = Vec::new();
   let mut waves = BTreeMap::<u64, Vec<String>>::new();
@@ -257,8 +264,10 @@ fn project_graph(
     nodes.push(json!({
       "key": key,
       "title": row.get("title").and_then(Value::as_str),
+      "url": row.get("url").and_then(Value::as_str).and_then(|url| link(url, secrets)),
       "wave": wave,
       "open_blockers": safe_strings(row.get("open_blockers")),
+      "done": row.get("status").and_then(Value::as_str) == Some("done"),
     }));
   }
   let waves = waves
