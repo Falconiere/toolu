@@ -30,6 +30,9 @@ step/requirement alignment. Keep ledger validation and approval grounded in the 
   failure propagation/recovery is planned instead of deferred.
 - **Documentation** — each user-facing behavior/interface/CLI/command/config
   change has an explicit documentation step with a runnable check.
+- **Size budget** — the plan's `Size` estimate is plausible for the declared
+  paths and within the budget. An over-budget plan that is not cut to a first
+  slice with `## Follow-ups` is a blocker.
 - **PR-delivery readiness** — plan includes end-to-end real-data verification,
   the final ledger verification, scoped commit/push expectations, and the
   delivery prerequisite for the automatic PR/babysit handoff.

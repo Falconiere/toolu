@@ -57,7 +57,7 @@ impl GateMode {
 const GATE_PRESETS: [&str; 3] = ["strict", "balanced", "relaxed"];
 
 /// The gates a mode can be set for.
-pub const GATE_NAMES: [&str; 9] = [
+pub const GATE_NAMES: [&str; 10] = [
   "pushReview",
   "qualityGate",
   "commitGate",
@@ -67,6 +67,7 @@ pub const GATE_NAMES: [&str; 9] = [
   "agentTier",
   "protectedFiles",
   "mcpBlocker",
+  "prSize",
 ];
 
 /// Security guardrails: `ask` at every preset but strict, and `ask` degrades to block.
@@ -89,9 +90,11 @@ fn preset_mode(preset: &str, name: &str, guardrail: bool) -> GateMode {
   match (preset, guardrail) {
     ("strict", _) => GateMode::Block,
     (_, true) => GateMode::Ask,
-    ("relaxed", false) if name == "pushReview" || name == "qualityGate" => GateMode::Advise,
+    ("relaxed", false) if ["pushReview", "qualityGate", "prSize"].contains(&name) => {
+      GateMode::Advise
+    }
     ("relaxed", false) => GateMode::Off,
-    (_, false) if name == "qualityGate" => GateMode::Block,
+    (_, false) if name == "qualityGate" || name == "prSize" => GateMode::Block,
     (_, false) => GateMode::Advise,
   }
 }

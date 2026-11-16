@@ -53,6 +53,8 @@ pub(crate) mod pattern;
 pub(crate) mod plan_ledger;
 /// Optional push-time AC coverage and telemetry.
 pub(crate) mod plan_ledger_ac;
+/// The pr-size PreToolUse built-in.
+pub(crate) mod pr_size;
 /// The protected-files PreToolUse built-in.
 pub(crate) mod protected_files;
 /// The push-review PreToolUse built-in.

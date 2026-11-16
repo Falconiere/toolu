@@ -1387,7 +1387,7 @@
       }
     },
     "verdict": {
-      "description": "toolu ledger verdict json, and verdict status under --json: the four push gates.",
+      "description": "toolu ledger verdict json, and verdict status under --json: the five push gates.",
       "type": "object",
       "additionalProperties": false,
       "required": ["version", "branch", "base_branch", "diff_sha", "overall", "gates", "generated_at"],
@@ -1400,12 +1400,13 @@
         "gates": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["quality", "plan", "review", "docs"],
+          "required": ["quality", "plan", "review", "docs", "size"],
           "properties": {
             "quality": { "$ref": "#/$defs/gate" },
             "plan": { "$ref": "#/$defs/gate" },
             "review": { "$ref": "#/$defs/gate" },
-            "docs": { "$ref": "#/$defs/gate" }
+            "docs": { "$ref": "#/$defs/gate" },
+            "size": { "$ref": "#/$defs/gate" }
           }
         },
         "generated_at": { "type": "string" }

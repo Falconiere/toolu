@@ -26,9 +26,15 @@ cost target, not a reason to hide complexity or omit a failure case.
 6. **Links resolve.** Link a repository file only when
    `git cat-file -e "$SHA:<path>"` succeeds at the base commit; otherwise
    state the fact inline or drop it.
-7. **One coherent PR each.** Include callers, tests, fixtures and docs that
+7. **One small PR each.** Include callers, tests, fixtures and docs that
    must change together. Make sibling contracts and dependencies explicit.
-   Explain necessary larger scope rather than forcing a Standard route.
+   State `Size: ~<n> code lines`, the added lines estimated from the listed
+   files without tests, fixtures and docs. Over the review budget
+   (`gates.prSize.maxLines`, 300 when unset, and 100 changed files) the
+   pr-size gate denies the worker's push, so split first: a
+   behavior-preserving refactor, then the interface with its tests, then one
+   behavior per child; a mechanical sweep splits by crate or directory. Each
+   child leaves the base green and merges alone. Never fit by dropping tests.
 
 ## Sub-issue
 
@@ -38,6 +44,7 @@ Title: a conventional-commit subject the PR can reuse.
 <One sentence: the observable change this PR makes.>
 
 Base: <sha>
+Size: ~<n> code lines
 
 ## Decisions
 - <decision> (`<path>:<line>`)
@@ -91,6 +98,7 @@ Title: `refactor(epic): let tests run the reader's text-blocker extraction`
 Let a unit test run the GitHub reader's text-blocker extraction without a network client.
 
 Base: c817da76e
+Size: ~40 code lines
 
 ## Decisions
 - Move the pattern loop of `text_blockers` (`crates/epic-orchestrator/src/tracker/github_fetch.rs:161`) into a pure function; `text_blockers` keeps the state fetch.

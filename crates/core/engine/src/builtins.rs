@@ -13,6 +13,7 @@ use crate::gates::gate_status::GATE_STATUS;
 use crate::gates::job_results::JOB_RESULTS;
 use crate::gates::mcp_blocker::MCP_BLOCKER;
 use crate::gates::plan_ledger::PLAN_LEDGER;
+use crate::gates::pr_size::PR_SIZE;
 use crate::gates::protected_files::PROTECTED;
 use crate::gates::push_review::PUSH_REVIEW;
 use crate::gates::push_waiver::PUSH_WAIVER;
@@ -26,6 +27,7 @@ pub const PRE_TOOL: &[&dyn Gate] = &[
   &DOCS_SYNC,
   &MCP_BLOCKER,
   &PLAN_LEDGER,
+  &PR_SIZE,
   &PROTECTED,
   &PUSH_REVIEW,
   &QUALITY_GATE,

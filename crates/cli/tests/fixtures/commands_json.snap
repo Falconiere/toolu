@@ -232,7 +232,7 @@ source: crates/cli/tests/helpers/schema.rs
           "placeholder": false
         },
         {
-          "about": "Judge the four push gates: quality, plan, review and docs",
+          "about": "Judge the five push gates: quality, plan, review, docs and size",
           "aliases": [],
           "args": [
             {

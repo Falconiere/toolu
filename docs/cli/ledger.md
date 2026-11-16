@@ -20,7 +20,7 @@ Commands:
   path                    Print the branch ledger's path
   root                    Print the project root
   self-test, --self-test  Parse a built-in two-step plan and check the result
-  verdict                 Judge the four push gates: quality, plan, review and docs
+  verdict                 Judge the five push gates: quality, plan, review, docs and size
   help                    Print this message or the help of the given subcommand(s)
 
 Options:
@@ -137,7 +137,7 @@ Options:
 ## `toolu ledger verdict`
 
 ```text
-Judge the four push gates: quality, plan, review and docs
+Judge the five push gates: quality, plan, review, docs and size
 
 Usage: toolu ledger verdict [OPTIONS] <MODE>
 

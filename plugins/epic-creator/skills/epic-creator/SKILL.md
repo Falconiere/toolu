@@ -62,6 +62,11 @@ child under their rules. While drafting:
 - Read each file once and cite from that read. Leave out what you did not read.
 - Make each child one coherent PR with observable criteria and focused checks.
   Account for callers, tests, fixtures and docs; prefer at most five criteria.
+- Size each child to the review budget: `toolu config get gates.prSize.maxLines`
+  added code lines (300 when the key is unset) and 100 changed files. Tests,
+  fixtures and docs add no code lines. Estimate from the files it lists and
+  split a child over the budget as [issue bodies](references/issue-bodies.md)
+  rule 7 says. More, smaller children are the goal.
 - Order children by dependency and confirm the draft has no cycle.
 - State a shared decision once, in the epic. A child repeats only what it obeys.
 
@@ -70,16 +75,19 @@ Check every body before showing it; fix broken claims, links and relationships:
 - target a child under 1200 characters and the epic under 4000; explain any
   larger body or six-plus criteria instead of dropping necessary requirements;
 - no "blocked by" or "depends on" outside `## Relationships`, and no `#N` task lines in the epic;
+- every child states a `Size:` estimate within the review budget;
 - every linked file passes `git cat-file -e "$SHA:<path>"`;
 - every `path:line` exists at the base commit.
 
 Body length, task count and fan-out can raise heuristic routing cost; title
 and labels also affect it. Keep real dependencies and complete contracts,
 and show expected routing costs in the table rather than promising Standard.
+A higher tier is the price of a small PR: never merge children to lower it.
 
 ## 4. Confirm
 
-Show one table (child, title, blocked by, characters, expected tier/reason)
+Show one table (child, title, blocked by, characters, estimated code lines,
+expected tier/reason)
 and the full bodies, then
 ask one structured question: create, revise or cancel (`AskUserQuestion` in
 Claude Code, `request_user_input` in Codex). Revise returns to step 3.

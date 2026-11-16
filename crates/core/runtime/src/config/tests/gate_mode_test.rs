@@ -24,13 +24,13 @@ fn modes(c: &LoadedConfig) -> Vec<&'static str> {
 }
 
 #[test]
-fn balanced_blocks_quality_asks_on_guardrails_and_advises_the_rest() {
+fn balanced_blocks_quality_and_size_asks_on_guardrails_and_advises_the_rest() {
   let c = config(json!({}), Host::Claude);
   assert_eq!(gate_preset(&c), "balanced");
   assert_eq!(
     modes(&c),
     [
-      "advise", "block", "advise", "ask", "advise", "advise", "advise", "ask", "ask"
+      "advise", "block", "advise", "ask", "advise", "advise", "advise", "ask", "ask", "block"
     ]
   );
 }
@@ -43,7 +43,7 @@ fn strict_blocks_everything_and_relaxed_keeps_guardrails_asking() {
   assert_eq!(
     modes(&relaxed),
     [
-      "advise", "advise", "off", "ask", "off", "off", "off", "ask", "ask"
+      "advise", "advise", "off", "ask", "off", "off", "off", "ask", "ask", "advise"
     ]
   );
 }

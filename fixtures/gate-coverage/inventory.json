@@ -600,6 +600,26 @@
     "bashRequired": false
   },
   {
+    "id": "toolu:builtin-module:PreToolUse:pr-size",
+    "sourcePath": "crates/core/engine/src/gates/pr_size.rs",
+    "plugin": "toolu",
+    "kind": "builtin-module",
+    "event": "PreToolUse",
+    "matcher": "",
+    "commandOrModule": "pr-size",
+    "parentId": "toolu:hooks.json:PreToolUse:hook_pre-tools:apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep",
+    "semantics": "Hold a pushed branch to the code-line and changed-file budgets of gates.prSize.",
+    "classification": "port-native",
+    "hostMechanism": "native",
+    "support": "optional",
+    "implementationIssue": null,
+    "implementationStatus": "done",
+    "verificationBaseline": "none",
+    "verificationConformance": "cargo test -p toolu-engine --lib pr_size",
+    "limits": "",
+    "bashRequired": false
+  },
+  {
     "id": "toolu:builtin-module:PreToolUse:protected-files",
     "sourcePath": "crates/core/engine/src/gates/protected_files.rs",
     "plugin": "toolu",
