@@ -23,7 +23,8 @@ const GATE_FILES: &[&str] = &["clippy.toml", "rustfmt.toml", "deny.toml"];
 /// Data files whose every change is gate data.
 const GATE_DATA: &[&str] = &["rules.json", "jscpd.json"];
 
-/// Data files that may grow next to product code.
+/// Data files that may grow next to product code, and shrink as the items
+/// they register retire (`inventory.json` rows, `folders.json` directories).
 const REGISTRATION: &[&str] = &["layers.json", "folders.json", "inventory.json"];
 
 /// Host configs that hold `lang.rust`.
@@ -120,6 +121,9 @@ fn data_file(
     if file == "inventory.json" {
       drop_retired(&mut old, &json(after), root)?;
     }
+    if file == "folders.json" {
+      drop_retired_folders(&mut old, &json(after), root);
+    }
     let grew = additive(&old, &json(after)) && (file != "layers.json" || unique(&json(after)));
     (!grew).then(|| format!("{shown} changed an existing entry (only additions are registration)"))
   } else if file == "coverage-floor.json" {
@@ -169,6 +173,28 @@ fn drop_retired(before: &mut Value, after: &Value, root: &Path) -> Result<(), St
   };
   rows.retain(|row| kept(row) || exists(row));
   Ok(())
+}
+
+/// Drop from `before` each folder registration that `after` no longer lists
+/// and whose directory is gone from the tree: registration shrinks with the
+/// code it registered. A removed entry whose directory still exists stays a
+/// gate change.
+fn drop_retired_folders(before: &mut Value, after: &Value, root: &Path) {
+  for (key, dir) in [("root", ""), ("crates", "crates"), ("core", "crates/core")] {
+    let Some(entries) = before.get_mut(key).and_then(Value::as_array_mut) else {
+      continue;
+    };
+    entries.retain(|entry| {
+      let Some(name) = entry.as_str() else {
+        return true;
+      };
+      let listed = after
+        .get(key)
+        .and_then(Value::as_array)
+        .is_some_and(|rows| rows.iter().any(|row| row.as_str() == Some(name)));
+      listed || root.join(dir).join(name).is_dir()
+    });
+  }
 }
 
 /// Whether every crate name of a layer table appears once: a name added to a

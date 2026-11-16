@@ -92,12 +92,35 @@ fn guardrail_data_is_gate_data_unless_it_only_grows() {
   assert!(
     gate(
       &format!("{DATA}/folders.json"),
-      Some(folders),
-      Some("{\"crates\":[\"b\"]}")
+      Some("{\"crates\":[\"cli\"]}"),
+      Some("{\"crates\":[]}")
     )
     .unwrap()
     .contains("changed an existing entry")
   );
+}
+
+#[test]
+fn a_folder_registration_may_go_with_its_folder_but_not_while_the_folder_lives() {
+  let path = format!("{DATA}/folders.json");
+  let before =
+    r#"{"root":["docs","no-such-root"],"crates":["cli","gone"],"core":["engine","no-such-core"]}"#;
+  let retired = r#"{"root":["docs"],"crates":["cli"],"core":["engine"]}"#;
+  assert_eq!(gate(&path, Some(before), Some(retired)), None);
+  let with_addition = r#"{"root":["docs"],"crates":["cli","new"],"core":["engine"]}"#;
+  assert_eq!(gate(&path, Some(before), Some(with_addition)), None);
+  for live in [
+    r#"{"root":[],"crates":["cli","gone"],"core":["engine","no-such-core"]}"#,
+    r#"{"root":["docs","no-such-root"],"crates":["gone"],"core":["engine","no-such-core"]}"#,
+    r#"{"root":["docs","no-such-root"],"crates":["cli","gone"],"core":["no-such-core"]}"#,
+  ] {
+    assert!(
+      gate(&path, Some(before), Some(live))
+        .unwrap()
+        .contains("changed an existing entry"),
+      "{live}"
+    );
+  }
 }
 
 #[test]
