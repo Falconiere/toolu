@@ -12,7 +12,8 @@ use toolu_runtime::json::ordered::Ordered;
 use toolu_state::git::base_branch;
 
 use super::gates::{GateContext, gate};
-use crate::gates::pr_size::branch_size;
+use crate::gates::pr_size::{branch_size, rev_size};
+use crate::gates::push_target::ref_exists;
 
 /// The branch's code lines and changed files against the `gates.prSize` budgets.
 pub fn size_gate(ctx: &mut GateContext<'_>) -> Ordered {
@@ -46,10 +47,12 @@ pub fn size_gate(ctx: &mut GateContext<'_>) -> Ordered {
   gate(state, &reason, Vec::new())
 }
 
-/// Why the epic engine must not merge the branch checked out at `root`: it
-/// is over its budget, or its base is missing, while the worktree's own config
-/// sets `gates.prSize` to `block` or `ask`. `None` lets the merge go on.
-pub fn merge_refusal(root: &Path, env: &Env) -> Option<String> {
+/// Why the epic engine must not merge the pull request head `head`, measured
+/// in the worktree at `root`: it is over its budget, or it or its base is
+/// missing there, while the worktree's own config sets `gates.prSize` to
+/// `block` or `ask`. `None` lets the merge go on. The head is measured, not
+/// the checkout: a split that was never pushed must not pass for the head.
+pub fn merge_refusal(root: &Path, env: &Env, head: &str) -> Option<String> {
   let roots = Roots::new(
     env
       .clone()
@@ -62,7 +65,12 @@ pub fn merge_refusal(root: &Path, env: &Env) -> Option<String> {
   if !matches!(mode, GateMode::Block | GateMode::Ask) {
     return None;
   }
-  match branch_size(root, env, &config) {
+  if !ref_exists(root, &format!("{head}^{{commit}}"), env) {
+    return Some(format!(
+      "pr size unmeasured: head '{head}' not found in the worktree"
+    ));
+  }
+  match rev_size(root, env, &config, head) {
     Ok(Some(size)) if size.over() => Some(format!("pr size over budget: {}", size.summary())),
     Ok(_) => None,
     Err(base) => Some(format!(

@@ -52,7 +52,7 @@ fn the_row_reports_the_count_and_fails_only_where_the_push_would_stop() {
 #[test]
 fn the_engine_refuses_a_merge_with_the_rows_count_only_where_the_push_would_stop() {
   let repo = Repo::new().unwrap();
-  let refusal = || super::merge_refusal(&repo.root, &repo.env());
+  let refusal = || super::merge_refusal(&repo.root, &repo.env(), "HEAD");
   assert_eq!(refusal(), None);
   repo
     .sh("seq 9 > big.rs && mkdir .claude && git add big.rs && git commit -qm grow")
@@ -73,9 +73,24 @@ fn the_engine_refuses_a_merge_with_the_rows_count_only_where_the_push_would_stop
     row(&repo, "feat/x"),
     "fail: 10 of 3 code lines, 2 of 100 files against main"
   );
+  // The pull request head is measured, not a checkout that moved on without a push.
+  repo
+    .sh("git branch pushed && git rm -q big.rs && git commit -qm split")
+    .unwrap();
+  assert_eq!(refusal(), None);
+  let pushed = super::merge_refusal(&repo.root, &repo.env(), "pushed");
+  assert_eq!(pushed.as_deref(), Some(over_pushed()));
+  assert_eq!(
+    super::merge_refusal(&repo.root, &repo.env(), "0123abc").as_deref(),
+    Some("pr size unmeasured: head '0123abc' not found in the worktree")
+  );
   repo.sh("git branch -q -m main trunk").unwrap();
   assert_eq!(
     refusal().as_deref(),
     Some("pr size unmeasured: base 'main' not found locally")
   );
+}
+
+fn over_pushed() -> &'static str {
+  "pr size over budget: 10 of 3 code lines, 2 of 100 files against main"
 }

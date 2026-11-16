@@ -138,21 +138,34 @@ fn size_base(root: &Path, env: &Env, base: &str) -> String {
   }
 }
 
-/// The size of the checked-out branch, or none when the base exists but Git
-/// cannot diff against it, which push-review allows too (`diff-failed`).
+/// The size of the checked-out branch: [`rev_size`] of `HEAD`.
 ///
 /// # Errors
-/// The base ref, when it is missing: an unmeasured branch is not a small one.
+/// As [`rev_size`].
 pub(crate) fn branch_size(
   root: &Path,
   env: &Env,
   config: &LoadedConfig,
 ) -> Result<Option<Size>, String> {
+  rev_size(root, env, config, "HEAD")
+}
+
+/// The size of `rev`, or none when the base exists but Git cannot diff
+/// against it, which push-review allows too (`diff-failed`).
+///
+/// # Errors
+/// The base ref, when it is missing: an unmeasured branch is not a small one.
+pub(crate) fn rev_size(
+  root: &Path,
+  env: &Env,
+  config: &LoadedConfig,
+  rev: &str,
+) -> Result<Option<Size>, String> {
   let base = size_base(root, env, &base_branch(env, Some(root), root));
   if !ref_exists(root, &base, env) {
     return Err(base);
   }
-  let range = format!("{base}...HEAD");
+  let range = format!("{base}...{rev}");
   let args = ["-c", "core.quotepath=false", "diff", "--numstat", &range];
   let Some(numstat) = git_at(root, &args, env) else {
     return Ok(None);

@@ -2,7 +2,7 @@
 //! the effect thread: gate the PR, then act on the verdict. Behind → disarm
 //! auto-merge and rebase it mechanically; checks running → arm auto-merge
 //! pinned to the head; green → merge pinned to the head; failing → disarm
-//! and hand back to babysit. A worktree over its `gates.prSize` budget is
+//! and hand back to babysit. A head over its `gates.prSize` budget is
 //! disarmed and `refused` instead of waiting or merging. The outcome is one
 //! JSON document for `commit_queue`.
 
@@ -133,7 +133,7 @@ fn act(
     .then(|| input.worktree.as_deref())
     .flatten()
     .filter(|tree| tree.is_dir())
-    .and_then(|tree| merge_refusal(tree, &input.env));
+    .and_then(|tree| merge_refusal(tree, &input.env, &head));
   if let Some(note) = oversize {
     disarm(gh, facts, armed)?;
     return Ok(with(outcome("refused"), "note", json!(note)));

@@ -158,15 +158,17 @@ is available only for a protection refusal.
 
 ## PR size budget
 
-Before the queue head arms auto-merge or merges, the engine measures the
-worker's worktree with the pr-size gate's own function, against that
-worktree's `gates.prSize` config (see [config](../config.md)). When the mode
-is `block` or `ask` and the branch is over budget, or its base ref is missing,
-the engine disarms auto-merge, sends no merge, and holds the head with
+Before the queue head arms auto-merge or merges, the engine measures the pull
+request's head commit in the worker's worktree with the pr-size gate's own
+function, against that worktree's `gates.prSize` config (see
+[config](../config.md)). It measures the head it would merge, not the
+checkout, so a split that was never pushed does not pass for it. When the mode
+is `block` or `ask` and the head is over budget, or the head or its base ref is
+missing in the worktree, the engine disarms auto-merge, sends no merge, and holds the head with
 `merge refused` attention naming the count, for example `merge refused: pr
 size over budget: 412 of 300 code lines, 9 of 100 files against origin/main`.
 The count equals the `size` row of `toolu ledger verdict status` in that
-worktree. This covers workers whose host loads no toolu hooks and pushes typed
+worktree when it is checked out at the head. This covers workers whose host loads no toolu hooks and pushes typed
 in a terminal. Under `advise` or `off`, when Git cannot diff the branch, or
 when no worktree is recorded, the engine merges as before.
 

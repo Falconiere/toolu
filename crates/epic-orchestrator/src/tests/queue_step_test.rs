@@ -272,6 +272,8 @@ fn sized(fixture: &Fixture, dir: &std::path::Path, lines: usize) -> StepJob {
   std::fs::write(tree.join("big.rs"), "x\n".repeat(lines)).expect("file");
   crate::support::git(&tree, &["add", "big.rs"]);
   crate::support::git(&tree, &["commit", "-qm", "grow"]);
+  // The rig serves the pull request at head `abc123`: make that the commit.
+  crate::support::git(&tree, &["branch", "abc123"]);
   let home = dir.display().to_string();
   let mut job = input(fixture, HEAD);
   job.worktree = Some(tree);
