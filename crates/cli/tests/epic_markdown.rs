@@ -190,3 +190,21 @@ fn the_brief_keeps_over_budget_work_on_a_rest_branch() {
   assert!(flat.contains(&format!("kept on {rest}-rest; split:")));
   assert!(flat.contains("**`NARROWED: …`**"));
 }
+
+/// #908: the worker measures before every push and reports `over size budget`; the
+/// controller applies a scope-preserving split itself and asks the user otherwise.
+#[test]
+fn the_worker_checks_size_before_every_push_and_reports_a_split() {
+  let text = brief(&Home::new().unwrap(), "claude", None).unwrap();
+  let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+  let check = "Before every push, `wip:` pushes included, read the `size` row of `toolu ledger verdict status`; over the review budget, do not push, whatever the gate mode.";
+  assert!(flat.contains(check), "{flat}");
+  let report = "`report needs-human --note \"over size budget: <n> of <max>;";
+  assert!(flat.contains(report), "{flat}");
+  let split = &surfaces().unwrap()[3].1;
+  let split = split.split_whitespace().collect::<Vec<_>>().join(" ");
+  let apply = "Invoking this skill authorizes applying that split without asking the user when all of these hold";
+  assert!(split.contains(apply), "{split}");
+  let otherwise = "Anything else is a normal `needs-human`: ask the user.";
+  assert!(split.contains(otherwise), "{split}");
+}

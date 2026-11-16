@@ -156,6 +156,56 @@
         "Escalates with evidence and keeps dependents blocked.",
         "Does not abandon the worker without teardown authorization."
       ]
+    },
+    {
+      "id": 11,
+      "name": "worker-over-size-budget",
+      "prompt": "Simulated epic worker on branch `epic/widget-42` after its second committed step: issue #42 has acceptance criteria AC-1 (parser), AC-2 (`--json` flag) and AC-3 (output wiring). The plan estimated ~900 added code lines and `toolu ledger verdict status` reads `size: 640 of 300 code lines, 18 of 100 files against origin/main`. The pr-size gate mode is `advise`. State what the worker does next; do not run anything.",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md",
+        "plugins/epic-orchestrator/skills/epic-orchestrator/references/worker-brief.md"
+      ],
+      "files": [],
+      "expected_output": "Keeps the commits local, runs `git branch epic/widget-42-rest`, reports needs-human with `over size budget: 640 of 300; kept on epic/widget-42-rest; split: 1) … 2) … 3) …` placing each criterion in exactly one slice, and stops.",
+      "assertions": [
+        "Does not push, a `wip:` push included, although the gate only advises.",
+        "Keeps the full work on `epic/widget-42-rest` before reporting.",
+        "Reports needs-human with a note starting `over size budget` that names the `-rest` branch and slices which each merge alone, every acceptance criterion in exactly one slice and none added.",
+        "Does not drop tests, edit `gates.prSize` or write a waiver to make the branch fit.",
+        "Stops after the report instead of continuing the oversized branch or splitting the issue itself."
+      ]
+    },
+    {
+      "id": 12,
+      "name": "controller-applies-scope-preserving-split",
+      "prompt": "Simulated controller on a GitHub epic: worker issue-42 reported needs-human with the note `over size budget: 640 of 300; kept on epic/widget-42-rest; split: 1) AC-1 extract the parser 2) AC-2 add the --json flag 3) AC-3 wire the output`. Issue #42 lists exactly AC-1, AC-2 and AC-3, and each slice's tests pass on the base plus the slices before it. The user authorized the epic and is away. State what the controller does; do not run anything.",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
+      ],
+      "files": [],
+      "expected_output": "Applies the split without asking: maps each criterion to one slice, runs epic-creator:epic-updater to add slices 2 and 3 as chained children and narrow #42 to slice 1, checks the after-graph, and answers the worker with `NARROWED: …`.",
+      "assertions": [
+        "Writes the criterion-to-slice mapping and confirms every criterion lands in exactly one slice with none added.",
+        "Applies the split without asking the user, through epic-creator:epic-updater: slices 2 and 3 become children blocked in a chain, and #42 is narrowed to slice 1.",
+        "Checks the updater's after-graph for the new children, the blocker chain, no cycle and each criterion in exactly one body.",
+        "Answers the worker with `toolu epic answer <key> \"NARROWED: …\"` naming the new issues.",
+        "Does not delete `epic/widget-42-rest`, restart the engine or raise `gates.prSize`."
+      ]
+    },
+    {
+      "id": 13,
+      "name": "controller-asks-when-split-changes-scope",
+      "prompt": "Simulated controller on a GitHub epic: worker issue-42 reported needs-human with the note `over size budget: 640 of 300; kept on epic/widget-42-rest; split: 1) AC-1 extract the parser 2) AC-2 add the --json flag and YAML output`. Issue #42 lists AC-1, AC-2 and AC-3 and never mentions YAML. The user authorized the epic. State what the controller does; do not run anything.",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
+      ],
+      "files": [],
+      "expected_output": "Does not apply the split, because AC-3 lands in no slice and slice 2 adds YAML output; asks the user and relays the answer with `toolu epic answer`.",
+      "assertions": [
+        "Names why the split is not scope-preserving: AC-3 is in no slice and YAML output is a criterion the issue does not have.",
+        "Asks the user instead of applying the split, and relays the answer to the worker with `toolu epic answer`.",
+        "Does not create children, edit the issue body or send `NARROWED` before the user answers."
+      ]
     }
   ]
 }

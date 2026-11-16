@@ -12,8 +12,8 @@ quality gate is not evidence that an agent follows the text correctly.
 | `plugins/toolu/skills/orchestrator/evals/behavior-evals.json` | Five agent roles, research tools, orchestration and language guidance |
 | `plugins/toolu/skills/orchestrator/evals/workflow-evals.json` | Workflow/command routing, SessionStart, installed/missing/disabled Ponytail |
 | `plugins/toolu/skills/orchestrator/evals/routing-evals.json` | Primary-skill selection with adjacent negative controls |
-| `plugins/epic-orchestrator/skills/epic-orchestrator/evals/evals.json` | Plan/run/status/pause and recovery boundaries |
-| `plugins/pr-babysit/skills/babysit/evals/evals.json` | Host continuation, strict clearance, uncertain outcomes and cancellation |
+| `plugins/epic-orchestrator/skills/epic-orchestrator/evals/evals.json` | Plan/run/status/pause, recovery boundaries, and over-budget splits applied or sent to the user |
+| `plugins/pr-babysit/skills/babysit/evals/evals.json` | Host continuation, strict clearance, uncertain outcomes, cancellation and declining requests beyond the goal |
 | `plugins/toolu/skills/debug/evals/cases.json` | Description-only positive and negative routing |
 | `plugins/toolu/evals/test-writer/` | Live `claude plugin eval` cases: routing, spec-derived tests, red before green, lean mock-free suites, E2E locator style, the `test-author` receipt |
 | `plugins/jev/skills/jev/evals/README.md` | Optional live judgments, evidence changes and unavailable-service fallback |
