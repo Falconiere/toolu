@@ -48,3 +48,34 @@ fn the_row_reports_the_count_and_fails_only_where_the_push_would_stop() {
   config(&repo, "off");
   assert_eq!(row(&repo, "feat/x"), "skip: prSize mode is off");
 }
+
+#[test]
+fn the_engine_refuses_a_merge_with_the_rows_count_only_where_the_push_would_stop() {
+  let repo = Repo::new().unwrap();
+  let refusal = || super::merge_refusal(&repo.root, &repo.env());
+  assert_eq!(refusal(), None);
+  repo
+    .sh("seq 9 > big.rs && mkdir .claude && git add big.rs && git commit -qm grow")
+    .unwrap();
+  // The worktree's own project config, not the user's.
+  for (mode, refused) in [
+    ("advise", false),
+    ("off", false),
+    ("ask", true),
+    ("block", true),
+  ] {
+    let body = format!(r#"{{"version":1,"gates":{{"prSize":{{"mode":"{mode}","maxLines":3}}}}}}"#);
+    std::fs::write(repo.root.join(".claude/toolu.config.json"), body).unwrap();
+    let over = "pr size over budget: 10 of 3 code lines, 2 of 100 files against main";
+    assert_eq!(refusal(), refused.then(|| over.to_owned()), "{mode}");
+  }
+  assert_eq!(
+    row(&repo, "feat/x"),
+    "fail: 10 of 3 code lines, 2 of 100 files against main"
+  );
+  repo.sh("git branch -q -m main trunk").unwrap();
+  assert_eq!(
+    refusal().as_deref(),
+    Some("pr size unmeasured: base 'main' not found locally")
+  );
+}

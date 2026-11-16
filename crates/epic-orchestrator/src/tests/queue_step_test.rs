@@ -264,6 +264,53 @@ fn a_github_failure_is_an_error_outcome_with_the_token_redacted() {
   assert_eq!(step(&job)["note"], "bad repository \"no-slash\"");
 }
 
+/// The head step of a worker worktree on `feat` adding `lines` code lines to `main`.
+fn sized(fixture: &Fixture, dir: &std::path::Path, lines: usize) -> StepJob {
+  let tree = dir.join("tree");
+  crate::support::repo_with_origin(&tree, "unused");
+  crate::support::git(&tree, &["checkout", "-qb", "feat"]);
+  std::fs::write(tree.join("big.rs"), "x\n".repeat(lines)).expect("file");
+  crate::support::git(&tree, &["add", "big.rs"]);
+  crate::support::git(&tree, &["commit", "-qm", "grow"]);
+  let home = dir.display().to_string();
+  let mut job = input(fixture, HEAD);
+  job.worktree = Some(tree);
+  job.env = job.env.with("HOME", &home).with("TOOLU_CONFIG_DIR", &home);
+  job
+}
+
+#[test]
+fn an_over_budget_branch_is_refused_and_disarmed_without_a_merge_call() {
+  let over = "pr size over budget: 301 of 300 code lines, 1 of 100 files against main";
+  for state in [
+    PrState::default(),
+    PrState {
+      rollup: pending(),
+      armed: true,
+      ..PrState::default()
+    },
+  ] {
+    let dir = tempfile::tempdir().expect("dir");
+    let fixture = served(&state);
+    accept_merge(&fixture);
+    let out = step(&sized(&fixture, dir.path(), 301));
+    assert_eq!(out["outcome"], "refused", "{out}");
+    assert_eq!(out["note"], over);
+    let (mutations, merges) = sent(&fixture);
+    assert_eq!(merges, Vec::<Value>::new());
+    // Only the disarm of an armed head: nothing arms auto-merge.
+    let disarms = mutations
+      .iter()
+      .filter(|m| m.to_string().contains("disable"));
+    assert_eq!(disarms.count(), usize::from(state.armed));
+    assert_eq!(mutations.len(), usize::from(state.armed));
+  }
+  let dir = tempfile::tempdir().expect("dir");
+  let fixture = served(&PrState::default());
+  accept_merge(&fixture);
+  assert_eq!(step(&sized(&fixture, dir.path(), 300))["outcome"], "merged");
+}
+
 #[test]
 fn a_moved_head_is_stale_whatever_the_message_casing() {
   let fixture = served(&PrState::default());

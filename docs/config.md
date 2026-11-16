@@ -513,7 +513,8 @@ verdict is `blocked`.
 There is no waiver file: an agent cannot attest its way past the budget. The
 way out is to split the branch; changing a budget or the mode is a config
 change a person makes. Hooks run only in hosts that load them, and never on a
-push typed in a terminal.
+push typed in a terminal; for epic workers the resident engine enforces the
+same budget before it merges (see [epic engine](epic-orchestrator/README.md#pr-size-budget)).
 
 ### Docs-sync surfaces (`docsSync`)
 

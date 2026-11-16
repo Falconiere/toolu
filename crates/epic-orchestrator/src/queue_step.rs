@@ -2,12 +2,14 @@
 //! the effect thread: gate the PR, then act on the verdict. Behind → disarm
 //! auto-merge and rebase it mechanically; checks running → arm auto-merge
 //! pinned to the head; green → merge pinned to the head; failing → disarm
-//! and hand back to babysit. The outcome is one JSON document for
-//! `commit_queue`.
+//! and hand back to babysit. A worktree over its `gates.prSize` budget is
+//! disarmed and `refused` instead of waiting or merging. The outcome is one
+//! JSON document for `commit_queue`.
 
 use std::path::PathBuf;
 
 use serde_json::{Map, Value, json};
+use toolu_engine::verdict::size::merge_refusal;
 use toolu_runtime::env::Env;
 
 use crate::executor::Job;
@@ -125,6 +127,17 @@ fn act(
   let verdict = text(result, "verdict");
   let head = text(result, "head");
   let reasons = || result.get("reasons").cloned().unwrap_or(json!([]));
+  // The pr-size budget, for workers whose host never ran the push gate (#906).
+  // shortcut: a worktree not recorded or gone is not measured; the launch records one.
+  let oversize = matches!(verdict.as_str(), "wait" | "merge")
+    .then(|| input.worktree.as_deref())
+    .flatten()
+    .filter(|tree| tree.is_dir())
+    .and_then(|tree| merge_refusal(tree, &input.env));
+  if let Some(note) = oversize {
+    disarm(gh, facts, armed)?;
+    return Ok(with(outcome("refused"), "note", json!(note)));
+  }
   Ok(match verdict.as_str() {
     "merged" | "closed" => outcome(&verdict),
     "fix" => {
