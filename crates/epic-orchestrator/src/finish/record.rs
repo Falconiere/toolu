@@ -136,6 +136,7 @@ pub(crate) fn read_issue_record(path: &Path, key: &str) -> Result<Record, String
     ));
   };
   crate::launch::record::require_local_record(&record, path)?;
+  crate::metrics::usage::validate_record(&record)?;
   let invalid = |detail: &str| format!("invalid issue record {}: {detail}", path.display());
   let started = !never_started(&record);
   let required = if started {

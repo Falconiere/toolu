@@ -73,16 +73,31 @@ pub(crate) fn agents(state: &Path) -> Result<Vec<Agent>, String> {
 
 /// The token row of `agent`.
 pub(crate) fn row(agent: &Agent, env: &Env) -> Value {
+  read(agent, env, false)
+}
+
+/// A durable snapshot marks partial native records as incomplete.
+pub(super) fn snapshot(agent: &Agent, env: &Env) -> Value {
+  read(agent, env, true)
+}
+
+fn read(agent: &Agent, env: &Env, strict: bool) -> Value {
+  let mut partial = false;
   let found = match (agent.host.as_str(), agent.session.as_deref()) {
     (_, None) => Err("no session id was captured at launch"),
-    ("claude", Some(session)) => claude(agent, session, env),
-    ("codex", Some(session)) => codex(session, env),
+    ("claude", Some(session)) => claude(agent, session, env, strict, &mut partial),
+    ("codex", Some(session)) => codex(session, env, strict, &mut partial),
+    ("muse", Some(session)) if strict => super::muse_tokens::read(session, env, true, &mut partial),
     ("muse", Some(session)) => super::muse_tokens::muse(session, env),
-    ("grok", Some(session)) => grok(agent, session, env),
+    ("grok", Some(session)) => grok(agent, session, env, strict),
     ("opencode", Some(_)) => Err("OpenCode keeps usage in its database, which toolu does not read"),
     (_, Some(_)) => Err("this host records no token use toolu can read"),
   };
   match found {
+    Ok((source, tokens)) if strict && partial => json!({
+      "key": agent.key, "host": agent.host, "source": source, "complete": false,
+      "tokens": tokens, "status": "partial", "reason": "session log contains malformed JSON",
+    }),
     Ok((source, tokens)) => json!({
       "key": agent.key, "host": agent.host, "source": source,
       "complete": agent.launches <= 1, "tokens": tokens,
@@ -93,7 +108,13 @@ pub(crate) fn row(agent: &Agent, env: &Env) -> Value {
   }
 }
 
-fn claude(agent: &Agent, session: &str, env: &Env) -> Result<(&'static str, Value), &'static str> {
+fn claude(
+  agent: &Agent,
+  session: &str,
+  env: &Env,
+  strict: bool,
+  partial: &mut bool,
+) -> Result<(&'static str, Value), &'static str> {
   let home = env
     .get("CLAUDE_CONFIG_DIR")
     .map_or_else(|| env.home().join(".claude"), PathBuf::from);
@@ -106,33 +127,103 @@ fn claude(agent: &Agent, session: &str, env: &Env) -> Result<(&'static str, Valu
   let main = project.join(format!("{session}.jsonl"));
   let text = std::fs::read_to_string(&main).map_err(|_err| "no transcript for the session")?;
   let mut texts = vec![text];
-  if let Ok(entries) = std::fs::read_dir(project.join(session).join("subagents")) {
-    let paths = entries.filter_map(|entry| entry.ok().map(|entry| entry.path()));
-    texts.extend(paths.filter_map(|path| std::fs::read_to_string(path).ok()));
-  }
-  let mut last: BTreeMap<String, Value> = BTreeMap::new();
-  for line in texts.iter().flat_map(|text| text.lines()) {
-    let Ok(entry) = serde_json::from_str::<Value>(line) else {
-      continue;
-    };
-    let usage = entry.pointer("/message/usage").cloned();
-    if let (Some("assistant"), Some(id), Some(usage)) = (
-      entry.get("type").and_then(Value::as_str),
-      entry.pointer("/message/id").and_then(Value::as_str),
-      usage,
-    ) {
-      last.insert(id.to_owned(), usage);
+  let children = project.join(session).join("subagents");
+  match std::fs::read_dir(children) {
+    Ok(entries) => {
+      for entry in entries {
+        let log = entry
+          .map_err(|_err| "cannot list subagent transcripts")
+          .and_then(|entry| {
+            std::fs::read_to_string(entry.path())
+              .map_err(|_err| "a subagent transcript cannot be read")
+          });
+        match log {
+          Ok(log) => texts.push(log),
+          Err(reason) if strict => return Err(reason),
+          Err(_) => {}
+        }
+      }
     }
+    Err(err) if strict && err.kind() != std::io::ErrorKind::NotFound => {
+      return Err("cannot list subagent transcripts");
+    }
+    Err(_) => {}
+  }
+  let mut last = BTreeMap::new();
+  for text in texts {
+    claude_usage(&text, &mut last, strict, partial)?;
   }
   Ok((
     "claude-code transcript",
-    field_totals(&last, &CLAUDE_FIELDS),
+    field_totals(&last, &CLAUDE_FIELDS, strict),
   ))
 }
 
-/// Each of `fields` summed over every usage object, saturating; a missing
-/// field counts as zero.
-pub(super) fn field_totals(usages: &BTreeMap<String, Value>, fields: &[&str]) -> Value {
+fn claude_usage(
+  text: &str,
+  into: &mut BTreeMap<String, Value>,
+  strict: bool,
+  partial: &mut bool,
+) -> Result<(), &'static str> {
+  let mut seen = false;
+  for entry in parse_lines(text, partial) {
+    if let (Some("assistant"), Some(id), Some(usage)) = (
+      entry.get("type").and_then(Value::as_str),
+      entry.pointer("/message/id").and_then(Value::as_str),
+      entry.pointer("/message/usage"),
+    ) {
+      if strict
+        && !CLAUDE_FIELDS
+          .iter()
+          .all(|field| usage.get(field).and_then(Value::as_u64).is_some())
+      {
+        return Err("transcript usage counters cannot be read");
+      }
+      into.insert(id.to_owned(), usage.clone());
+      seen = true;
+    }
+  }
+  if strict && !seen {
+    return Err("transcript has no token usage");
+  }
+  Ok(())
+}
+
+/// Parse log records and remember malformed JSON for snapshot coverage.
+pub(super) fn parse_lines<'a>(
+  text: &'a str,
+  partial: &'a mut bool,
+) -> impl DoubleEndedIterator<Item = Value> + 'a {
+  text.lines().filter_map(move |line| {
+    if line.trim().is_empty() {
+      return None;
+    }
+    if let Ok(entry) = serde_json::from_str(line) {
+      Some(entry)
+    } else {
+      *partial = true;
+      None
+    }
+  })
+}
+
+/// Input and output must be recorded; optional known counters must be unsigned.
+pub(super) fn valid_counts(value: &Value, fields: &[&str]) -> bool {
+  fields
+    .iter()
+    .take(2)
+    .all(|field| value.get(field).and_then(Value::as_u64).is_some())
+    && fields
+      .iter()
+      .all(|field| value.get(field).is_none_or(|v| v.as_u64().is_some()))
+}
+
+/// Sum native fields, omitting unknown quantities in strict snapshots.
+pub(super) fn field_totals(
+  usages: &BTreeMap<String, Value>,
+  fields: &[&str],
+  strict: bool,
+) -> Value {
   let sum = |field: &str| -> u64 {
     usages
       .values()
@@ -141,13 +232,19 @@ pub(super) fn field_totals(usages: &BTreeMap<String, Value>, fields: &[&str]) ->
   };
   let tokens: serde_json::Map<String, Value> = fields
     .iter()
+    .filter(|field| !strict || usages.values().all(|usage| usage.get(**field).is_some()))
     .map(|field| ((*field).to_owned(), json!(sum(field))))
     .collect();
   Value::Object(tokens)
 }
 
 /// Grok's per-session totals, which already include its subagents' calls.
-fn grok(agent: &Agent, session: &str, env: &Env) -> Result<(&'static str, Value), &'static str> {
+fn grok(
+  agent: &Agent,
+  session: &str,
+  env: &Env,
+  strict: bool,
+) -> Result<(&'static str, Value), &'static str> {
   let path = crate::launch::grok_session::group(env, &agent.worktree)
     .join(session)
     .join("usage.json");
@@ -158,25 +255,55 @@ fn grok(agent: &Agent, session: &str, env: &Env) -> Result<(&'static str, Value)
     .cloned()
     .filter(Value::is_object)
     .ok_or("the usage record cannot be read")?;
+  if strict && !valid_counts(&usage, &GROK_FIELDS) {
+    return Err("the usage record has no valid token counts");
+  }
   let totals = BTreeMap::from([(session.to_owned(), usage)]);
-  Ok(("grok usage record", field_totals(&totals, &GROK_FIELDS)))
+  Ok((
+    "grok usage record",
+    field_totals(&totals, &GROK_FIELDS, strict),
+  ))
 }
 
-fn codex(session: &str, env: &Env) -> Result<(&'static str, Value), &'static str> {
+fn codex(
+  session: &str,
+  env: &Env,
+  strict: bool,
+  partial: &mut bool,
+) -> Result<(&'static str, Value), &'static str> {
   let home = env
     .get("CODEX_HOME")
     .map_or_else(|| env.home().join(".codex"), PathBuf::from);
   let suffix = format!("{session}.jsonl");
   let path = find_file(&home.join("sessions"), &suffix, 4).ok_or("no rollout for the session")?;
   let text = std::fs::read_to_string(path).map_err(|_err| "the rollout cannot be read")?;
-  text
-    .lines()
-    .rev()
-    .filter_map(|line| serde_json::from_str::<Value>(line).ok())
-    .find(|entry| entry.pointer("/payload/type").and_then(Value::as_str) == Some("token_count"))
-    .and_then(|entry| entry.pointer("/payload/info/total_token_usage").cloned())
-    .map(|tokens| ("codex rollout", tokens))
-    .ok_or("the rollout has no token count")
+  let mut latest = None;
+  for entry in parse_lines(&text, partial).rev() {
+    if latest.is_none()
+      && entry.pointer("/payload/type").and_then(Value::as_str) == Some("token_count")
+    {
+      latest = Some(entry.pointer("/payload/info/total_token_usage").cloned());
+    }
+    if !strict && latest.is_some() {
+      break;
+    }
+  }
+  let tokens = latest.flatten().ok_or("the rollout has no token count")?;
+  if strict
+    && !valid_counts(
+      &tokens,
+      &[
+        "input_tokens",
+        "output_tokens",
+        "cached_input_tokens",
+        "reasoning_output_tokens",
+        "total_tokens",
+      ],
+    )
+  {
+    return Err("the rollout has no valid token counts");
+  }
+  Ok(("codex rollout", tokens))
 }
 
 /// The first file under `dir`, at most `depth` levels down, whose name ends in `suffix`.

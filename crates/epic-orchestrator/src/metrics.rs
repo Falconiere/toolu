@@ -20,10 +20,14 @@ mod muse_tokens;
 mod ready;
 mod scope;
 mod stats;
+/// Private and public epic summary rendering.
 pub(crate) mod summary;
 mod text;
 mod timeline;
 mod tokens;
+/// Durable per-attempt worker usage.
+pub(crate) mod usage;
+mod usage_report;
 
 use std::time::Duration;
 

@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 use toolu_runtime::env::Env;
 
-use super::tokens::field_totals;
+use super::tokens::{field_totals, parse_lines, valid_counts};
 use crate::launch::muse_session::data_root;
 
 const FIELDS: [&str; 4] = [
@@ -43,24 +43,36 @@ fn find_dir(dir: &Path, name: &str, depth: u32) -> Option<PathBuf> {
 }
 
 /// The session's own log and its subagents' logs.
-fn logs(session: &Path) -> Vec<PathBuf> {
+fn logs(session: &Path, strict: bool) -> Result<Vec<PathBuf>, &'static str> {
   let mut logs = vec![session.join("session.jsonl")];
-  if let Ok(children) = std::fs::read_dir(session.join("subagent")) {
-    let mut paths: Vec<PathBuf> = children
-      .filter_map(|entry| entry.ok().map(|entry| entry.path().join("session.jsonl")))
-      .collect();
-    paths.sort();
-    logs.extend(paths);
+  match std::fs::read_dir(session.join("subagent")) {
+    Ok(children) => {
+      for child in children {
+        match child {
+          Ok(child) => logs.push(child.path().join("session.jsonl")),
+          Err(_) if strict => return Err("cannot list subagent logs"),
+          Err(_) => {}
+        }
+      }
+    }
+    Err(err) if strict && err.kind() != std::io::ErrorKind::NotFound => {
+      return Err("cannot list subagent logs");
+    }
+    Err(_) => {}
   }
-  logs
+  logs.sort();
+  Ok(logs)
 }
 
 /// Every reported quantity in `text`, keyed by its `usage_id`.
-fn reported(text: &str, into: &mut BTreeMap<String, Value>) {
-  for entry in text
-    .lines()
-    .filter_map(|line| serde_json::from_str::<Value>(line).ok())
-  {
+fn reported(
+  text: &str,
+  into: &mut BTreeMap<String, Value>,
+  strict: bool,
+  partial: &mut bool,
+) -> Result<(), &'static str> {
+  let mut seen = false;
+  for entry in parse_lines(text, partial) {
     if entry.pointer("/payload/event/kind").and_then(Value::as_str)
       != Some("goal_usage_attribution")
     {
@@ -76,9 +88,17 @@ fn reported(text: &str, into: &mut BTreeMap<String, Value>) {
       .and_then(Value::as_bool)
       == Some(true);
     if let (Some(id), Some(quantity), true) = (id, quantity, counted) {
+      if strict && !valid_counts(quantity, &FIELDS) {
+        return Err("session log has invalid usage counters");
+      }
       into.insert(id.to_owned(), quantity.clone());
+      seen = true;
     }
   }
+  if strict && !seen {
+    return Err("session log has no reported usage");
+  }
+  Ok(())
 }
 
 /// The token sums of Muse session `session`.
@@ -86,19 +106,29 @@ fn reported(text: &str, into: &mut BTreeMap<String, Value>) {
 /// # Errors
 /// No session directory, or a log in it cannot be read.
 pub(super) fn muse(session: &str, env: &Env) -> Result<(&'static str, Value), &'static str> {
+  read(session, env, false, &mut false)
+}
+
+/// Read native usage, refusing incomplete sources for durable snapshots.
+pub(super) fn read(
+  session: &str,
+  env: &Env,
+  strict: bool,
+  partial: &mut bool,
+) -> Result<(&'static str, Value), &'static str> {
   let sessions = data_root(env).join("sessions");
   let dir = find_dir(&sessions, session, 3).ok_or("no session log for the session")?;
   let mut usage = BTreeMap::new();
-  for (index, log) in logs(&dir).iter().enumerate() {
+  for (index, log) in logs(&dir, strict)?.iter().enumerate() {
     match std::fs::read_to_string(log) {
-      Ok(text) => reported(&text, &mut usage),
+      Ok(text) => reported(&text, &mut usage, strict, partial)?,
       // A subagent directory without a log yet holds no use.
-      Err(err) if index > 0 && err.kind() == std::io::ErrorKind::NotFound => {}
+      Err(err) if !strict && index > 0 && err.kind() == std::io::ErrorKind::NotFound => {}
       Err(_err) if index == 0 => return Err("the session log cannot be read"),
       Err(_err) => return Err("a subagent log cannot be read"),
     }
   }
-  Ok(("muse session log", field_totals(&usage, &FIELDS)))
+  Ok(("muse session log", field_totals(&usage, &FIELDS, strict)))
 }
 
 #[cfg(test)]
