@@ -1,6 +1,6 @@
 {
   "name": "epic-orchestrator",
-  "version": "9.1.0",
+  "version": "10.0.0",
   "hookProtocol": 4,
   "description": "Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr worktrees, parallel Claude Code / Codex / Cursor Agent workers routed by Jev complexity, merge gate, rate-limit and progress guardrails.",
   "author": {
