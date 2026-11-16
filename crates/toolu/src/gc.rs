@@ -1,9 +1,8 @@
-//! `toolu gc`: reclaim what finished epics, gates and sandboxes leave behind.
-//! A report by default; `--apply` removes merged worktrees and branches, the
-//! `refs/epic-wip/*` snapshots of finished issues and old job logs, prunes the
-//! sandbox's orphan clones, and stops the sandbox and the Colima gate profile
-//! when no worker holds a lease. The epic engine runs the same sweep after it
-//! closes an epic (`toolu_engine::gc`).
+//! `toolu gc`: reclaim what finished epics and gates leave behind. A report by
+//! default; `--apply` removes merged worktrees and branches, the
+//! `refs/epic-wip/*` snapshots of finished issues and old job logs, and stops
+//! the Colima gate profile when no worker holds a lease. The epic engine runs
+//! the same sweep after it closes an epic (`toolu_engine::gc`).
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -15,13 +14,12 @@ use toolu_engine::gc::{Request, summary, sweep};
 use toolu_engine::resources::store::resource_home;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
-use toolu_runtime::invocation::current_exe;
 use toolu_runtime::process::commands::git_toplevel;
 
-/// Reclaim leftovers of finished epics, gates and sandboxes.
+/// Reclaim leftovers of finished epics and gates.
 pub fn command() -> Command {
   Command::new("gc")
-    .about("Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply")
+    .about("Reclaim what finished epics and gates leave behind; a report unless --apply")
     .arg(
       Arg::new("apply")
         .long("apply")
@@ -53,7 +51,6 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     repos,
     state_dirs: state_dirs(&env, &resource_root),
     resource_root,
-    toolu: current_exe(),
     apply: matches.get_flag("apply"),
     all_branches: true,
     env,
@@ -123,7 +120,7 @@ pub(crate) fn lines(report: &Value) -> Vec<String> {
       None => out.extend(repo_lines(repo)),
     }
   }
-  out.extend(sandbox_lines(report));
+  out.extend(vm_lines(report));
   out.extend(engine_lines(report));
   out
 }
@@ -177,31 +174,9 @@ fn note(report: &Value, pointer: &str, label: &str) -> Option<String> {
     .map(|why| format!("  {label}: {why}"))
 }
 
-fn len(value: Option<&Value>) -> usize {
-  value.and_then(Value::as_array).map_or(0, Vec::len)
-}
-
-fn sandbox_lines(report: &Value) -> Vec<String> {
-  let sandbox = report.get("sandbox").unwrap_or(&Value::Null);
+fn vm_lines(report: &Value) -> Vec<String> {
   let colima = report.get("colima").unwrap_or(&Value::Null);
   let mut out = vec![
-    format!(
-      "sandbox: {} {}",
-      text(sandbox, "action"),
-      text(sandbox, "reason")
-    )
-    .trim_end()
-    .to_owned(),
-  ];
-  let (removed, kept) = (
-    len(sandbox.pointer("/clones/removed")),
-    len(sandbox.pointer("/clones/kept")),
-  );
-  if removed + kept > 0 {
-    out.push(format!("  clones: {removed} orphan, {kept} kept"));
-  }
-  out.extend(note(report, "/sandbox/clones/error", "clones error"));
-  out.push(
     format!(
       "colima toolu-gate: {} {}",
       text(colima, "toolu-gate"),
@@ -209,7 +184,7 @@ fn sandbox_lines(report: &Value) -> Vec<String> {
     )
     .trim_end()
     .to_owned(),
-  );
+  ];
   if let Some(dangling) = report.pointer("/docker/dangling").and_then(Value::as_u64) {
     let removed = report
       .pointer("/docker/removed")

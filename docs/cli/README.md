@@ -19,7 +19,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`debug`](debug.md) | `plugins/toolu` | available | Count or summarize logs, stacks and failing tests |
 | [`setup`](setup.md) | `plugins/toolu` | available | Configure agent profiles |
 | [`doctor`](doctor.md) | `plugins/toolu` | available | Report binary, config, plugin and tool health |
-| [`gc`](gc.md) | `plugins/toolu` | available | Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply |
+| [`gc`](gc.md) | `plugins/toolu` | available | Reclaim what finished epics and gates leave behind; a report unless --apply |
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
 | [`opencode`](opencode.md) | `plugins/toolu` | available | Run toolu plugins under OpenCode; their generated server.js calls these |
@@ -37,7 +37,6 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`statusline`](statusline.md) | `plugins/statusline` | available | Render and set up the native Claude status line |
 | [`babysit`](babysit.md) | `plugins/pr-babysit` | available | Babysit a PR until CI, review threads and the review-bot verdict are clear |
 | [`epic`](epic.md) | `plugins/epic-orchestrator` | available | Drive an epic to merged PRs: the resident engine, merge queue and trackers |
-| [`sandbox`](sandbox.md) | `plugins/sandbox` | available | Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux |
 | [`git-better`](git-better.md) | `plugins/git-better` | available | Semantic branches and commits that agents can read |
 | [`commands`](commands.md) | built into `crates/cli` | available | List every toolu command; --json exports the tree for tools and docs |
 | [`completions`](completions.md) | built into `crates/cli` | available | Print a bash, zsh, or fish completion script |
@@ -60,7 +59,7 @@ Commands:
   debug           Count or summarize logs, stacks and failing tests
   setup           Configure agent profiles
   doctor          Report binary, config, plugin and tool health
-  gc              Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply
+  gc              Reclaim what finished epics and gates leave behind; a report unless --apply
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and push-review status
   opencode        Run toolu plugins under OpenCode; their generated server.js calls these
@@ -78,7 +77,6 @@ Commands:
   statusline      Render and set up the native Claude status line
   babysit         Babysit a PR until CI, review threads and the review-bot verdict are clear [alias: pr-babysit]
   epic            Drive an epic to merged PRs: the resident engine, merge queue and trackers [alias: epic-orchestrator]
-  sandbox         Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux
   git-better      Semantic branches and commits that agents can read
   commands        List every toolu command; --json exports the tree for tools and docs
   completions     Print a bash, zsh, or fish completion script

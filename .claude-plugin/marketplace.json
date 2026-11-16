@@ -190,15 +190,6 @@
       "license": "MIT"
     },
     {
-      "name": "sandbox",
-      "source": "./plugins/sandbox",
-      "description": "A Linux sandbox for builds, gates and agent CLIs: a Lima VM on macOS that mounts only the project, this machine on Linux. `toolu sandbox setup` provisions the toolchain, and `toolu sandbox run` runs any command there at the same path. Standalone, no dependencies.",
-      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
-      "category": "productivity",
-      "keywords": ["sandbox", "linux", "lima", "vm"],
-      "license": "MIT"
-    },
-    {
       "name": "git-better",
       "source": "./plugins/git-better",
       "description": "Semantic branches and commits agents can read: scoped Conventional Commit subjects with an Intent trailer and <type>/<ref>-<slug> branch names, checked before git runs.",

@@ -97,11 +97,6 @@
       "expected": "git-better:git-better"
     },
     {
-      "id": "sandbox",
-      "prompt": "Run the quality gate in the Linux sandbox.",
-      "expected": "sandbox:sandbox"
-    },
-    {
       "id": "structural",
       "prompt": "Find every implementation of this Rust trait using structural search.",
       "expected": "ast-grep:ast-grep"

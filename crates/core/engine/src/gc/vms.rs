@@ -1,7 +1,7 @@
-//! Idle VMs and gate images: the Lima sandbox (through `toolu sandbox`), the
-//! Colima `toolu-gate` profile the deploy gate runs in, and Docker's dangling
-//! images there. Nothing stops while a lease is held, a container runs, or
-//! the program is not on `PATH`; each case is reported as it is.
+//! Idle VMs and gate images: the Colima `toolu-gate` profile the deploy gate
+//! runs in, and Docker's dangling images there. Nothing stops while a lease is
+//! held, a container runs, or the program is not on `PATH`; each case is
+//! reported as it is.
 
 use std::path::Path;
 use std::time::Duration;
@@ -35,58 +35,6 @@ fn held(idle: &Result<bool, String>) -> Option<String> {
     Ok(false) => Some("a worker lease is held".to_owned()),
     Err(err) => Some(format!("leases unknown: {err}")),
   }
-}
-
-/// A `toolu --json sandbox <verb>` document, or the failure.
-fn toolu_json(request: &Request, toolu: &Path, verb: &[&str]) -> Result<Value, String> {
-  let toolu = toolu.to_string_lossy();
-  let mut argv = vec![toolu.as_ref(), "--json", "sandbox"];
-  argv.extend_from_slice(verb);
-  let text = capture(&request.env, None, &argv, SLOW)?;
-  serde_json::from_str(&text).map_err(|err| format!("unreadable sandbox reply: {err}"))
-}
-
-/// Prune the sandbox's orphan clones, then stop it when idle.
-pub(crate) fn sandbox(request: &Request, idle: &Result<bool, String>) -> Value {
-  let Some(toolu) = request.toolu.as_deref() else {
-    return json!({"action": "skipped", "reason": "no toolu binary"});
-  };
-  let mut prune = vec!["prune"];
-  if request.apply {
-    prune.push("--apply");
-  }
-  let clones = toolu_json(request, toolu, &prune).unwrap_or_else(|err| json!({"error": err}));
-  let (action, reason) = match held(idle).or_else(|| shell_open(request)) {
-    Some(reason) => ("kept", reason),
-    None if !request.apply => ("would-stop", "no lease is held".to_owned()),
-    None => match toolu_json(request, toolu, &["stop"]) {
-      Ok(doc) if doc.get("changed") == Some(&Value::Bool(true)) => ("stopped", String::new()),
-      Ok(doc) => (
-        "kept",
-        doc
-          .get("state")
-          .and_then(Value::as_str)
-          .unwrap_or("not running")
-          .to_owned(),
-      ),
-      Err(err) => ("kept", err),
-    },
-  };
-  json!({"action": action, "reason": reason, "clones": clones})
-}
-
-/// Why the sandbox stays when a `limactl shell` (a `toolu sandbox run` or
-/// `shell`) is running on this machine without an engine lease.
-fn shell_open(request: &Request) -> Option<String> {
-  capture(
-    &request.env,
-    None,
-    &["pgrep", "-f", "limactl shell "],
-    QUICK,
-  )
-  .ok()
-  .filter(|pids| !pids.trim().is_empty())
-  .map(|_| "a sandbox shell or run is active".to_owned())
 }
 
 /// The Colima gate profile's status, one of `Running`, `Stopped`, ...; `None` when absent.

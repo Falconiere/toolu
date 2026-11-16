@@ -185,7 +185,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Seventeen plugins, one marketplace. Every plugin ships synchronized Claude,
+Sixteen plugins, one marketplace. Every plugin ships synchronized Claude,
 Codex and Muse manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
@@ -208,7 +208,6 @@ plugins.
 | Workflow | **`epic-orchestrator`** | Drive a GitHub, Jira, or Linear epic to merged PRs via local Herdr or tmux workers across supported coding-agent hosts, dependency waves, and a merge gate with auto-merge. |
 | Workflow | **`epic-creator`** | Turn an idea into a GitHub epic the engine can run: one-PR sub-issues with cited decisions and runnable checks, created after one confirmation. |
 | Workflow | **`git-better`** | Semantic branches and commits agents can read: scoped Conventional Commit subjects with an `Intent:` trailer and `<type>/<ref>-<slug>` branch names, checked before git runs. |
-| Environment | **`sandbox`** | A Linux place for builds, gates and agent CLIs: `toolu sandbox run` on a Lima VM that mounts only the project (macOS) or this machine (Linux). |
 | Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
@@ -285,7 +284,6 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep`, `
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     ├── toolu-review/            # toolu-review:review skill + push-review state writer
     ├── code-review/             # native review pipeline, review skill and command
-    ├── sandbox/                 # toolu sandbox: a Linux VM (Lima) or the host for builds and agent CLIs
     ├── git-better/              # semantic-git rule: semantic commit messages and branch names
     └── epic-orchestrator/       # resident epic engine, merge queue and tracker verbs
 ```

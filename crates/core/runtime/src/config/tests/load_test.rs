@@ -169,13 +169,14 @@ fn versions_compare_numerically_and_print_as_javascript_does() {
 }
 
 #[test]
-fn a_sandbox_section_is_a_known_key_the_loader_does_not_inspect() {
-  let (_dir, open) = loaded(
-    None,
-    Some(r#"{"version":1,"sandbox":{"backend":"host","futureKnob":1}}"#),
+fn a_retired_sandbox_section_is_an_unknown_key() {
+  let (_dir, closed) = loaded(None, Some(r#"{"version":1,"sandbox":{"backend":"host"}}"#));
+  assert!(
+    closed
+      .invalid
+      .unwrap()
+      .ends_with(": unknown top-level key 'sandbox'")
   );
-  assert_eq!(open.invalid, None);
-  assert_eq!(open.data["sandbox"]["backend"], "host");
 }
 
 #[test]

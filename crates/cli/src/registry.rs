@@ -190,12 +190,6 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     links::epic,
   ),
   verb(
-    "sandbox",
-    toolu_sandbox::PLUGIN,
-    toolu_sandbox::command,
-    toolu_sandbox::run,
-  ),
-  verb(
     "git-better",
     toolu_hub::git_better::PLUGIN,
     toolu_hub::git_better::command,

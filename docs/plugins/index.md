@@ -19,10 +19,9 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 11 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev over text and images — probability, choice, and score answers code can branch on |
 | 12 | [**brainstorm**](../../plugins/brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
 | 13 | [**code-review**](../../plugins/code-review/README.md) | Workflow | — | Native review of branch and local changes through host CLIs and direct TypeSafe Jev, anchored findings and push-review state |
-| 14 | [**sandbox**](../../plugins/sandbox/README.md) | Environment | — | A Linux place for builds, gates and agent CLIs: a Lima VM on macOS, the host on Linux; `toolu sandbox run` runs a command there |
-| 15 | [**git-better**](../../plugins/git-better/README.md) | Workflow | `toolu` | Semantic branches and commits agents can read: scoped Conventional Commit subjects with an `Intent:` trailer and `<type>/<ref>-<slug>` branch names, checked before git runs |
-| 16 | [**epic-creator**](../../plugins/epic-creator/README.md) | Workflow | `brainstorm` | Turn an idea into a GitHub epic the engine can run: one-PR sub-issues with cited decisions and runnable checks, created after one confirmation |
-| 17 | [**documentation-gate**](../../plugins/documentation-gate/README.md) | Workflow | `toolu` | Route an editing worker and record documentation review for the committed diff |
+| 14 | [**git-better**](../../plugins/git-better/README.md) | Workflow | `toolu` | Semantic branches and commits agents can read: scoped Conventional Commit subjects with an `Intent:` trailer and `<type>/<ref>-<slug>` branch names, checked before git runs |
+| 15 | [**epic-creator**](../../plugins/epic-creator/README.md) | Workflow | `brainstorm` | Turn an idea into a GitHub epic the engine can run: one-PR sub-issues with cited decisions and runnable checks, created after one confirmation |
+| 16 | [**documentation-gate**](../../plugins/documentation-gate/README.md) | Workflow | `toolu` | Route an editing worker and record documentation review for the committed diff |
 
 ## Architecture Overview
 

@@ -2,7 +2,7 @@
 //! a live smoke of the native toolu hooks in real Claude Code, Codex, Muse, Cursor and
 //! `OpenCode` sessions (`both`, the default, means Claude Code, Codex and Muse; Cursor and
 //! `OpenCode` are asked for by name), with no `bun` on the children's `PATH`.
-//! Every host runs on macOS and Linux (on macOS, Linux runs inside `toolu sandbox`); on
+//! Every host runs on macOS and Linux; on
 //! Linux, Codex and Muse sandbox their commands with bubblewrap. Per host it checks that
 //! a protected `.env` write
 //! is denied, an allowed `cat` of the project's nonce file runs, a post-edit quality

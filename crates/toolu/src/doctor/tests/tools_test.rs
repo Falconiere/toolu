@@ -1,6 +1,6 @@
 use super::super::checks::Status;
 use super::super::inventory::{Inventory, Plugin};
-use super::{check, check_on};
+use super::check;
 use toolu_runtime::env::Env;
 
 fn env(path: &str) -> Env {
@@ -63,20 +63,6 @@ fn tmux_satisfies_the_herdr_row() {
   let inventory = named(&["epic-orchestrator"]);
   let check = check(&inventory, &env(dir.path().to_str().unwrap()));
   assert_eq!(check.status, Status::Ok);
-}
-
-#[test]
-fn the_sandbox_wants_lima_on_macos_only() {
-  let inventory = named(&["sandbox"]);
-  let mac = check_on(&inventory, &env("/nonexistent"), "macos");
-  assert_eq!(mac.status, Status::Warn);
-  assert_eq!(mac.summary, "sandbox needs limactl");
-  assert_eq!(
-    mac.hint.as_deref(),
-    Some("install Lima 2 for toolu sandbox: brew install lima")
-  );
-  let linux = check_on(&inventory, &env("/nonexistent"), "linux");
-  assert_eq!(linux.status, Status::Ok);
 }
 
 #[test]

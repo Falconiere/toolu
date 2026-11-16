@@ -1,8 +1,8 @@
-//! Reclaim what finished epics, gates and sandboxes leave behind: merged
-//! worktrees and branches, the `refs/epic-wip/*` snapshots of merged issues,
-//! old job logs, and idle VMs. [`sweep`] reports by default and acts with
-//! `apply`; `toolu gc` and the epic engine (after `epic-closed`) both call it.
-//! Every step tolerates "already gone", so a repeated sweep is harmless.
+//! Reclaim what finished epics and gates leave behind: merged worktrees and
+//! branches, the `refs/epic-wip/*` snapshots of merged issues, old job logs,
+//! and idle VMs. [`sweep`] reports by default and acts with `apply`; `toolu gc`
+//! and the epic engine (after `epic-closed`) both call it. Every step tolerates
+//! "already gone", so a repeated sweep is harmless.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -34,8 +34,6 @@ pub struct Request {
   pub state_dirs: Vec<PathBuf>,
   /// The engine's resource root: leases and job logs.
   pub resource_root: PathBuf,
-  /// The `toolu` that runs `sandbox prune` and `sandbox stop`; `None` skips the sandbox.
-  pub toolu: Option<PathBuf>,
   /// Remove and stop; otherwise only report what would go.
   pub apply: bool,
   /// Delete every merged local branch, not only the issue records' branches.
@@ -69,7 +67,6 @@ pub fn sweep(request: &Request) -> Value {
   json!({
     "apply": request.apply,
     "repos": repos,
-    "sandbox": vms::sandbox(request, &idle),
     "colima": vms::colima(request, &idle),
     "docker": vms::docker(request),
     "engine": engine_state::sweep(request, &records),
@@ -128,7 +125,7 @@ pub fn summary(report: &Value) -> String {
     node.as_str().unwrap_or("skipped").to_owned()
   };
   format!(
-    "{}worktrees={trees} branches={} wip_refs={} job_logs={} sandbox={} colima={}",
+    "{}worktrees={trees} branches={} wip_refs={} job_logs={} colima={}",
     if report.get("apply") == Some(&Value::Bool(true)) {
       ""
     } else {
@@ -140,7 +137,6 @@ pub fn summary(report: &Value) -> String {
       .pointer("/engine/job_logs_removed")
       .and_then(Value::as_u64)
       .unwrap_or(0),
-    text(&["sandbox", "action"]),
     text(&["colima", "toolu-gate"]),
   )
 }

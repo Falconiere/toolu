@@ -36,7 +36,7 @@ fn an_applied_sweep_journals_its_summary_and_ends_the_action() {
   let steps = commit(&mut world, "e", &doc);
   assert_eq!(
     swept_note(&steps),
-    "worktrees=0 branches=0 wip_refs=0 job_logs=3 sandbox=skipped colima=skipped"
+    "worktrees=0 branches=0 wip_refs=0 job_logs=3 colima=skipped"
   );
   assert_eq!(world.epics["e"].pending.as_ref().map(|p| p.phase), Some(2));
   assert!(world.attention.is_empty(), "a sweep is never a judgment");

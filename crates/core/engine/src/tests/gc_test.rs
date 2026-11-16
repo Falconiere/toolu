@@ -28,8 +28,7 @@ fn a_full_sweep_reports_each_section_and_its_summary_counts_them() {
   let applied = sweep(&repo.request(true));
   let text = summary(&applied);
   assert!(
-    text
-      .starts_with("worktrees=1 branches=1 wip_refs=1 job_logs=0 sandbox=skipped colima=no-colima"),
+    text.starts_with("worktrees=1 branches=1 wip_refs=1 job_logs=0 colima=no-colima"),
     "{text}"
   );
   assert!(!herdr.join("k1").exists());
