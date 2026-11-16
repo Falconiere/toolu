@@ -14,7 +14,12 @@ its open, same-repository children within the existing goal. An audit or
 dry run authorizes reads and local drafts only. Prepare the exact diff before
 writing; do not ask again for already-authorized body edits. New scope,
 new issues, relationship changes, titles, closure or reopening need explicit
-authorization for the concrete proposed change. Never start or pause the
+authorization for the concrete proposed change. One exception: a size split
+the `epic-orchestrator` skill applies is authorized (new slice issues, their
+blocker chain and membership, and the narrowed split issue) when every
+criterion of the split issue lands in exactly one resulting issue and none is
+added. Its worker waiting at `needs-human` is the safe handoff for that
+issue. Never start or pause the
 engine, change code, commit, or send worker messages through this skill.
 
 ## 1. Snapshot

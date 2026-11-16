@@ -111,6 +111,29 @@ fn every_judgment_the_engine_raises_has_a_command() {
 }
 
 #[test]
+fn an_over_budget_split_is_applied_only_when_it_keeps_the_scope() {
+  let text = skill().unwrap();
+  let row = text
+    .lines()
+    .find(|line| line.starts_with("| `needs-human` |"))
+    .unwrap();
+  assert!(row.contains("`references/size-split.md`"), "{row}");
+  let split = shipped("skills/epic-orchestrator/references/size-split.md").unwrap();
+  let split = split.split_whitespace().collect::<Vec<_>>().join(" ");
+  for rule in [
+    "exactly one slice",
+    "no slice adds a criterion",
+    "merges alone",
+    "ask the user",
+    "epic-creator:epic-updater",
+    "toolu epic answer <key> \"NARROWED:",
+    "Never delete `<branch>-rest` or `refs/epic-wip/*`",
+  ] {
+    assert!(split.contains(rule), "missing {rule:?}");
+  }
+}
+
+#[test]
 fn status_reads_without_waiting_and_stop_pauses() {
   let text = skill().unwrap();
   let status = section(&text, "Status and stop").unwrap();

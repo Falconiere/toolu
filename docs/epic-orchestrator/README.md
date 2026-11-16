@@ -106,6 +106,15 @@ that child once for the missing details. Task-list children reuse their initial
 issue GET. Dependency and closing-PR requests still run for every child; an API
 rate limit fails graph construction rather than silently dropping blockers.
 
+A running engine sees children added to its epic without a restart. A refresh
+rebuilds the graph and adds new children: it runs when a native epic's
+sub-issue list changes while one of its PRs waits, after every merged issue's
+cleanup, and every 15 minutes for Jira and Linear. A worker whose issue cannot
+fit the PR size budget keeps its work on `<branch>-rest` and proposes slices;
+the orchestrator skill applies a split that keeps every acceptance criterion
+in exactly one slice (`references/size-split.md`), so slice 2, blocked by the
+narrowed issue, starts after that issue merges.
+
 ## Quiet babysit checks
 
 Each PR check first sends conditional REST requests for the PR, its checks and

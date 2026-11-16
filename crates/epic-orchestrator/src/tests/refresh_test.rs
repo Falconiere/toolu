@@ -209,6 +209,30 @@ fn a_merged_issue_seen_closed_is_noted_and_an_abandoned_open_one_raises_nothing(
   assert_eq!(crate::refill_rig::armed(&world).len(), 0);
 }
 
+/// #907: a size split adds a child blocked by the narrowed issue while the
+/// engine runs. The refresh after that issue's cleanup adds it and launches it.
+#[test]
+fn a_refresh_adds_a_split_child_that_launches_once_its_narrowed_blocker_merged() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let dir = state_dir(tmp.path(), &[("a", "closed")]);
+  record(&dir, "a", &json!({"stage": "merged"}));
+  let mut world = registered(tmp.path(), &dir);
+  assert!(!world.issues.contains_key("b"));
+  let path = Path::new(&dir).join("graph.json");
+  let mut graph: Value =
+    serde_json::from_str(&std::fs::read_to_string(&path).expect("read")).expect("json");
+  graph["issues"].as_array_mut().expect("issues").push(json!({
+    "ref": "o/r#2", "title": "b", "state": "open", "url": "", "repo": "o/r",
+    "number": 2, "key": "b", "status": "ready", "open_blockers": ["a"]}));
+  std::fs::write(&path, graph.to_string()).expect("graph");
+  arm(&mut world, "e");
+  let _call = to_call(&mut world, "e");
+  let _steps = commit(&mut world, "e", r#"{"outcome":"applied"}"#);
+  assert_eq!(world.issues["b"].blockers, vec!["a".to_owned()]);
+  crate::refill::refill(&mut world);
+  assert_eq!(crate::refill_rig::armed(&world), vec!["b".to_owned()]);
+}
+
 #[test]
 fn a_rate_limited_refresh_spends_its_retry_budget_then_waits_the_fixed_deadline() {
   let fixture = Fixture::start().expect("fixture");
