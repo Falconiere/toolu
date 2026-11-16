@@ -5,7 +5,9 @@ A worker that cannot fit the PR size budget stops with a `needs-human` note:
 Invoking this skill authorizes applying that split without asking the user
 when all of these hold:
 
-- The epic is on GitHub (`epic-creator:epic-updater` edits GitHub only).
+- The epic is on GitHub and the issue is in the epic's own repository
+  (`epic-creator:epic-updater` edits GitHub only, and only same-repository
+  children).
 - Every acceptance criterion of the issue lands in exactly one slice, and no
   slice adds a criterion. Write the mapping (criterion → slice) first.
 - Each slice merges alone: its tests pass on the base plus the slices before it.
