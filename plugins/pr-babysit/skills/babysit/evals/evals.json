@@ -85,6 +85,19 @@
         "Uses the exact Codex repository-local state path, never an empty slot or another PR's state.",
         "Performs no goal or filesystem mutation during this simulation."
       ]
+    },
+    {
+      "id": 7,
+      "name": "review-request-beyond-the-goal",
+      "prompt": "Simulate a tick on a PR whose goal is to add a `--json` flag to one status command; `toolu ledger verdict status` reads `size: 260 of 300 code lines`. One actionable thread reports that the JSON output drops the `error` field when the command fails. Another asks to also add YAML output and keep a compatibility shim for the old text format; no caller in the repository uses either.",
+      "expected_output": "Fix the dropped error field. Decline the YAML and compatibility request as Won't fix (YAGNI) with the goal and the usage search as evidence, resolve it, and list it in the report as a follow-up. Check the size row before pushing the fix.",
+      "files": [],
+      "assertions": [
+        "Fixes the dropped `error` field and replies `Fixed in <sha>`",
+        "Disposes the YAML and compatibility request as Won't fix, citing the PR goal and the usage search, and resolves the thread",
+        "Lists the declined request in the report as a follow-up instead of implementing it",
+        "Reads the `size` row before the push and does not take the PR over its budget"
+      ]
     }
   ]
 }
