@@ -99,6 +99,12 @@ exits right after start): check `codex debug models` or `cursor-agent
   push after the gate, or protection), and the engine holds the issue without
   resending. Fix the cause or ask the user, merge with the gate below once it
   says `merge`, then `toolu epic ack <key>`; the PR check sees the merge.
+  A note `pr size over budget: <count>` (or `pr size unmeasured`: the pull
+  request head or its base is missing in the worktree; fetch there) means the
+  engine refused the head under `gates.prSize`. Do not
+  merge it by hand: have the worker split the branch, keeping the first slice
+  that works alone, and report again; a new phase releases the hold. Raising
+  the budget or the mode is the user's call.
 - **`failed` on the epic key after a tracker close:** fix the reported cause,
   then rerun `toolu epic close --graph <state_dir>/graph.json`. Keep the same
   state directory and its `close-intents/` receipts: a pending comment is
