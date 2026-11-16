@@ -14,8 +14,6 @@ mod git_better_read;
 mod git_better_schema;
 #[path = "helpers/inventory.rs"]
 mod inventory;
-#[path = "helpers/sandbox_schema.rs"]
-mod sandbox_schema;
 #[path = "helpers/schema.rs"]
 mod schema;
 
@@ -48,7 +46,6 @@ fn unported(names: &[String]) -> Vec<&String> {
     "statusline",
     "babysit",
     "epic",
-    "sandbox",
     "git-better",
     "ts-quality",
     "rust-quality",
@@ -85,7 +82,6 @@ const NAMES: &[&str] = &[
   "statusline",
   "babysit",
   "epic",
-  "sandbox",
   "git-better",
   "commands",
   "completions",

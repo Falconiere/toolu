@@ -2,14 +2,14 @@
 
 # `toolu gc`
 
-Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply.
+Reclaim what finished epics and gates leave behind; a report unless --apply.
 
 Owner: `plugins/toolu`.
 
 ## `toolu gc`
 
 ```text
-Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply
+Reclaim what finished epics and gates leave behind; a report unless --apply
 
 Usage: toolu gc [OPTIONS]
 

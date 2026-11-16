@@ -37,8 +37,7 @@ startup behavior in Codex, Claude Code, or Muse.
 7. For native hook acceptance, run `cargo xtask host-smoke --host claude|codex|muse|cursor|opencode|both`
    with the checkout binary (`both` is Claude Code, Codex and Muse; Cursor and OpenCode
    run when named; every host runs on macOS and Linux, where
-   Codex and Muse need `bwrap`; on macOS, `toolu sandbox run --clone -- cargo xtask host-smoke`
-   runs it in the Linux VM). It hides Bun, installs temporary host profiles and
+   Codex and Muse need `bwrap`). It hides Bun, installs temporary host profiles and
    checks a denied `.env` write, a post-edit quality failure, a denied
    commit, and a denied push in actual Claude Code, Codex and Muse sessions.
 8. For Muse, use a fresh temporary profile with isolated `HOME`, `XDG_CONFIG_HOME`,

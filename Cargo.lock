@@ -1418,7 +1418,6 @@ dependencies = [
  "toolu-protocol",
  "toolu-review",
  "toolu-runtime",
- "toolu-sandbox",
  "toolu-state",
  "toolu-statusline",
 ]
@@ -1712,18 +1711,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "toolu-engine",
- "toolu-protocol",
- "toolu-runtime",
- "toolu-state",
-]
-
-[[package]]
-name = "toolu-sandbox"
-version = "9.1.0"
-dependencies = [
- "clap",
- "serde_json",
- "tempfile",
  "toolu-protocol",
  "toolu-runtime",
  "toolu-state",

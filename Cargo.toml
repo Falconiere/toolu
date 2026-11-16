@@ -36,7 +36,6 @@ members = [
   "crates/epic-orchestrator",
   "crates/plugins",
   "crates/code-review",
-  "crates/sandbox",
   "crates/git-better",
 ]
 

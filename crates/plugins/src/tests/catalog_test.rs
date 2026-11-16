@@ -32,7 +32,6 @@ fn the_built_in_catalog_is_the_repository_manifest() {
       "pr-babysit",
       "python-quality",
       "rust-quality",
-      "sandbox",
       "statusline",
       "toolu",
       "toolu-review",

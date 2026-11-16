@@ -1,6 +1,6 @@
 //! Real repositories for the sweep's tests: a bare origin, a clone whose
 //! `origin/HEAD` is `main`, and an environment whose `PATH` has git but no
-//! `herdr`, `colima`, `docker` or `toolu`, so no test touches a developer's VM.
+//! `herdr`, `colima` or `docker`, so no test touches a developer's VM.
 
 use std::path::{Path, PathBuf};
 
@@ -109,7 +109,6 @@ impl Repo {
       repos: vec![self.root.clone()],
       state_dirs: vec![self.tmp.join("epic")],
       resource_root: self.tmp.join("resources"),
-      toolu: None,
       apply,
       all_branches: true,
       env: self.env.clone(),
