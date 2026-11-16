@@ -43,7 +43,8 @@ worktree, commit, rebase onto `origin/{{BASE}}`, push `{{BRANCH}}` (including
 `--force-with-lease` after a rebase){{PR_AUTH}}.
 Invoking {{DELIVERY}} also supplies delivery authorization; do not
 stop to ask for it. {{APPROVALS}} You may **not** merge, push to `{{BASE}}`,
-touch other branches or worktrees, or edit other issues.
+touch other branches (beyond creating `{{BRANCH}}-rest`) or worktrees, or edit
+other issues.
 
 {{QUESTIONS}} When a spec or plan has an open question,
 decide it from the issue, the epic's agreed decisions, and the code; record the
@@ -90,9 +91,10 @@ directly.
    the `size` row of `toolu ledger verdict status`; over the review budget, do
    not push, whatever the gate mode. If the plan's estimate or that row says
    this issue cannot fit, do not shrink tests or edit `gates.prSize`: commit
-   locally, then
-   `report needs-human --note "over size budget: <n> of <max>; split: 1) … 2) …"`
-   naming slices that each merge alone, and stop.
+   locally, run `git branch {{BRANCH}}-rest` to keep the full work, then
+   `report needs-human --note "over size budget: <n> of <max>; kept on {{BRANCH}}-rest; split: 1) … 2) …"`
+   naming slices that each merge alone, with every acceptance criterion in
+   exactly one slice and none added, and stop.
 3. **PR.** The skill creates or finds the PR targeting `{{BASE}}`. Use a
    conventional-commit title. Its body starts with `{{CLOSES}}` and `Part of {{EPIC_REF}}`, followed by a
    summary and verification evidence. Verify its number and head/base branches;
@@ -146,7 +148,7 @@ the branch recoverable:
   if you still can, then stop. The engine moves the issue to another host.
 - Never `git reset --hard`, `git clean`, `git checkout -- .`, or force-push
   without `--force-with-lease`. Never delete `refs/epic-wip/*`: the engine
-  snapshots your worktree there.
+  snapshots your worktree there. Never delete `{{BRANCH}}-rest`.
 
 ## Messages from the orchestrator
 
@@ -156,6 +158,10 @@ the branch recoverable:
   conflicts so both sides' intent survives (read the other change, don't just
   pick yours); re-run the gate and affected tests; `git push --force-with-lease`;
   `report babysit --pr <n>`; stop.
+- **`NARROWED: …`** — your split was applied: the issue now holds slice 1
+  only. Re-read it. If `{{BRANCH}}-rest` is missing, `git branch {{BRANCH}}-rest`
+  first. Remove the other slices' changes from `{{BRANCH}}` with new commits
+  (no reset), then resume the pipeline at Deliver.
 - **Any other direction** from the orchestrator — follow it within this
   brief's limits, push, `report babysit --pr <n>` once a PR exists, and stop.
 - **`STATUS?`** — reply in one line: phase, PR, what you are doing, blocker if

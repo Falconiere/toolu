@@ -22,6 +22,7 @@ fn surfaces() -> Res<Vec<(String, String)>> {
     "skills/epic-orchestrator/SKILL.md",
     "skills/epic-orchestrator/references/preflight.md",
     "skills/epic-orchestrator/references/recovery.md",
+    "skills/epic-orchestrator/references/size-split.md",
     "skills/epic-orchestrator/references/worker-brief.md",
     "commands/epic.md",
   ]
@@ -171,4 +172,21 @@ fn the_brief_fills_every_placeholder_for_each_host_and_tracker() {
     assert!(text.contains("toolu epic job --detach -- <command>"));
     assert!(text.contains("toolu epic job --wait` once"));
   }
+}
+
+/// #907: an over-budget worker keeps its work on `<branch>-rest`, names it in
+/// its note, and a `NARROWED` answer resumes it on the first slice.
+#[test]
+fn the_brief_keeps_over_budget_work_on_a_rest_branch() {
+  let home = Home::new().unwrap();
+  let text = brief(&home, "claude", None).unwrap();
+  let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+  let rest = flat
+    .split("`git branch ")
+    .nth(1)
+    .and_then(|tail| tail.split_once("-rest`"))
+    .map_or("", |(branch, _)| branch);
+  assert!(!rest.is_empty(), "no -rest branch: {flat}");
+  assert!(flat.contains(&format!("kept on {rest}-rest; split:")));
+  assert!(flat.contains("**`NARROWED: …`**"));
 }

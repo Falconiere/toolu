@@ -37,6 +37,7 @@ limits the approval prompts would):
 - merge PRs that pass the merge gate
 - close delivered sub-issues (GitHub close, Jira transition to Done, Linear
   completed state), then tick and close the epic
+- apply a scope-preserving size split ([size splits](references/size-split.md))
 
 `--admin` is allowed only when branch protection (for example, a required
 approval on a solo repo) is the only thing blocking a gate-green PR. `--admin`
@@ -110,7 +111,7 @@ or a settled cause closes an item; ack the rest once handled. To redirect a live
 
 | kind | action |
 |---|---|
-| `needs-human` | If the issue, epic or code answers the `note`, `toolu epic answer <key> "<answer>"`; else ask the user and relay it the same way. A note starting `over size budget` proposes a split: ask the user to authorize it, add the children with `epic-creator:epic-updater`, then answer the worker with its narrowed first slice. |
+| `needs-human` | If the issue, epic or code answers the `note`, `toolu epic answer <key> "<answer>"`; else ask the user and relay it the same way. A note starting `over size budget` proposes a split: apply it per `references/size-split.md`. |
 | `failed` | Read the note (`herdr agent read <key> --lines 80` if unclear). `toolu epic answer <key> "<new direction>"`, or escalate. Notes `uncertain launch`, `merge uncertain`, `merge refused`, `rebase push uncertain` and tracker close failures on the epic key: follow `references/recovery.md`. |
 | `blocked` | Read `pending`. Inside the boundary: approve with `herdr agent send-keys`; else ask the user. Then `toolu epic ack <key>`. |
 | `stall` | The engine sent `STATUS?`. Read the reply, then `toolu epic answer <key> "<nudge>"` or `toolu epic ack <key>` to wait one more stall length. |
