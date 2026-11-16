@@ -51,6 +51,23 @@ and include the real inputs and failure propagation that prove the behavior.
 When the repository's instructions name a scoped pre-check, make it each code
 step's `check`, with the step's own `paths`; keep the full gate as the final step.
 
+## Size budget
+
+A pull request must arrive small: size is planned here, measured during
+execution and never fixed after the push. Plan the smallest change that meets
+the acceptance criteria; fix the case that happened, not every case that could.
+Read the budget with `toolu config get gates.prSize.maxLines` (300 code lines
+when the key is unset, and 100 changed files). Tests, fixtures and docs add no
+code lines. Estimate each step's added code lines from its `paths` and add a
+`**Size:** ~<n> of <budget> code lines` line below the header.
+
+Over the budget, slice before planning further. The plan covers only the
+first slice that works alone with its tests: a behavior-preserving refactor,
+the interface, or one behavior. List every later slice in one line under
+`## Follow-ups`; each becomes its own plan and PR. An epic worker follows its
+brief instead: it reports the proposed split and stops. Never fit by dropping
+tests or docs.
+
 ## Handoff
 
 Leave the plan `Draft` and send it to `plan-review`. Only an approved plan moves

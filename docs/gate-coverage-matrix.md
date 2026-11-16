@@ -40,6 +40,7 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | `toolu:builtin-module:PreToolUse:docs-sync` | `crates/core/engine/src/gates/docs_sync.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:mcp-blocker` | `crates/core/engine/src/gates/mcp_blocker.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:plan-ledger` | `crates/core/engine/src/gates/plan_ledger.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:pr-size` | `crates/core/engine/src/gates/pr_size.rs` | toolu | PreToolUse | port-native | optional | —/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:protected-files` | `crates/core/engine/src/gates/protected_files.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:push-review` | `crates/core/engine/src/gates/push_review.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:quality-gate` | `crates/core/engine/src/gates/quality_gate.rs` | toolu | PreToolUse | port-native | required | #261/done | native | no | — |

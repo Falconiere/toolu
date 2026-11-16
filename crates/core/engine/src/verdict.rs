@@ -1,5 +1,5 @@
-//! The four-gate verdict (`packages/toolu-core/src/ledger/verdict.ts`, #421):
-//! one read-only view over the push gates (quality, plan, review and docs) that
+//! The push-gate verdict (`packages/toolu-core/src/ledger/verdict.ts`, #421):
+//! one read-only view over the push gates (quality, plan, review, docs and size) that
 //! answers "is this branch done, and why not". It never writes state or runs a
 //! check. Exit 0 means ready, 1 blocked (a gate failed or escalated), 2 an error.
 
@@ -13,6 +13,8 @@ pub mod glob;
 pub mod plan;
 /// The review gate.
 pub mod review;
+/// The size gate.
+pub mod size;
 
 use toolu_runtime::json::jq_text;
 use toolu_runtime::json::ordered::Ordered;
@@ -25,7 +27,7 @@ use crate::ledger::jq::{number, string};
 use gates::{GateContext, quality_gate};
 
 /// The gate names, in report order.
-pub const GATES: [&str; 4] = ["quality", "plan", "review", "docs"];
+pub const GATES: [&str; 5] = ["quality", "plan", "review", "docs", "size"];
 
 /// Every gate for the repository at the invocation directory, and the config
 /// warnings met on the way.
@@ -58,6 +60,7 @@ pub fn verdict_report(opts: &LedgerOptions) -> Result<(Ordered, Vec<String>), St
     ("plan".to_owned(), plan::plan_gate(&ctx)),
     ("review".to_owned(), review::review_gate(&ctx)),
     ("docs".to_owned(), docs::docs_gate(&mut ctx)),
+    ("size".to_owned(), size::size_gate(&mut ctx)),
   ];
   let blocked = gates
     .iter()

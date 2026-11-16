@@ -32,7 +32,7 @@ fn a_fresh_branch_is_blocked_and_its_table_names_every_gate() {
   assert_eq!(
     status.stdout,
     format!(
-      "verdict: feat/x vs main (diff {sha})\nGATE     STATE     REASON\nquality  pass      no quality-gate failure recorded\nplan     advise    no plan ledger for this change; if non-trivial, run plan\nreview   fail      no push-review state file; run a reviewer and write the state\ndocs     advise    code changed without a doc update\noverall: blocked\n"
+      "verdict: feat/x vs main (diff {sha})\nGATE     STATE     REASON\nquality  pass      no quality-gate failure recorded\nplan     advise    no plan ledger for this change; if non-trivial, run plan\nreview   fail      no push-review state file; run a reviewer and write the state\ndocs     advise    code changed without a doc update\nsize     pass      1 of 300 code lines, 1 of 100 files against main\noverall: blocked\n"
     )
   );
   let json = verdict_main(true, &opts);
@@ -69,11 +69,11 @@ fn outside_a_repository_or_without_git_the_verdict_is_an_error() {
 #[test]
 fn the_table_pads_like_printf_and_cuts_the_hash_to_twelve() {
   let report = parse_json(
-    r#"{"branch":"b","base_branch":"m","diff_sha":"0123456789abcdef","overall":"ready","gates":{"quality":{"state":"pass","reason":"q"},"plan":{"state":"skip","reason":"p"},"review":{"state":"pass","reason":"r"},"docs":{"state":"pass","reason":"d"}}}"#,
+    r#"{"branch":"b","base_branch":"m","diff_sha":"0123456789abcdef","overall":"ready","gates":{"quality":{"state":"pass","reason":"q"},"plan":{"state":"skip","reason":"p"},"review":{"state":"pass","reason":"r"},"docs":{"state":"pass","reason":"d"},"size":{"state":"pass","reason":"s"}}}"#,
   )
   .unwrap();
   assert_eq!(
     render_verdict_status(&report),
-    "verdict: b vs m (diff 0123456789ab)\nGATE     STATE     REASON\nquality  pass      q\nplan     skip      p\nreview   pass      r\ndocs     pass      d\noverall: ready\n"
+    "verdict: b vs m (diff 0123456789ab)\nGATE     STATE     REASON\nquality  pass      q\nplan     skip      p\nreview   pass      r\ndocs     pass      d\nsize     pass      s\noverall: ready\n"
   );
 }

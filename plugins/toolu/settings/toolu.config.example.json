@@ -24,6 +24,11 @@
     "agentTier": {
       "mode": "advise"
     },
+    "prSize": {
+      "mode": "block",
+      "maxLines": 300,
+      "maxFiles": 100
+    },
     "sweep": true,
     "stateTtlHours": 24,
     "telemetryRetentionDays": 7

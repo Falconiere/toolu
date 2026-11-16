@@ -30,6 +30,7 @@ reaches it only via `gates.<name>.mode`.
 | `planLedger` | block | **advise** | off |
 | `docsSync` | block | **advise** | off |
 | `agentTier` | block | **advise** | off |
+| `prSize` | block | **block** | advise |
 | `bashCommands` ⚠️ | block | **ask** | ask |
 | `protectedFiles` ⚠️ | block | **ask** | ask |
 | `mcpBlocker` ⚠️ | block | **ask** | ask |
@@ -62,6 +63,16 @@ nested shell commands and substitutions. See `writes` in
 ## Documentation review
 
 When `documentation-gate` is selected, its SessionStart registration makes the native docs review rule replace the legacy docs-sync check. Run `documentation-gate:sync` to route a separate editing worker and record a review of the committed diff. Missing, stale or incomplete review follows the configured `docsSync` mode; `off` is silent. The target repository supplies the effective configuration, including for static `git -C PATH` pushes. Use an explicit `git push <remote> HEAD:<branch>`; unsupported push forms are rejected under that mode unless a lone push sends only commits already in the base, and `push.followTags=true` needs `--no-follow-tags`. The hook never calls Jev. Without the active plugin, the legacy surface check remains.
+
+## PR size budget
+
+`prSize` holds the branch a `git push` sends to `gates.prSize.maxLines` code
+lines (default 300) and `gates.prSize.maxFiles` changed files (default 100).
+Tests, fixtures, docs and generated files add no code lines:
+`gates.prSize.alsoExclude` adds globs and `gates.prSize.exclude` replaces the list. It blocks under the default
+preset. `toolu ledger verdict status` shows the count as its `size` row. It
+has no waiver: split the branch, or have a person change the budget with
+`toolu config set gates.prSize.maxLines <n>`. See `docs/config.md`.
 
 ## Per-gate overrides
 

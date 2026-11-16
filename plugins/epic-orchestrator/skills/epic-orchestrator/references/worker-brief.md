@@ -86,6 +86,13 @@ directly.
    `origin/{{BASE}}` if it moved, then re-run affected checks.
    When repository instructions name a scoped pre-check, make it each code
    step's check with that step's paths; the final full gate remains required.
+   The PR must arrive small. Before every push, `wip:` pushes included, read
+   the `size` row of `toolu ledger verdict status`; over the review budget, do
+   not push, whatever the gate mode. If the plan's estimate or that row says
+   this issue cannot fit, do not shrink tests or edit `gates.prSize`: commit
+   locally, then
+   `report needs-human --note "over size budget: <n> of <max>; split: 1) … 2) …"`
+   naming slices that each merge alone, and stop.
 3. **PR.** The skill creates or finds the PR targeting `{{BASE}}`. Use a
    conventional-commit title. Its body starts with `{{CLOSES}}` and `Part of {{EPIC_REF}}`, followed by a
    summary and verification evidence. Verify its number and head/base branches;
@@ -132,7 +139,8 @@ the branch recoverable:
 - Commit as soon as a phase leaves working changes (`wip:` subjects are fine;
   the PR squash-merges; any other subject needs an `Intent:` trailer when
   git-better is installed), and `git push -u origin {{BRANCH}}` after each commit
-  that passes the affected tests. Pushing this branch is authorized.
+  that passes the affected tests and fits the size budget. Pushing this
+  branch is authorized.
 - Report each phase before starting it, so a relaunch resumes there.
 - Hit a provider usage or rate limit? `report failed --note "rate-limited: <message>"`
   if you still can, then stop. The engine moves the issue to another host.

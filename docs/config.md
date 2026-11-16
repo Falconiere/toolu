@@ -71,6 +71,8 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
   "planLedger": { "blockOnUncoveredAcs": false },
   "gates":      { "preset": "strict|balanced|relaxed",
                   "<gate>": { "mode": "block|ask|advise|off" },
+                  "prSize": { "mode": "block|ask|advise|off", "maxLines": 300,
+                              "maxFiles": 100, "alsoExclude": ["docs/cli/*"] },
                   "sweep": true,
                   "stateTtlHours": 24,
                   "telemetryRetentionDays": 7 },
@@ -249,7 +251,7 @@ How firmly a gate says no is configuration, not a constant. Full reference:
 `ask` requires a host that can prompt; on Codex it degrades to `advise`, so the
 gate still speaks rather than silently doing nothing.
 
-`gates.preset` sets all nine at once and **defaults to `balanced`**:
+`gates.preset` sets all ten at once and **defaults to `balanced`**:
 
 | Gate | `strict` | **`balanced`** | `relaxed` |
 |------|----------|----------------|-----------|
@@ -259,6 +261,7 @@ gate still speaks rather than silently doing nothing.
 | `planLedger` | block | **advise** | off |
 | `docsSync` | block | **advise** | off |
 | `agentTier` | block | **advise** | off |
+| `prSize` | block | **block** | advise |
 | `bashCommands` ⚠️ | block | **ask** | ask |
 | `protectedFiles` ⚠️ | block | **ask** | ask |
 | `mcpBlocker` ⚠️ | block | **ask** | ask |
@@ -457,6 +460,60 @@ you need a fixed tier that differs from the routing table.
 Plan steps can pin their own tier: a step in a `## Steps (machine-readable)`
 block may carry `"model": "<alias>"`, validated at parse time and surfaced by
 `toolu ledger status` as `model=<alias>` on the summary line for the next step.
+
+### PR size budget (`gates.prSize`)
+
+The pr-size gate (`crates/core/engine/src/gates/pr_size.rs`) measures the
+branch a `git push` sends and holds it to two budgets, so a pull request
+arrives small enough to review. It reads `git diff --numstat <base>...HEAD`:
+
+- **code lines**: added lines outside the excluded paths. Deletions are free
+  and binary files have none.
+- **changed files**: every file in the diff, excluded or not.
+
+| key | default | meaning |
+|---|---|---|
+| `gates.prSize.mode` | preset (`block` under balanced) | `block` denies an over-budget push; `ask` prompts; `advise` only tells the agent; `off` is silent |
+| `gates.prSize.maxLines` | `300` | the code-line budget, a positive integer |
+| `gates.prSize.maxFiles` | `100` | the changed-file budget, a positive integer |
+| `gates.prSize.exclude` | see below | globs whose lines are not code lines; an array **replaces** the built-in list, and `[]` counts every line |
+| `gates.prSize.alsoExclude` | none | globs **added** to the list, for a repository's own generated files |
+
+The built-in `exclude` list, in full:
+
+- generated: `*.lock`, `*-lock.json`, `*-lock.yaml`, `*/go.sum`, `*.snap`, `*.min.js`, `*.min.css`
+- tests and fixtures: `*/tests/*`, `*/test/*`, `*/__tests__/*`, `*/fixtures/*`, `*/testdata/*`, `*_test.*`, `*.test.*`, `*.spec.*`, `*/test_*.py`
+- prose: `*.md`, `*.mdx`, `*.rst`
+
+Globs are bash `case` patterns: `*` crosses `/`. Each path is matched as
+written and with a leading `/`, so `*/tests/*` also covers a root `tests/`.
+A budget that is not a positive integer warns and keeps its default.
+
+Change a budget with `toolu config set`, adding `--project` for one
+repository:
+
+```bash
+toolu config set gates.prSize.maxLines 500
+toolu config set gates.prSize.mode advise
+```
+
+The base is a non-empty `PUSH_REVIEW_BASE`, else `origin/<default branch>`
+when that ref exists, else the local default branch. The remote ref comes
+first because a local base shared by linked worktrees lags it, and the lag
+would count other merged work. A push of the default branch itself is exempt. When that base ref is missing
+the gate fails at its mode instead of letting the push through: fetch the
+base or set `PUSH_REVIEW_BASE`. When the ref exists but Git cannot diff
+against it, the push is allowed, as push-review allows it.
+
+`toolu ledger verdict status` shows the same measurement as its `size` row
+(`212 of 300 code lines, 14 of 100 files against origin/main`) without
+pushing. Under `block` or `ask` an over-budget branch reads `fail`, so the
+verdict is `blocked`.
+
+There is no waiver file: an agent cannot attest its way past the budget. The
+way out is to split the branch; changing a budget or the mode is a config
+change a person makes. Hooks run only in hosts that load them, and never on a
+push typed in a terminal.
 
 ### Docs-sync surfaces (`docsSync`)
 
