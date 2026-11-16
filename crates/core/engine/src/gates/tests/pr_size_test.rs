@@ -53,19 +53,23 @@ fn push(repo: &Repo, env: &Env) -> Decision {
 
 #[test]
 fn code_lines_skip_tests_docs_and_generated_files_but_every_file_is_counted() {
-  let numstat = "10\t90\tsrc/lib.rs\n500\t0\tCargo.lock\n-\t-\tlogo.png\n7\t0\tdocs/cli/x.md\n3\t1\tsrc/{old => new}/gate.rs\n40\t0\tcrates/a/src/tests/x_test.rs\n";
+  let numstat = "10\t90\tsrc/lib.rs\n500\t0\tCargo.lock\n-\t-\tlogo.png\n7\t0\tdocs/cli/x.md\n3\t1\tsrc/{old => new}/gate.rs\n40\t0\ttestdata/big.json\n";
   assert_eq!(counted(numstat, &config(&json!({}))), (13, 6));
   let all = config(&json!({"gates": {"prSize": {"exclude": []}}}));
   assert_eq!(counted(numstat, &all), (560, 6));
   let locks = config(&json!({"gates": {"prSize": {"exclude": ["*.lock"]}}}));
   assert_eq!(counted(numstat, &locks), (60, 6));
+  let also = config(&json!({"gates": {"prSize": {"alsoExclude": ["src/lib.rs"]}}}));
+  assert_eq!(counted(numstat, &also), (3, 6));
 }
 
 #[test]
 fn a_branch_is_measured_against_both_configured_budgets() {
   let repo = grown(9);
   let env = repo.env();
-  let size = branch_size(&repo.root, &env, &config(&json!({}))).expect("size");
+  let size = branch_size(&repo.root, &env, &config(&json!({})))
+    .expect("base")
+    .expect("size");
   assert_eq!(
     size.summary(),
     "10 of 300 code lines, 3 of 100 files against main"
@@ -73,11 +77,25 @@ fn a_branch_is_measured_against_both_configured_budgets() {
   assert!(!size.over());
   for tight in [json!({"maxLines": 9}), json!({"maxFiles": 2})] {
     let config = config(&json!({"gates": {"prSize": tight}}));
-    assert!(branch_size(&repo.root, &env, &config).expect("size").over());
+    assert!(
+      branch_size(&repo.root, &env, &config)
+        .expect("base")
+        .expect("size")
+        .over()
+    );
   }
-  let zero = config(&json!({"gates": {"prSize": {"maxLines": 0, "maxFiles": 0}}}));
-  let size = branch_size(&repo.root, &env, &zero).expect("size");
+  let wrong = config(&json!({"gates": {"prSize": {"maxLines": 0, "maxFiles": "9"}}}));
+  let size = branch_size(&repo.root, &env, &wrong)
+    .expect("base")
+    .expect("size");
   assert_eq!((size.max, size.max_files), (300, 100));
+  assert_eq!(
+    wrong.take_warnings(),
+    [
+      "gates.prSize.maxLines: 0 is not a positive integer; using 300",
+      "gates.prSize.maxFiles: \"9\" is not a positive integer; using 100",
+    ]
+  );
 }
 
 #[test]
@@ -87,9 +105,13 @@ fn the_remote_base_wins_over_a_lagging_local_base() {
     .sh("git update-ref refs/remotes/origin/main HEAD~1")
     .expect("origin");
   let unpinned = repo.env().with("PUSH_REVIEW_BASE", "");
-  let size = branch_size(&repo.root, &unpinned, &config(&json!({}))).expect("size");
+  let size = branch_size(&repo.root, &unpinned, &config(&json!({})))
+    .expect("base")
+    .expect("size");
   assert_eq!((size.added, size.base.as_str()), (9, "origin/main"));
-  let pinned = branch_size(&repo.root, &repo.env(), &config(&json!({}))).expect("size");
+  let pinned = branch_size(&repo.root, &repo.env(), &config(&json!({})))
+    .expect("base")
+    .expect("size");
   assert_eq!((pinned.added, pinned.base.as_str()), (10, "main"));
 }
 
@@ -113,6 +135,13 @@ fn an_over_budget_push_is_denied_by_default_and_the_base_branch_is_exempt() {
   set(r#"{"version":1,"gates":{"prSize":{"maxLines":351}}}"#);
   assert_eq!(push(&repo, &env), Decision::Allow);
   set(r#"{"version":1}"#);
+  let Decision::Deny { reason } = push(&repo, &env.clone().with("PUSH_REVIEW_BASE", "gone")) else {
+    panic!("an unmeasured branch is denied");
+  };
+  assert!(
+    reason.as_str().contains("base 'gone' not found locally"),
+    "{reason:?}"
+  );
   repo
     .sh("git branch -q -D main && git branch -q -m main")
     .expect("rename");

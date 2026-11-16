@@ -68,8 +68,8 @@ When `documentation-gate` is selected, its SessionStart registration makes the n
 
 `prSize` holds the branch a `git push` sends to `gates.prSize.maxLines` code
 lines (default 300) and `gates.prSize.maxFiles` changed files (default 100).
-Tests, fixtures, docs and generated files add no code lines; a
-`gates.prSize.exclude` array replaces that list. It blocks under the default
+Tests, fixtures, docs and generated files add no code lines:
+`gates.prSize.alsoExclude` adds globs and `gates.prSize.exclude` replaces the list. It blocks under the default
 preset. `toolu ledger verdict status` shows the count as its `size` row. It
 has no waiver: split the branch, or have a person change the budget with
 `toolu config set gates.prSize.maxLines <n>`. See `docs/config.md`.

@@ -72,7 +72,7 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
   "gates":      { "preset": "strict|balanced|relaxed",
                   "<gate>": { "mode": "block|ask|advise|off" },
                   "prSize": { "mode": "block|ask|advise|off", "maxLines": 300,
-                              "maxFiles": 100, "exclude": ["*.lock", "*.md"] },
+                              "maxFiles": 100, "alsoExclude": ["docs/cli/*"] },
                   "sweep": true,
                   "stateTtlHours": 24,
                   "telemetryRetentionDays": 7 },
@@ -477,12 +477,17 @@ arrives small enough to review. It reads `git diff --numstat <base>...HEAD`:
 | `gates.prSize.maxLines` | `300` | the code-line budget, a positive integer |
 | `gates.prSize.maxFiles` | `100` | the changed-file budget, a positive integer |
 | `gates.prSize.exclude` | see below | globs whose lines are not code lines; an array **replaces** the built-in list, and `[]` counts every line |
+| `gates.prSize.alsoExclude` | none | globs **added** to the list, for a repository's own generated files |
 
-The built-in `exclude` list covers generated files (`*.lock`, `*-lock.json`,
-`*-lock.yaml`, `go.sum`, `*.snap`, `*.min.js`, `*.min.css`), tests and
-fixtures (`tests/*`, `test/*`, `*/__tests__/*`, `*_test.*`, `*.test.*`,
-`*.spec.*`, `test_*.py`, `fixtures/*`, `*/testdata/*`) and prose (`*.md`,
-`*.mdx`, `*.rst`). Globs are bash `case` patterns: `*` crosses `/`.
+The built-in `exclude` list, in full:
+
+- generated: `*.lock`, `*-lock.json`, `*-lock.yaml`, `*/go.sum`, `*.snap`, `*.min.js`, `*.min.css`
+- tests and fixtures: `*/tests/*`, `*/test/*`, `*/__tests__/*`, `*/fixtures/*`, `*/testdata/*`, `*_test.*`, `*.test.*`, `*.spec.*`, `*/test_*.py`
+- prose: `*.md`, `*.mdx`, `*.rst`
+
+Globs are bash `case` patterns: `*` crosses `/`. Each path is matched as
+written and with a leading `/`, so `*/tests/*` also covers a root `tests/`.
+A budget that is not a positive integer warns and keeps its default.
 
 Change a budget with `toolu config set`, adding `--project` for one
 repository:
@@ -495,7 +500,10 @@ toolu config set gates.prSize.mode advise
 The base is a non-empty `PUSH_REVIEW_BASE`, else `origin/<default branch>`
 when that ref exists, else the local default branch. The remote ref comes
 first because a local base shared by linked worktrees lags it, and the lag
-would count other merged work. A push of the default branch itself is exempt.
+would count other merged work. A push of the default branch itself is exempt. When that base ref is missing
+the gate fails at its mode instead of letting the push through: fetch the
+base or set `PUSH_REVIEW_BASE`. When the ref exists but Git cannot diff
+against it, the push is allowed, as push-review allows it.
 
 `toolu ledger verdict status` shows the same measurement as its `size` row
 (`212 of 300 code lines, 14 of 100 files against origin/main`) without

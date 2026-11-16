@@ -27,9 +27,10 @@ pub const PRE_TOOL: &[&dyn Gate] = &[
   &DOCS_SYNC,
   &MCP_BLOCKER,
   &PLAN_LEDGER,
-  &PR_SIZE,
   &PROTECTED,
   &PUSH_REVIEW,
+  // After push-review, so its base-missing denial keeps the first word.
+  &PR_SIZE,
   &QUALITY_GATE,
 ];
 

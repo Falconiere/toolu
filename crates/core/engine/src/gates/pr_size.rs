@@ -27,29 +27,25 @@ const DEFAULT_MAX_LINES: u64 = 300;
 const DEFAULT_MAX_FILES: u64 = 100;
 
 /// Paths whose lines are not code lines: generated files, tests and fixtures,
-/// and prose. A `gates.prSize.exclude` array replaces the list.
+/// and prose. Each path is also matched with a leading `/`, so `*/tests/*`
+/// covers a root `tests/`. A `gates.prSize.exclude` array replaces the list.
 const NOT_CODE: &[&str] = &[
   "*.lock",
   "*-lock.json",
   "*-lock.yaml",
-  "go.sum",
   "*/go.sum",
   "*.snap",
   "*.min.js",
   "*.min.css",
-  "tests/*",
   "*/tests/*",
-  "test/*",
   "*/test/*",
   "*/__tests__/*",
+  "*/fixtures/*",
+  "*/testdata/*",
   "*_test.*",
   "*.test.*",
   "*.spec.*",
-  "test_*.py",
   "*/test_*.py",
-  "fixtures/*",
-  "*/fixtures/*",
-  "*/testdata/*",
   "*.md",
   "*.mdx",
   "*.rst",
@@ -90,22 +86,29 @@ fn setting<'a>(config: &'a LoadedConfig, key: &str) -> Option<&'a Value> {
 }
 
 fn limit(config: &LoadedConfig, key: &str, fallback: u64) -> u64 {
-  let configured = setting(config, key).and_then(Value::as_u64);
-  configured.filter(|max| *max > 0).unwrap_or(fallback)
+  let Some(value) = setting(config, key) else {
+    return fallback;
+  };
+  value.as_u64().filter(|max| *max > 0).unwrap_or_else(|| {
+    config.warn(format!(
+      "gates.prSize.{key}: {value} is not a positive integer; using {fallback}"
+    ));
+    fallback
+  })
+}
+
+fn globs(config: &LoadedConfig, key: &str) -> Option<Vec<String>> {
+  let items = setting(config, key)?.as_array()?;
+  let strings = items.iter().filter_map(Value::as_str);
+  Some(strings.map(str::to_owned).collect())
 }
 
 /// The code lines and changed files of `git diff --numstat` output. A binary
 /// file (`-`) or an excluded path is a changed file with no code lines.
 fn counted(numstat: &str, config: &LoadedConfig) -> (u64, u64) {
-  let configured = setting(config, "exclude").and_then(Value::as_array);
-  let excludes: Vec<String> = match configured {
-    Some(globs) => globs
-      .iter()
-      .filter_map(Value::as_str)
-      .map(str::to_owned)
-      .collect(),
-    None => NOT_CODE.iter().map(|glob| (*glob).to_owned()).collect(),
-  };
+  let mut excludes = globs(config, "exclude")
+    .unwrap_or_else(|| NOT_CODE.iter().map(|glob| (*glob).to_owned()).collect());
+  excludes.extend(globs(config, "alsoExclude").unwrap_or_default());
   let mut total = (0, 0);
   for line in numstat.lines() {
     let mut fields = line.splitn(3, '\t');
@@ -113,7 +116,7 @@ fn counted(numstat: &str, config: &LoadedConfig) -> (u64, u64) {
       continue;
     };
     total.1 += 1;
-    if !matches_any(path, &excludes) {
+    if !matches_any(path, &excludes) && !matches_any(&format!("/{path}"), &excludes) {
       total.0 += added.parse::<u64>().unwrap_or(0);
     }
   }
@@ -135,23 +138,33 @@ fn size_base(root: &Path, env: &Env, base: &str) -> String {
   }
 }
 
-/// The size of the checked-out branch, or none when Git cannot diff it.
-pub(crate) fn branch_size(root: &Path, env: &Env, config: &LoadedConfig) -> Option<Size> {
+/// The size of the checked-out branch, or none when the base exists but Git
+/// cannot diff against it, which push-review allows too (`diff-failed`).
+///
+/// # Errors
+/// The base ref, when it is missing: an unmeasured branch is not a small one.
+pub(crate) fn branch_size(
+  root: &Path,
+  env: &Env,
+  config: &LoadedConfig,
+) -> Result<Option<Size>, String> {
   let base = size_base(root, env, &base_branch(env, Some(root), root));
+  if !ref_exists(root, &base, env) {
+    return Err(base);
+  }
   let range = format!("{base}...HEAD");
-  let numstat = git_at(
-    root,
-    &["-c", "core.quotepath=false", "diff", "--numstat", &range],
-    env,
-  )?;
+  let args = ["-c", "core.quotepath=false", "diff", "--numstat", &range];
+  let Some(numstat) = git_at(root, &args, env) else {
+    return Ok(None);
+  };
   let (added, files) = counted(&numstat, config);
-  Some(Size {
+  Ok(Some(Size {
     added,
     max: limit(config, "maxLines", DEFAULT_MAX_LINES),
     files,
     max_files: limit(config, "maxFiles", DEFAULT_MAX_FILES),
     base,
-  })
+  }))
 }
 
 fn message(size: &Size, mode: GateMode) -> String {
@@ -181,9 +194,17 @@ fn evaluate(
   if branch == base_branch(ctx.env, Some(&root), &root) {
     return Ok(Decision::Allow);
   }
-  match branch_size(&root, ctx.env, &config).filter(Size::over) {
-    Some(size) => decided(mode, message(&size, mode)),
-    None => Ok(Decision::Allow),
+  let size = branch_size(&root, ctx.env, &config);
+  warnings.extend(config.take_warnings());
+  match size {
+    Ok(Some(size)) if size.over() => decided(mode, message(&size, mode)),
+    Ok(_) => Ok(Decision::Allow),
+    Err(base) => decided(
+      mode,
+      format!(
+        "pr-size: cannot measure this branch: base '{base}' not found locally. Fetch it (`git fetch origin`), or set `PUSH_REVIEW_BASE` to the branch this one merges into, then push again."
+      ),
+    ),
   }
 }
 

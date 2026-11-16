@@ -43,6 +43,8 @@ fn the_row_reports_the_count_and_fails_only_where_the_push_would_stop() {
     row(&repo, "main"),
     "skip: current branch is the base branch"
   );
+  repo.sh("git branch -q -m main trunk").unwrap();
+  assert_eq!(row(&repo, "feat/x"), "fail: base 'main' not found locally");
   config(&repo, "off");
   assert_eq!(row(&repo, "feat/x"), "skip: prSize mode is off");
 }
