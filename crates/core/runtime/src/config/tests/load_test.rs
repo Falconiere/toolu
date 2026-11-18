@@ -3,7 +3,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 
-use super::{ConfigFiles, LoadedConfig, WARN_PREFIX, check_text, exists, load, merge};
+use super::{ConfigFiles, LoadedConfig, check_text, exists, load, merge};
 use crate::env::Env;
 use crate::host::roots::Roots;
 
@@ -274,11 +274,6 @@ fn codex_and_toolu_user_config_dir_choose_their_files() {
     super::config_files(&hermes, None).user,
     global.join("toolu.config.json")
   );
-}
-
-#[test]
-fn warnings_are_printed_after_the_config_prefix() {
-  assert_eq!(WARN_PREFIX, "toolu-config: ");
 }
 
 #[test]

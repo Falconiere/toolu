@@ -1,4 +1,4 @@
-//! The crate links from outside and Muse payloads reach the native walk.
+//! Muse payloads reach the native walk.
 
 use std::time::Duration;
 
@@ -24,11 +24,6 @@ fn assert_muse_refusal(
     assert_eq!(result.result.exit_code, 0);
     assert_eq!(result.trace, Vec::new());
   }
-}
-
-#[test]
-fn the_crate_links_and_names_its_layer() {
-  assert_eq!(toolu_engine::LAYER, "engine");
 }
 
 #[test]

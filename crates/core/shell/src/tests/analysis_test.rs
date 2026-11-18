@@ -1,4 +1,5 @@
 use super::{CommandOrigin, PipelinePosition, RedirectOperator, Tristate};
+use crate::analyze;
 
 #[test]
 fn every_redirect_operator_reads_back_from_its_spelling() {
@@ -41,9 +42,26 @@ fn origins_and_tristates_use_the_typescript_names() {
 }
 
 #[test]
-fn alone_is_the_first_of_one() {
+fn a_pipe_records_each_commands_index_and_the_pipeline_length() {
+  let place = |source: &str| -> Vec<(String, PipelinePosition)> {
+    analyze(source)
+      .commands
+      .iter()
+      .map(|command| {
+        let name = command.argv.first().cloned().flatten().unwrap_or_default();
+        (name, command.pipeline)
+      })
+      .collect()
+  };
   assert_eq!(
-    PipelinePosition::ALONE,
-    PipelinePosition { index: 0, size: 1 }
+    place("echo alone"),
+    [("echo".to_owned(), PipelinePosition::ALONE)]
+  );
+  assert_eq!(
+    place("echo left | cat"),
+    [
+      ("echo".to_owned(), PipelinePosition { index: 0, size: 2 }),
+      ("cat".to_owned(), PipelinePosition { index: 1, size: 2 }),
+    ]
   );
 }

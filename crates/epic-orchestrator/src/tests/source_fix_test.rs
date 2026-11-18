@@ -1,9 +1,12 @@
-use super::fixture;
+use super::{fixture, in_repo};
 
 #[test]
-fn fixture_builds_a_running_issue() {
-  let fix = fixture(true).expect("fixture");
-  assert!(fix.env.get("HERDR_SOCKET_PATH").is_some());
-  let rows = fix.script.agents.as_array().expect("agents");
-  assert_eq!(rows.len(), 1);
+fn in_repo_records_the_issue_repository() {
+  let fix = fixture(false).expect("fixture");
+  in_repo(&fix).expect("graph");
+  let graph = std::fs::read_to_string(fix.tmp.path().join("epic/graph.json")).expect("read");
+  assert_eq!(
+    graph,
+    r#"{"epic":"one","issues":[{"key":"a","repo":"o/r","open_blockers":[]}]}"#
+  );
 }
