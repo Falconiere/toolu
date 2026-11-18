@@ -6,6 +6,13 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [10.1.1](https://github.com/Falconiere/toolu/compare/v10.1.0...v10.1.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **plugins:** offer Grok when grok is on PATH ([#916](https://github.com/Falconiere/toolu/issues/916)) ([3f37745](https://github.com/Falconiere/toolu/commit/3f37745f9dadbd2d304f23b9ba977e54a9dd9333))
+
 ## [10.1.0](https://github.com/Falconiere/toolu/compare/v10.0.0...v10.1.0) (2026-11-18)
 
 
