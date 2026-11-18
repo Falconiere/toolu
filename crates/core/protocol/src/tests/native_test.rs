@@ -118,10 +118,16 @@ fn names_from_another_host_or_unknown_names_are_none() {
 }
 
 #[test]
-fn pascal_case_names_belong_to_claude_codex_muse_and_opencode() {
+fn pascal_case_names_include_qwen() {
   assert_eq!(
     hosts_for_native("PreToolUse"),
-    [Host::Claude, Host::Codex, Host::Muse, Host::Opencode]
+    [
+      Host::Claude,
+      Host::Codex,
+      Host::Muse,
+      Host::Opencode,
+      Host::Qwen
+    ]
   );
 }
 

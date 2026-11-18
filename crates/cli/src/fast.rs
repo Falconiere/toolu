@@ -7,6 +7,7 @@
 //! `hook` command (`command`) mirrors this grammar and reports the error.
 
 use clap::{Arg, ArgMatches, Command};
+use toolu_protocol::host::Host;
 use toolu_protocol::launcher::is_name;
 
 use crate::registry::starts_hook_line;
@@ -40,6 +41,7 @@ pub(crate) fn parse(words: &[String]) -> Option<Fast> {
   let strs: Vec<&str> = words.iter().map(String::as_str).collect();
   match strs.as_slice() {
     ["--hook-protocol"] => Some(Fast::HookProtocol),
+    ["--host", host, "--hook-protocol"] if Host::parse(host).is_some() => Some(Fast::HookProtocol),
     ["statusline", "render"] => Some(Fast::StatuslineRender),
     ["hook", name, rest @ ..] => hook("toolu", name, rest),
     [plugin, "hook", name, rest @ ..] if is_name(plugin) && starts_hook_line(plugin) => {

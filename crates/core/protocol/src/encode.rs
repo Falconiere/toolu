@@ -54,6 +54,7 @@ enum Normal<'a> {
 pub fn supports_ask(host: Host, event: HostEvent) -> bool {
   match host {
     Host::Claude => pre_action(event) || event == HostEvent::PermissionEvaluate,
+    Host::Qwen => pre_action(event),
     // Codex drops a PreToolUse ask and runs the tool; PermissionRequest shows its own prompt.
     Host::Codex => event == HostEvent::PermissionEvaluate,
     // Cursor accepts but does not enforce ask on preToolUse.
@@ -86,7 +87,7 @@ pub fn encode(host: Host, event: HostEvent, decision: &Decision) -> Result<Encod
   let normal = normalize(host, event, decision);
   Ok(match host {
     // The OpenCode bridge reads Claude's output and translates it (`crate::opencode::reply`).
-    Host::Claude | Host::Codex | Host::Opencode => {
+    Host::Claude | Host::Codex | Host::Opencode | Host::Qwen => {
       Encoded::Command(hook::output(native, event, normal))
     }
     Host::Cursor => Encoded::Command(cursor::output(event, normal)),

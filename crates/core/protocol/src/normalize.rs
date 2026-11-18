@@ -44,9 +44,35 @@ impl Payload {
       Payload::Cursor(payload) => cursor_view(payload),
       Payload::Hermes(payload) => hermes_view(payload),
       Payload::Muse(payload) => muse::view(payload),
+      Payload::Qwen(payload) => {
+        let mut view = hook_view(payload);
+        view.tool_name = view.tool_name.map(qwen_tool_name);
+        view
+      }
     };
     view.event(event, roots)
   }
+}
+
+/// Translate Qwen Code tool IDs used by toolu's gates to their canonical names.
+pub fn qwen_tool_name(name: &str) -> &str {
+  match name {
+    "run_shell_command" => "Bash",
+    "write_file" => "Write",
+    "edit" => "Edit",
+    "grep_search" => "Grep",
+    "read_file" => "Read",
+    "web_fetch" => "WebFetch",
+    "web_search" => "WebSearch",
+    "agent" => "Agent",
+    _ => name,
+  }
+}
+
+/// Qwen's shell accepts an optional absolute working directory.
+pub fn qwen_shell_directory(input: Option<&Value>) -> Option<&str> {
+  let dir = input?.get("directory")?.as_str()?;
+  std::path::Path::new(dir).is_absolute().then_some(dir)
 }
 
 impl View<'_> {

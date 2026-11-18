@@ -231,6 +231,7 @@ pub(super) fn host_of(target: Target) -> Host {
     Target::Muse => Host::Muse,
     Target::Cursor => Host::Cursor,
     Target::Opencode => Host::Opencode,
+    Target::Qwen => Host::Qwen,
   }
 }
 

@@ -70,9 +70,10 @@ fn parse(value: &Value) -> Result<Selection, String> {
       "claude" => Target::Claude,
       "codex" => Target::Codex,
       "muse" => Target::Muse,
+      "qwen" => Target::Qwen,
       _other => {
         return Err(format!(
-          "\"host\" must be claude, codex or muse, got {name}"
+          "\"host\" must be claude, codex, muse or qwen, got {name}"
         ));
       }
     }),

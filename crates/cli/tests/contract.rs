@@ -217,7 +217,7 @@ fn host_must_be_a_known_host_and_config_dir_is_accepted() {
   assert!(
     stderr(&bogus)
       .unwrap()
-      .contains("[possible values: claude, codex, cursor, hermes, muse, opencode]")
+      .contains("[possible values: claude, codex, cursor, hermes, muse, opencode, qwen]")
   );
   let known = toolu(&["--host", "codex", "--config-dir", "/tmp", "commands"]).unwrap();
   assert_eq!(known.status.code(), Some(0));
@@ -227,6 +227,16 @@ fn host_must_be_a_known_host_and_config_dir_is_accepted() {
   assert_eq!(muse.status.code(), Some(0));
   assert!(one_document(&muse).is_ok());
   assert_eq!(stderr(&muse).unwrap(), "");
+}
+
+#[test]
+fn qwen_capability_probe_recognizes_only_known_hosts() {
+  let protocol = toolu(&["--hook-protocol"]).unwrap();
+  let qwen = toolu(&["--host", "qwen", "--hook-protocol"]).unwrap();
+  assert!(qwen.status.success());
+  assert_eq!(qwen.stdout, protocol.stdout);
+  let unknown = toolu(&["--host", "unknown", "--hook-protocol"]).unwrap();
+  assert_eq!(unknown.status.code(), Some(64));
 }
 
 #[test]

@@ -6,12 +6,13 @@ use crate::args::Scope;
 use crate::support::{Answer, Sandbox};
 
 #[test]
-fn installer_targets_are_claude_codex_muse_cursor_and_opencode() {
+fn installer_targets_include_qwen_code() {
   assert_eq!(target_of(Host::Claude), Ok(Target::Claude));
   assert_eq!(target_of(Host::Codex), Ok(Target::Codex));
   assert_eq!(target_of(Host::Muse), Ok(Target::Muse));
   assert_eq!(target_of(Host::Cursor), Ok(Target::Cursor));
   assert_eq!(target_of(Host::Opencode), Ok(Target::Opencode));
+  assert_eq!(target_of(Host::Qwen), Ok(Target::Qwen));
   let Err(fail) = target_of(Host::Hermes) else {
     panic!("hermes was accepted");
   };
@@ -19,7 +20,7 @@ fn installer_targets_are_claude_codex_muse_cursor_and_opencode() {
   assert!(
     fail
       .message
-      .contains("claude, codex, muse, cursor or opencode"),
+      .contains("claude, codex, muse, cursor, opencode or qwen"),
     "{}",
     fail.message
   );
@@ -97,7 +98,7 @@ fn an_explicit_host_wins_and_one_found_host_is_used() {
   assert_eq!(none.exit, Exit::Usage);
   assert_eq!(
     none.message,
-    "no host found on PATH (probed claude, codex, muse). Choose one with --host."
+    "no host found on PATH (probed claude, codex, muse, qwen). Choose one with --host."
   );
   sb.stub("codex", "exit 0");
   assert_eq!(
@@ -173,11 +174,12 @@ fn only_hosts_whose_removal_reaches_only_toolu_take_retired_names() {
     Target::Codex,
     Target::Cursor,
     Target::Opencode,
+    Target::Qwen,
     Target::Muse,
   ];
   assert_eq!(
     hosts.map(Target::removes_only_toolu),
-    [true, true, true, true, false]
+    [true, true, true, true, true, false]
   );
 }
 

@@ -93,7 +93,7 @@ fn advice(
     .and_then(|reason| gate_decision(mode, reason))
     .and_then(|decision: Decision| {
       let host = match roots.host() {
-        Host::Codex | Host::Muse => roots.host(),
+        Host::Codex | Host::Muse | Host::Qwen => roots.host(),
         Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => Host::Claude,
       };
       encode(host, HostEvent::ToolPre, &decision).ok()
@@ -114,7 +114,8 @@ fn evaluate(payload: &str, env: Env, cwd: &Path) -> Outcome {
   let tool = get(&doc, "tool_name").map(value_text).unwrap_or_default();
   let host = detect(&env, None).host;
   let delegation = matches!(tool.as_str(), "Agent" | "Task" | "spawn_agent")
-    || (host == Host::Muse && tool == "subagent_spawn");
+    || (host == Host::Muse && tool == "subagent_spawn")
+    || (host == Host::Qwen && toolu_protocol::normalize::qwen_tool_name(&tool) == "Agent");
   if !delegation || !has_git(&env) {
     return silent();
   }

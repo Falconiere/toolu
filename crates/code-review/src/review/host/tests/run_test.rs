@@ -23,9 +23,12 @@ fn invocation(
 }
 
 #[test]
-fn every_host_either_has_a_binary_or_is_hermes() {
+fn only_supported_review_workers_have_binaries() {
   for host in Host::ALL {
-    assert_eq!(binary(host).is_some(), host != Host::Hermes);
+    assert_eq!(
+      binary(host).is_some(),
+      !matches!(host, Host::Hermes | Host::Qwen)
+    );
   }
 }
 

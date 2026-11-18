@@ -74,7 +74,7 @@ fn efforts(host: Option<Host>) -> &'static [&'static str] {
       "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
     ],
     Some(Host::Cursor) => &["model"],
-    Some(Host::Hermes | Host::Opencode) | None => &[],
+    Some(Host::Hermes | Host::Opencode | Host::Qwen) | None => &[],
   }
 }
 

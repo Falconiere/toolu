@@ -3,9 +3,12 @@
 use serde_json::json;
 
 use super::output;
-use crate::encode::Normal;
+use crate::decision::Decision;
 use crate::encode::tests::parsed;
+use crate::encode::{Encoded, Normal, encode};
 use crate::event::HostEvent;
+use crate::host::Host;
+use crate::text::Text;
 
 #[test]
 fn allow_is_silent() {
@@ -24,6 +27,30 @@ fn a_pre_tool_use_deny_or_ask_is_a_permission_decision() {
   };
   decide(Normal::Deny("protected file"), "deny");
   decide(Normal::Ask("protected file"), "ask");
+}
+
+#[test]
+fn qwen_tool_permissions_and_prompt_blocks_use_native_output() {
+  let stdout = |event, decision| {
+    let Encoded::Command(out) = encode(Host::Qwen, event, &decision).unwrap();
+    parsed(&out)
+  };
+  let reason = Text::new("protected file").unwrap();
+  let deny = Decision::Deny {
+    reason: reason.clone(),
+  };
+  assert_eq!(stdout(HostEvent::ToolPre, Decision::Allow), json!(""));
+  for (decision, permission) in [(deny.clone(), "deny"), (Decision::Ask { reason }, "ask")] {
+    assert_eq!(
+      stdout(HostEvent::ToolPre, decision),
+      json!({ "hookSpecificOutput": { "hookEventName": "PreToolUse",
+        "permissionDecision": permission, "permissionDecisionReason": "protected file" } })
+    );
+  }
+  assert_eq!(
+    stdout(HostEvent::Prompt, deny),
+    json!({"decision": "block", "reason": "protected file"})
+  );
 }
 
 #[test]

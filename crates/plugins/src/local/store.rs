@@ -29,10 +29,9 @@ pub(crate) enum State {
 /// A host's local plugins directory.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Store {
-  /// Cursor's `<config>/plugins/local`, `OpenCode`'s `<config>/plugins`.
+  /// The directory the host searches for local plugins.
   pub(crate) dir: PathBuf,
-  /// Whether each copy gets `OpenCode`'s `server.js` shim.
-  pub(crate) shim: bool,
+  target: Target,
 }
 
 /// The `version` of a plugin directory's Claude-format manifest.
@@ -45,31 +44,35 @@ pub(crate) fn version_of(plugin: &Path) -> Option<String> {
 /// The `OpenCode` shim for the plugin copied from `source` as `name`: the hooks its
 /// `hooks.json` needs, and its skills and commands when it has any.
 pub(crate) fn opencode_shim(source: &Path, name: &str) -> Result<String, String> {
-  let hooks = match std::fs::read_to_string(source.join("hooks/hooks.json")) {
-    Ok(text) => serde_json::from_str::<Value>(&text)
-      .map_err(|err| format!("{name}: hooks/hooks.json is not JSON: {err}"))?,
-    Err(err) if err.kind() == std::io::ErrorKind::NotFound => Value::Null,
-    Err(err) => return Err(format!("{name}: cannot read hooks/hooks.json: {err}")),
-  };
+  let hooks = read_hooks(source, name)?;
   let catalog = ["skills", "commands"]
     .iter()
     .any(|dir| source.join(dir).is_dir());
   shim(name, &hooks_of(&hooks), catalog)
 }
 
+/// Read a plugin's shared hook inventory; an absent file means it has no hooks.
+pub(super) fn read_hooks(source: &Path, name: &str) -> Result<Value, String> {
+  match std::fs::read_to_string(source.join("hooks/hooks.json")) {
+    Ok(text) => serde_json::from_str(&text)
+      .map_err(|err| format!("{name}: hooks/hooks.json is not JSON: {err}")),
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(Value::Null),
+    Err(err) => Err(format!("{name}: cannot read hooks/hooks.json: {err}")),
+  }
+}
+
 impl Store {
   /// The store of `target` under the config of `env`.
   pub(crate) fn locate(env: &Env, target: Target) -> Store {
-    if target == Target::Opencode {
-      return Store {
-        dir: plugins_dir(&Roots::new(env.clone(), Some(Host::Opencode))),
-        shim: true,
-      };
-    }
-    Store {
-      dir: local_dir(&Roots::new(env.clone(), Some(Host::Cursor))),
-      shim: false,
-    }
+    let roots = |host| Roots::new(env.clone(), Some(host));
+    let dir = match target {
+      Target::Opencode => plugins_dir(&roots(Host::Opencode)),
+      Target::Qwen => roots(Host::Qwen).config_root().join("extensions"),
+      Target::Claude | Target::Codex | Target::Muse | Target::Cursor => {
+        local_dir(&roots(Host::Cursor))
+      }
+    };
+    Store { dir, target }
   }
 
   /// Where plugin `name` lives.
@@ -107,20 +110,22 @@ impl Store {
   /// Copies `source` to `name`, replacing a plugin of toolu's own: the copy is
   /// finished beside the target and renamed into place.
   pub(crate) fn put(&self, source: &Path, name: &str, tag: &str) -> Result<(), String> {
+    let target = self.path(name);
     let staged = self.dir.join(format!(".{name}.toolu-staging"));
     let io = |what: &str, err: std::io::Error| format!("{what} {}: {err}", staged.display());
     if staged.exists() {
       std::fs::remove_dir_all(&staged).map_err(|err| io("cannot clear", err))?;
     }
     copy_tree(source, &staged).map_err(|err| io("cannot copy into", err))?;
-    if self.shim {
+    if self.target == Target::Opencode {
       let text = opencode_shim(source, name)?;
       std::fs::write(staged.join(FILE), text).map_err(|err| io("cannot write the shim in", err))?;
+    } else if self.target == Target::Qwen {
+      super::qwen::write(source, &staged, &target, name)?;
     }
     let marker = json!({"tag": tag, "version": version_of(source)});
     std::fs::write(staged.join(MARKER), format!("{marker}\n"))
       .map_err(|err| io("cannot mark", err))?;
-    let target = self.path(name);
     if target.exists() {
       std::fs::remove_dir_all(&target)
         .map_err(|err| format!("cannot replace {}: {err}", target.display()))?;

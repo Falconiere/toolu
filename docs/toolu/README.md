@@ -12,7 +12,7 @@ Install the [native binary](../install.md), then the core plugin:
 toolu plugins install toolu
 ```
 
-Use `--host claude|codex|muse|cursor|opencode` to select a host. See the
+Use `--host claude|codex|muse|cursor|opencode|qwen` to select a host. See the
 [installer guide](../cli/installer.md) for hook trust and approval steps.
 The optional `code-simplifier` companion comes from the
 `anthropics/claude-plugins-official` marketplace.
@@ -148,7 +148,8 @@ plugins/toolu/
 ```
 
 OpenCode's installer generates a `server.js` shim in each installed plugin;
-it forwards events to the native bridge. Core commands also provide
+it forwards events to the native bridge. The Qwen installer embeds the native
+hook commands in each extension’s `qwen-extension.json`. Core commands also provide
 [garbage collection](../cli/gc.md). See the [remote worker removal guide](../delegation.md)
 for upgrade and recovery guidance.
 

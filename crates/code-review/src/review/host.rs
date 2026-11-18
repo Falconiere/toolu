@@ -62,7 +62,7 @@ pub(crate) fn binary(host: Host) -> Option<&'static str> {
     Host::Claude => Some("claude"),
     Host::Codex => Some("codex"),
     Host::Cursor => Some("cursor-agent"),
-    Host::Hermes => None,
+    Host::Hermes | Host::Qwen => None,
     Host::Muse => Some("muse"),
     Host::Opencode => Some("opencode"),
   }
@@ -87,7 +87,7 @@ pub(crate) fn delivery(host: Host) -> Delivery {
   match host {
     Host::Claude | Host::Codex => Delivery::Stdin,
     Host::Muse => Delivery::PromptFile,
-    Host::Cursor | Host::Opencode | Host::Hermes => Delivery::Argv,
+    Host::Cursor | Host::Opencode | Host::Hermes | Host::Qwen => Delivery::Argv,
   }
 }
 
@@ -98,7 +98,7 @@ pub(crate) fn premium_model(host: Host) -> Option<&'static str> {
   match host {
     Host::Cursor => Some("claude-opus-5-thinking-high"),
     Host::Opencode => Some("anthropic/claude-opus-5"),
-    Host::Claude | Host::Codex | Host::Hermes | Host::Muse => None,
+    Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Qwen => None,
   }
 }
 
@@ -196,6 +196,7 @@ fn flags(spec: &Argv<'_>) -> Result<Vec<String>, String> {
       args.extend(["run".into(), "--format".into(), "json".into()]);
     }
     Host::Hermes => return Err("hermes has no review CLI".to_owned()),
+    Host::Qwen => return Err("qwen is not supported as a review worker".to_owned()),
   }
   Ok(args)
 }

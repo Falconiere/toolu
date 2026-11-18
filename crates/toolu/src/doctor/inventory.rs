@@ -64,8 +64,26 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
     Host::Muse => super::muse::collect(roots),
     Host::Cursor => super::cursor::collect(roots),
     Host::Opencode => super::opencode::collect(roots),
+    Host::Qwen => qwen(roots),
     Host::Hermes => Inventory::warn("plugin inventory is unknown for this host"),
   }
+}
+
+fn qwen(roots: &Roots) -> Inventory {
+  let (found, unreadable) = super::opencode::ours(&roots.config_root().join("extensions"));
+  let missing: Vec<_> = found
+    .iter()
+    .filter(|(_, root)| !root.join("qwen-extension.json").is_file())
+    .map(|(name, _)| name.as_str())
+    .collect();
+  let warning = unreadable.or_else(|| {
+    (!missing.is_empty()).then(|| format!("missing qwen-extension.json in {}", missing.join(", ")))
+  });
+  let plugins = found
+    .into_iter()
+    .map(|(name, root)| plugin_at(&name, root))
+    .collect();
+  Inventory { plugins, warning }
 }
 
 /// The plugins check. An unavailable or empty inventory warns and does not fail.

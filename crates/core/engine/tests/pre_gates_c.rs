@@ -64,3 +64,27 @@ fn push_without_review_is_denied_on_the_target_branch() {
       .contains("Code review required before push")
   );
 }
+
+#[test]
+fn qwen_push_review_targets_the_shell_directory() {
+  let target = branch().expect("target branch");
+  let hook = Hook::new(Host::Qwen).expect("Qwen workspace");
+  write(
+    &hook.sb.path("project/.qwen/toolu.config.json"),
+    &json!({"version": 1, "gates": {"preset": "strict"}}).to_string(),
+  )
+  .expect("Qwen config");
+  let payload = json!({
+    "session_id": "s1", "hook_event_name": "PreToolUse",
+    "tool_name": "run_shell_command",
+    "tool_input": {"command": "git push", "directory": target.sb.path("project")},
+  });
+  let got = hook.run(Phase::Pre, &payload.to_string(), PRE_TOOL, &[]);
+  let output: serde_json::Value =
+    serde_json::from_str(&got.result.stdout).expect("Qwen push decision");
+  let decision = &output["hookSpecificOutput"];
+  assert_eq!(decision["permissionDecision"], "deny", "{got:?}");
+  let reason = decision["permissionDecisionReason"].as_str().unwrap();
+  assert!(reason.contains("Code review required before push"));
+  assert!(reason.contains("feat_example.json"), "{reason}");
+}

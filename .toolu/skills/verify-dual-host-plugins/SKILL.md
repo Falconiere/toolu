@@ -1,6 +1,6 @@
 ---
 name: verify-dual-host-plugins
-description: Verify toolu plugin packaging and startup on Codex, Claude Code, and Muse. Use when adding or reviewing host plugins.
+description: Verify toolu plugin packaging and startup across supported hosts. Use when adding or reviewing host plugins.
 metadata:
   toolu:
     origin: agent
@@ -9,7 +9,7 @@ metadata:
 ## When to Use
 
 Use when adding or reviewing a toolu plugin that must install and deliver working
-startup behavior in Codex, Claude Code, or Muse.
+startup behavior in a supported host.
 
 ## Procedure
 
@@ -47,6 +47,10 @@ startup behavior in Codex, Claude Code, or Muse.
    rejected before the hook runs. Check the test's terminal status, exit code,
    stdout and parsed `system_message`: startup context and the native runtime
    line belong in `systemMessage`.
+9. For Qwen Code, install into a scratch `QWEN_HOME` containing spaces and run
+   `qwen extensions list`. Run the live edit and Git checks with the checkout
+   binary via `TOOLU_BIN`. Point a push test's shell `directory` at a second
+   scratch Git repository and verify that its bare origin gets no ref.
 
 ## Pitfalls
 

@@ -65,14 +65,16 @@ fn on(
   cx: &Context<'_>,
 ) -> Res<Vec<Step>> {
   match target {
-    Target::Cursor | Target::Opencode => cx.spinning(target.name(), "copying plugins", |cx| {
-      local::update(
-        &Local::new(cx, target)?,
-        catalog,
-        &have.names,
-        request.dry_run,
-      )
-    }),
+    Target::Cursor | Target::Opencode | Target::Qwen => {
+      cx.spinning(target.name(), "copying plugins", |cx| {
+        local::update(
+          &Local::new(cx, target)?,
+          catalog,
+          &have.names,
+          request.dry_run,
+        )
+      })
+    }
     Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
       &driver(target, request, cx)?,
       catalog,
@@ -86,7 +88,7 @@ fn on(
 /// The toolu plugins `target` reports, read without changing anything; why
 /// they could not be read otherwise.
 fn installed(target: Target, request: &Request, cx: &Context<'_>) -> Result<Have, String> {
-  if matches!(target, Target::Cursor | Target::Opencode) {
+  if matches!(target, Target::Cursor | Target::Opencode | Target::Qwen) {
     let names = Store::locate(&cx.env, target).ours();
     return Ok(Have {
       names,

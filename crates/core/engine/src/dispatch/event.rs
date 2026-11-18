@@ -4,7 +4,10 @@
 
 use serde_json::{Map, Value, json};
 use std::cell::OnceCell;
+use std::path::Path;
 use toolu_protocol::event::HostEvent;
+use toolu_protocol::host::Host;
+use toolu_protocol::normalize::qwen_shell_directory;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_runtime::registry::rule::{EditOperation, EditSplit, RuleContext};
@@ -154,12 +157,19 @@ impl View {
     payload: &'v Payload<'_>,
     session: &'v Session<'_>,
   ) -> RuleContext<'v> {
+    let mut cwd = session.cwd();
+    if session.host == Host::Qwen
+      && payload.tool_name == "Bash"
+      && let Some(directory) = qwen_shell_directory(self.raw.get("tool_input"))
+    {
+      cwd = Path::new(directory);
+    }
     RuleContext {
       host: session.host,
       env: &session.env,
       config_root: &session.config_root,
       project_root: &session.project_root,
-      cwd: Some(session.cwd()),
+      cwd: Some(cwd),
       plugin_root: session
         .options
         .lib_dir

@@ -189,6 +189,45 @@ fn codex_reads_like_claude() {
 }
 
 #[test]
+fn qwen_run_shell_command_reaches_shell_pre() {
+  let event = normalize(
+    Host::Qwen,
+    HostEvent::ToolPre,
+    r#"{"hook_event_name":"PreToolUse","session_id":"s","cwd":"/repo",
+        "tool_name":"run_shell_command","tool_use_id":"call",
+        "tool_input":{"command":"git push"}}"#,
+  );
+  let NormalizedEvent::ShellPre { tool, command, .. } = &event else {
+    panic!("expected shell/pre: {event:?}");
+  };
+  assert_eq!(command.as_str(), "git push");
+  assert_eq!(tool.name.as_str(), "Bash");
+  assert_eq!(tool.call_id.as_str(), "call");
+}
+
+#[test]
+fn qwen_tool_ids_reach_existing_file_and_search_gates() {
+  for (native, canonical, input) in [
+    (
+      "write_file",
+      "Write",
+      json!({"file_path": "/repo/.env", "content": "demo"}),
+    ),
+    (
+      "edit",
+      "Edit",
+      json!({"file_path": "/repo/file", "old_string": "old", "new_string": "new"}),
+    ),
+    ("grep_search", "Grep", json!({"pattern": "demo"})),
+  ] {
+    let payload = json!({"tool_name": native, "tool_input": input}).to_string();
+    let event = normalize(Host::Qwen, HostEvent::ToolPre, &payload);
+    assert_eq!(event.kind(), EventKind::ToolPre);
+    assert_eq!(event.tool().unwrap().name.as_str(), canonical);
+  }
+}
+
+#[test]
 fn cursor_before_shell_execution_is_the_shell_tool() {
   let event = normalize(
     Host::Cursor,

@@ -28,6 +28,7 @@ pub(crate) fn extract(host: Host, stdout: &str) -> Result<Extracted, String> {
     Host::Opencode => extract_opencode(stdout),
     Host::Codex | Host::Muse => extract_raw(host, stdout),
     Host::Hermes => Err("hermes has no review CLI".to_owned()),
+    Host::Qwen => Err("qwen is not supported as a review worker".to_owned()),
   }
 }
 

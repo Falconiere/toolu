@@ -7,7 +7,7 @@ use serde_json::Value;
 use std::cell::OnceCell;
 use toolu_protocol::event::HostEvent;
 use toolu_protocol::host::Host;
-use toolu_protocol::normalize::Roots as ProtocolRoots;
+use toolu_protocol::normalize::{Roots as ProtocolRoots, qwen_tool_name};
 use toolu_protocol::payload::{Payload as HostPayload, parse};
 use toolu_protocol::text::Text;
 use toolu_runtime::json::jq_text;
@@ -69,8 +69,11 @@ fn malformed_edit(phase: Phase, host: Host) -> ModuleResult {
   }
 }
 
-/// Canonicalize Muse's raw tool name through the host protocol before edit splitting.
+/// Canonicalize host tool names before shell dispatch and edit splitting.
 fn tool_name(text: &str, doc: Option<&Ordered>, session: &Session<'_>) -> Result<String, String> {
+  if session.host == Host::Qwen {
+    return Ok(qwen_tool_name(&read_field(doc, &["tool_name"])).to_owned());
+  }
   if session.host != Host::Muse {
     return Ok(read_field(doc, &["tool_name"]));
   }

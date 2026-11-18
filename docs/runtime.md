@@ -1,6 +1,6 @@
 # Runtime contract
 
-Every toolu hook, skill command and agent command runs the installed native `toolu` binary. Claude Code, Codex, Muse and Cursor need no Bun runtime for toolu. OpenCode requires a generated JavaScript shim that forwards events to the native binary; see [OpenCode](opencode.md). Installation, targets, version skew and binary resolution are in [install.md](install.md).
+Every toolu hook, skill command and agent command runs the installed native `toolu` binary. Claude Code, Codex, Muse, Cursor and Qwen Code need no Bun runtime for toolu. OpenCode requires a generated JavaScript shim that forwards events to the native binary; see [OpenCode](opencode.md). Installation, targets, version skew and binary resolution are in [install.md](install.md).
 
 > **Install once.** Install `toolu` with the get.toolu.sh installer or Homebrew before you enable a toolu plugin:
 >
@@ -36,6 +36,13 @@ A `TOOLU_BIN` that does not name a native `toolu` is never replaced by another c
 On Muse, startup and resume put that title, runtime line and any session guidance in one `systemMessage`. Prompt hints use the same field. The native binary check shares a once-per-session marker across plugin hooks and gives a Muse install command or an absolute native path when plain `toolu` is unavailable to agent commands.
 
 On OpenCode, hooks.json is not run by the host: each installed plugin's generated `server.js` resolves `toolu` in the same order and hands every hook call to `toolu opencode bridge`, which runs the plugin's `hooks.json` entries as the binary itself. A missing binary refuses tool calls and is logged on the other hooks ([OpenCode](opencode.md)).
+
+On Qwen Code, the installer adapts the shared hooks into each extension's
+`qwen-extension.json`. Qwen runs the native launcher through its command-hook
+interface. The launcher probes each candidate with `--host qwen --hook-protocol`.
+Shell and file tool IDs are mapped to the names the gates use. For a shell tool
+with an absolute `directory`, gates resolve Git targets from that directory.
+[Qwen Code installation](cli/installer.md#qwen-code)
 
 Agent command tools use a non-login shell. Their plain `toolu` reachability and the SessionStart absolute-path advice are checked separately; see [Agent command shell](install.md#agent-command-shell).
 

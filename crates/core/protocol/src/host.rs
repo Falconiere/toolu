@@ -15,17 +15,20 @@ pub enum Host {
   Muse,
   /// `OpenCode` V2, through the `toolu opencode bridge` its plugin shim runs.
   Opencode,
+  /// Qwen Code.
+  Qwen,
 }
 
 impl Host {
   /// Every host, in `--host` order.
-  pub const ALL: [Host; 6] = [
+  pub const ALL: [Host; 7] = [
     Host::Claude,
     Host::Codex,
     Host::Cursor,
     Host::Hermes,
     Host::Muse,
     Host::Opencode,
+    Host::Qwen,
   ];
 
   /// The `--host` value.
@@ -37,6 +40,7 @@ impl Host {
       Host::Hermes => "hermes",
       Host::Muse => "muse",
       Host::Opencode => "opencode",
+      Host::Qwen => "qwen",
     }
   }
 
