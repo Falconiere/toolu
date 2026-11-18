@@ -21,6 +21,8 @@ fn the_guide_documents_hosts_update_and_terminal_output() {
     "## Terminal output",
     "↑/↓ (or `k`/`j`) move, space toggles, `a` toggles all, Enter confirms",
     "Cursor when its config directory (`~/.cursor`) exists or `cursor-agent` is on `PATH`",
+    "Grok Build on `PATH`",
+    "Grok is chosen when `grok` is on `PATH`",
     "`toolu plugins update` never asks which host",
     "`update` without `--host` prints the `install` document",
     "A script that reads one host's steps should pass `--host`",
