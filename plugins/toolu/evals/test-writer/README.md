@@ -40,7 +40,7 @@ A trigger run cost about $0.10; a behavior run cost $0.15–0.25.
 
 ## Limits
 
-- Plugin eval has no script graders, and the gate bans tracked shell and TypeScript files, so there are no scaffold scripts. Each case embeds its code in `prompt.md` and is graded with regexes, tool-use counts and LLM judges. No case runs mutation tests.
+- Plugin eval has no script graders, and no case needs a `scaffold.sh` (the gate otherwise bans tracked shell and TypeScript files). Each case embeds its code in `prompt.md` and is graded with regexes, tool-use counts and LLM judges. No case runs mutation tests.
 - The eval sandbox gives each run a temporary `HOME` and no network, so `cargo` cannot run. Behavior cases use Python and Node; Rust is covered by a trigger case only.
 - `agent-receipt` matches the Agent tool's `subagent_type` input. That field name is inferred; the plugin-eval docs do not state it.
 - Only Claude Code runs this harness. Codex, Muse, Cursor and OpenCode are not covered.

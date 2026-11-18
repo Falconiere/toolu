@@ -6,7 +6,7 @@
 
 **Check:** `cargo xtask gate-coverage`
 
-Every live hook and built-in gate in this inventory is `port-native` and runs on the generated native launcher (#440 removed the Bun bundles). A `hooks.json` row is named after the hook it runs (`hook <name>`); a built-in gate's source is its module under `crates/core/engine/src/gates/`. The final-removal check (`cargo xtask final-removal`) also rejects tracked shell and Bats files, except the root curl installer `install.sh` (#457).
+Every live hook and built-in gate in this inventory is `port-native` and runs on the generated native launcher (#440 removed the Bun bundles). A `hooks.json` row is named after the hook it runs (`hook <name>`); a built-in gate's source is its module under `crates/core/engine/src/gates/`. The final-removal check (`cargo xtask final-removal`) also rejects tracked shell and Bats files, except the root curl installer `install.sh` (#457) and eval case setup scripts at `plugins/<plugin>/evals/<case>/scaffold.sh`.
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
