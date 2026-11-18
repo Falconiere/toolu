@@ -54,6 +54,31 @@
             }
           ],
           "expected": "/home/u/.hermes"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u"
+              },
+              "host": "qwen"
+            }
+          ],
+          "expected": "/home/u/.qwen"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "QWEN_HOME": "/custom qwen profile",
+                "QWEN_CODE": "1"
+              }
+            }
+          ],
+          "expected": "/custom qwen profile"
         }
       ]
     },

@@ -5,7 +5,9 @@ fn every_host_name_parses_back_to_its_host() {
   let names: Vec<&str> = Host::ALL.iter().map(|host| host.name()).collect();
   assert_eq!(
     names,
-    ["claude", "codex", "cursor", "hermes", "muse", "opencode"]
+    [
+      "claude", "codex", "cursor", "hermes", "muse", "opencode", "qwen"
+    ]
   );
   for host in Host::ALL {
     assert_eq!(Host::parse(host.name()), Some(host));

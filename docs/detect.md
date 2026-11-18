@@ -20,10 +20,16 @@ The layer shells out to `git` only, and for most questions not even that (see **
 2. a hook event name only one host uses;
 3. Cursor's `CURSOR_VERSION` or `CURSOR_PROJECT_DIR`;
 4. Muse's `MUSE_PLUGIN_ID` or `MUSE_SESSION_ID`;
-5. Codex's `PLUGIN_ROOT`;
-6. otherwise Claude Code.
+5. Qwen Code's `QWEN_PROJECT_DIR` or `QWEN_CODE=1`, unless `CLAUDECODE` is set;
+6. Codex's `PLUGIN_ROOT`;
+7. OpenCode's `OPENCODE_SESSION_ID` or `OPENCODE=1`, unless `CLAUDECODE` is set;
+8. otherwise Claude Code.
 
 On Muse the config root is `MUSE_CONFIG_DIR`, else `$XDG_CONFIG_HOME/muse`, else `~/.config/muse`; `TOOLU_CONFIG_DIR` wins on every host. The plugin root and data directory are `MUSE_PLUGIN_ROOT` and `MUSE_PLUGIN_DATA_DIR`. Muse has no project-directory variable, so the project root is the git toplevel.
+
+On Qwen Code the config root is `QWEN_HOME`, else `~/.qwen`. Qwen Code
+provides `QWEN_PROJECT_DIR` to hooks. The installer supplies `TOOLU_PLUGIN_ROOT`
+to each hook so it can find the extension's assets.
 
 ## API
 

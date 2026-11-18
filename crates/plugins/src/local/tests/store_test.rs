@@ -85,7 +85,6 @@ fn symlinks_are_not_followed_into_the_copy() {
 fn an_opencode_copy_gets_the_shim_for_its_hooks_and_catalog() {
   let home = tempfile::tempdir().unwrap();
   let opencode = Store::locate(&env(home.path()), Target::Opencode);
-  assert!(opencode.shim);
   assert!(opencode.dir.ends_with(".config/opencode/plugins"));
   opencode.put(&repo_plugin("toolu"), "toolu", "v1").unwrap();
   let shim = std::fs::read_to_string(opencode.path("toolu/server.js")).unwrap();

@@ -16,7 +16,7 @@ pub struct Detected {
 
 /// Resolves the host, first hit wins: `TOOLU_HOST_OVERRIDE`, a hook event name
 /// only one host uses, Cursor's per-hook variables, Muse's identity variables,
-/// Codex's `PLUGIN_ROOT`, `OpenCode`'s shell variables, then Claude. Hermes
+/// Qwen's hook environment, Codex's `PLUGIN_ROOT`, `OpenCode`'s shell variables, then Claude. Hermes
 /// documents no hook environment, so only its event names (or the override)
 /// select it. The `OpenCode` bridge sets the override for the hooks it runs.
 pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
@@ -48,6 +48,11 @@ pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
       .is_some() =>
     {
       Host::Muse
+    }
+    _ if (env.get("QWEN_PROJECT_DIR").is_some() || env.get("QWEN_CODE") == Some("1"))
+      && env.get("CLAUDECODE").is_none() =>
+    {
+      Host::Qwen
     }
     _ if env.get("PLUGIN_ROOT").is_some() => Host::Codex,
     _ if opencode(env) => Host::Opencode,

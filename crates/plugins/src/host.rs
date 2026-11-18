@@ -42,11 +42,12 @@ pub(crate) enum Target {
   Cursor,
   /// `OpenCode` V2, through its plugins directory and a generated shim.
   Opencode,
+  /// Qwen Code, through its local extensions directory.
+  Qwen,
 }
 
-/// The probe order: Muse comes last, so the order Claude Code and Codex users
-/// are offered stays as it was.
-const PROBED: [Target; 3] = [Target::Claude, Target::Codex, Target::Muse];
+/// The probe order for hosts which have a CLI on `PATH`.
+const PROBED: [Target; 4] = [Target::Claude, Target::Codex, Target::Muse, Target::Qwen];
 
 impl Target {
   /// The `--host` value, which is also the binary probed on `PATH`.
@@ -57,6 +58,7 @@ impl Target {
       Target::Muse => "muse",
       Target::Cursor => "cursor",
       Target::Opencode => "opencode",
+      Target::Qwen => "qwen",
     }
   }
 
@@ -68,6 +70,7 @@ impl Target {
       Target::Muse => "Muse",
       Target::Cursor => "Cursor",
       Target::Opencode => "OpenCode",
+      Target::Qwen => "Qwen Code",
     }
   }
 
@@ -77,7 +80,7 @@ impl Target {
   /// name, from any source. A new target must decide here.
   pub(crate) fn removes_only_toolu(self) -> bool {
     match self {
-      Target::Claude | Target::Codex | Target::Cursor | Target::Opencode => true,
+      Target::Claude | Target::Codex | Target::Cursor | Target::Opencode | Target::Qwen => true,
       Target::Muse => false,
     }
   }
@@ -94,8 +97,9 @@ pub(crate) fn target_of(host: Host) -> Res<Target> {
     Host::Muse => Ok(Target::Muse),
     Host::Cursor => Ok(Target::Cursor),
     Host::Opencode => Ok(Target::Opencode),
+    Host::Qwen => Ok(Target::Qwen),
     Host::Hermes => Err(Fail::usage(format!(
-      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse, cursor or opencode",
+      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse, cursor, opencode or qwen",
       host.name()
     ))),
   }
@@ -151,8 +155,8 @@ fn opencode_config(env: &Env) -> std::path::PathBuf {
 /// `update` means.
 pub(crate) fn with_toolu(env: &Env) -> Vec<Target> {
   let mut found = available(env);
-  for target in [Target::Cursor, Target::Opencode] {
-    if !Store::locate(env, target).ours().is_empty() {
+  for target in [Target::Cursor, Target::Opencode, Target::Qwen] {
+    if !found.contains(&target) && !Store::locate(env, target).ours().is_empty() {
       found.push(target);
     }
   }
@@ -237,7 +241,7 @@ pub(crate) fn resolve(
 /// Claude Code takes every scope, the other hosts none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
   match (scope, target) {
-    (Some(_), Target::Codex | Target::Muse | Target::Cursor | Target::Opencode) => {
+    (Some(_), Target::Codex | Target::Muse | Target::Cursor | Target::Opencode | Target::Qwen) => {
       Err(Fail::usage(format!(
         "--scope is for Claude Code; {} has no scope concept",
         target.name()

@@ -5938,7 +5938,8 @@ source: crates/cli/tests/helpers/schema.rs
         "cursor",
         "hermes",
         "muse",
-        "opencode"
+        "opencode",
+        "qwen"
       ],
       "required": false,
       "short": null,

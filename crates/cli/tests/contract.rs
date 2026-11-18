@@ -217,7 +217,7 @@ fn host_must_be_a_known_host_and_config_dir_is_accepted() {
   assert!(
     stderr(&bogus)
       .unwrap()
-      .contains("[possible values: claude, codex, cursor, hermes, muse, opencode]")
+      .contains("[possible values: claude, codex, cursor, hermes, muse, opencode, qwen]")
   );
   let known = toolu(&["--host", "codex", "--config-dir", "/tmp", "commands"]).unwrap();
   assert_eq!(known.status.code(), Some(0));

@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use toolu_protocol::decision::Decision;
+use toolu_protocol::host::Host;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::config::gate_mode::GateMode;
 use toolu_runtime::host::roots::Roots;
@@ -60,11 +61,16 @@ impl Push<'_> {
     sha: &str,
   ) -> Result<Decision, String> {
     let text = if self.mode == GateMode::Ask {
-      if !sha.is_empty() {
+      if self.ctx.host != Host::Qwen && !sha.is_empty() {
         let waiver = self.waivers();
         let _pended = waiver.pend(sha, &self.base, code, SystemTime::now());
       }
-      format!("{ASK_LEAD}\n\n{reason}")
+      let lead = if self.ctx.host == Host::Qwen {
+        "No clean review is recorded for this diff. Approval applies to this push only."
+      } else {
+        ASK_LEAD
+      };
+      format!("{lead}\n\n{reason}")
     } else {
       reason
     };
@@ -122,7 +128,7 @@ impl Push<'_> {
     if !std::fs::metadata(file).is_ok_and(|meta| meta.is_file()) {
       return self.decide(
         "no-state",
-        no_state_reason(current, &self.base, &file_text),
+        no_state_reason(current, &self.base, &file_text, self.ctx.host),
         "",
         current,
       );
@@ -137,9 +143,14 @@ impl Push<'_> {
   }
 }
 
-fn no_state_reason(sha: &str, base: &str, file: &str) -> String {
+fn no_state_reason(sha: &str, base: &str, file: &str, host: Host) -> String {
+  let hint = if host == Host::Qwen {
+    "the `/toolu-review:review` skill"
+  } else {
+    HINT
+  };
   format!(
-    "Code review required before push (diff SHA {sha}, base {base}).\nRun a code reviewer on `git diff {base}...HEAD` and apply its findings — use {HINT}. Then atomically write {file} (tmp+mv) with schema {{ version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }}. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff {base}...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push."
+    "Code review required before push (diff SHA {sha}, base {base}).\nRun a code reviewer on `git diff {base}...HEAD` and apply its findings — use {hint}. Then atomically write {file} (tmp+mv) with schema {{ version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }}. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff {base}...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push."
   )
 }
 

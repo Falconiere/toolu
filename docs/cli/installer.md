@@ -5,10 +5,10 @@ that installs toolu's plugins on each host (#438). The generated reference of
 every verb and flag is [plugins.md](plugins.md). The
 [README](../../README.md#install) install snippets use these commands.
 
-Claude Code, Codex and Muse are driven through their own plugin CLIs. Cursor and
-OpenCode have none, so toolu copies plugins into the directory each loads. The
+Claude Code, Codex and Muse are driven through their own plugin CLIs. For Cursor,
+OpenCode and Qwen Code, toolu copies plugins into the directory each loads. The
 code is `crates/plugins` (`toolu-plugins`); Muse is [below](#muse), then
-[Cursor](#cursor) and [OpenCode](#opencode).
+[Cursor](#cursor), [OpenCode](#opencode), and [Qwen Code](#qwen-code).
 
 Design: `docs/toolu/specs/2026-10-12-toolu-plugins-in-rust-design.md`.
 
@@ -55,8 +55,8 @@ toolu plugins update [name...]    Update toolu's plugins on every host that has 
 
 | Flag | Meaning |
 |------|---------|
-| `--host <id>` | `claude`, `codex`, `muse`, `cursor` or `opencode`. Detected when omitted; see [Choosing hosts](#choosing-hosts). Without `--host`, `update` acts on every host that has toolu plugins. `hermes` is not an installer target and exits `64`. |
-| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse, Cursor or OpenCode exits `64`, except `update` without `--host`, which does not use it. |
+| `--host <id>` | `claude`, `codex`, `muse`, `cursor`, `opencode` or `qwen`. Detected when omitted; see [Choosing hosts](#choosing-hosts). Without `--host`, `update` acts on every host that has toolu plugins. `hermes` is not an installer target and exits `64`. |
+| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with another host exits `64`, except `update` without `--host`, which does not use it. |
 | `--approve` | `install` and `update` only: approve each plugin's pending hooks on Muse. Does nothing on Claude Code and Codex. |
 | `--config <path>` | `install` only: replay a [`.toolu/plugins.json`](#tooluplugins-json) selection. Not combined with names. |
 | `--catalog <path>` | Read the plugin catalog from a file instead of the one built into the binary. |
@@ -135,11 +135,11 @@ or `--json`, they exit `64` and name the candidates rather than guessing.
 ([Updating every host](#updating-every-host)).
 
 **`remove` also takes a plugin the marketplace retired** (#615), such as a
-leftover 7.11.0 `context7` from before the Rust rewrite. On Claude Code, Codex
-Cursor and OpenCode, a name outside the catalog that is shaped like a plugin name
+leftover 7.11.0 `context7` from before the Rust rewrite. On Claude Code, Codex,
+Cursor, OpenCode and Qwen Code, a name outside the catalog that is shaped like a plugin name
 (lowercase letters and digits, single inner hyphens) goes to the host's own
 removal, which only reaches toolu's plugins: `claude plugin uninstall
-<name>@toolu`, `codex plugin remove <name>@toolu`, or a Cursor or OpenCode directory with
+<name>@toolu`, `codex plugin remove <name>@toolu`, or a local directory with
 toolu's install marker. A name the host does not have is a failed step with the
 host's message, exit `1`. Muse removes by bare name from any source, so there
 `remove` takes catalog names only, and `toolu doctor` names `muse plugins remove
@@ -185,10 +185,10 @@ command and `toolu` with it.
 ## Choosing hosts
 
 `--host` always wins. Without it, one host on `PATH` (`claude`, `codex`,
-`muse`) is used without asking. When several are found, a terminal asks:
+`muse`, `qwen`) is used without asking. When several are found, a terminal asks:
 
-- `install` offers every supported host on the machine: Claude Code, Codex and
-  Muse on `PATH`, Cursor when its config directory (`~/.cursor`) exists or
+- `install` offers every supported host on the machine: Claude Code, Codex,
+  Muse and Qwen Code on `PATH`, Cursor when its config directory (`~/.cursor`) exists or
   `cursor-agent` is on `PATH`, and OpenCode when its config directory
   (`~/.config/opencode`) exists or `opencode` is on `PATH`. Several can be chosen.
 - `list` and `remove` ask for one host. They offer Cursor and OpenCode only when
@@ -211,7 +211,7 @@ did. A script names Cursor with `--host cursor` and OpenCode with `--host openco
 
 `toolu plugins update` never asks which host. Without `--host` it updates every
 detected host that has toolu plugins, in a section each. That is the `PATH`
-hosts, and Cursor and OpenCode when toolu installed a plugin there.
+hosts, plus Cursor, OpenCode and Qwen Code when toolu installed a plugin there.
 
 - Each host's toolu plugins are read before anything is prepared, pinned or
   cloned. A host without them is only noted (`muse: no toolu plugins
@@ -267,7 +267,7 @@ The run installs `enabled` with its dependencies, as if the names had been
 given, and an empty list installs nothing. `version` is the file format: an
 unknown or missing value exits `64` rather than being guessed at.
 `generatorVersion` records the CLI that wrote the file, and a file from a newer
-major exits `64` with both versions named. `host` (`claude`, `codex`, `muse`, `cursor` or `opencode`)
+major exits `64` with both versions named. `host` (`claude`, `codex`, `muse` or `qwen`)
 is used when `--host` is absent; `--host` wins. A file that is missing, is not JSON or is malformed also
 exits `64`. Nothing writes this file. The TypeScript installer parsed
 `--config` but never read it.
@@ -362,3 +362,22 @@ OpenCode plugins can only be JavaScript, so each copy gets a generated shim:
 - **Plugins that are not toolu's.** A directory without the marker is reported
   as `skew` and never touched. `toolu doctor --host opencode` lists toolu's
   copies and warns about one without its `server.js`.
+
+## Qwen Code
+
+`toolu plugins install --host qwen` installs native extensions under
+`${QWEN_HOME:-$HOME/.qwen}/extensions`. Start a new Qwen Code session to load them.
+Use `qwen extensions list` to see them in Qwen Code and
+`toolu doctor --host qwen` to check the toolu installation. This integration
+was tested with Qwen Code 0.28.0.
+
+`toolu plugins list --host qwen`, `toolu plugins update --host qwen`, and
+`toolu plugins remove <name> --host qwen --yes` manage the installed copies.
+The installer preserves extensions it did not create. Like the other local
+installers, it reads plugins from the release tag matching the toolu binary.
+The launcher verifies Qwen host support when resolving the native binary.
+
+Qwen Code 0.28.0 exposes shell exit codes as display text in hook payloads.
+toolu's shell gate-status recording and push-waiver promotion require a
+structured exit status. Pre-tool gates and post-edit checks run through the
+native extension hooks.

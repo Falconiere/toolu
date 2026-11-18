@@ -30,11 +30,13 @@ fn only_an_empty_null_or_zero_status_counts_as_landed() {
 }
 
 #[test]
-fn muse_push_requires_a_proven_zero_exit() {
-  for status in ["", "null", "1", "128", "00", "x"] {
-    assert!(push_failed(status, Host::Muse), "{status}");
+fn muse_and_qwen_push_require_a_proven_zero_exit() {
+  for host in [Host::Muse, Host::Qwen] {
+    for status in ["", "null", "1", "128", "00", "x"] {
+      assert!(push_failed(status, host), "{host:?} {status}");
+    }
+    assert!(!push_failed("0", host), "{host:?}");
   }
-  assert!(!push_failed("0", Host::Muse));
 }
 
 #[test]

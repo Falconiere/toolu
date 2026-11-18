@@ -31,7 +31,7 @@ pub(crate) static PUSH_WAIVER: PushWaiver = PushWaiver;
 
 /// A reported exit status other than 0 means the push did not land.
 fn push_failed(status: &str, host: Host) -> bool {
-  if host == Host::Muse {
+  if matches!(host, Host::Muse | Host::Qwen) {
     return status != "0";
   }
   !matches!(status, "" | "null" | "0")

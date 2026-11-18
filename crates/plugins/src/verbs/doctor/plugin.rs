@@ -181,7 +181,7 @@ fn version_only(entry: &Installed, cx: &Context<'_>, update: String) -> Vec<Find
 
 fn plugin_root(target: Target, entry: &Installed, cx: &Context<'_>) -> Option<PathBuf> {
   match target {
-    Target::Cursor | Target::Opencode => {
+    Target::Cursor | Target::Opencode | Target::Qwen => {
       let path = local::store::Store::locate(&cx.env, target).path(&entry.name);
       path.is_dir().then_some(path)
     }

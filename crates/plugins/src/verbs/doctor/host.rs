@@ -89,7 +89,7 @@ fn inventory(
   request: &Request,
   cx: &Context<'_>,
 ) -> (Vec<Installed>, Option<InventoryFail>) {
-  if matches!(target, Target::Cursor | Target::Opencode) {
+  if matches!(target, Target::Cursor | Target::Opencode | Target::Qwen) {
     return (local_inventory(target, cx), None);
   }
   let driver = match driver(target, request, cx) {

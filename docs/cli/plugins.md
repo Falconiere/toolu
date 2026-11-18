@@ -24,7 +24,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 
@@ -47,7 +47,7 @@ Options:
   -q, --quiet             Drop the diagnostics of a successful run
       --scope <SCOPE>     user, project or local (Claude Code only) [possible values: user, project, local]
       --dry-run           Print the host commands without running them
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-input          Never prompt; fail naming what is missing
       --config <PATH>     Replay a .toolu/plugins.json selection
@@ -67,7 +67,7 @@ Options:
       --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -88,7 +88,7 @@ Options:
   -q, --quiet             Drop the diagnostics of a successful run
       --scope <SCOPE>     user, project or local (Claude Code only) [possible values: user, project, local]
       --dry-run           Print the host commands without running them
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-input          Never prompt; fail naming what is missing
   -y, --yes               Confirm a destructive operation
@@ -111,7 +111,7 @@ Options:
   -q, --quiet             Drop the diagnostics of a successful run
       --scope <SCOPE>     user, project or local (Claude Code only) [possible values: user, project, local]
       --dry-run           Print the host commands without running them
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-input          Never prompt; fail naming what is missing
       --approve           Approve each plugin's hooks after installing or updating it (Muse only)
@@ -129,7 +129,7 @@ Options:
       --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```

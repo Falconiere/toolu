@@ -12,13 +12,15 @@ use crate::args::Approval;
 use crate::fail::Res;
 use crate::host::Target;
 use crate::host::adapter::Adapter;
-use crate::host::checkout::{CURSOR_SUBDIR, Checkout, OPENCODE_SUBDIR};
+use crate::host::checkout::Checkout;
 use crate::verbs::{Driver, prepare};
 
 /// `install` and `update` on the local directory.
 mod change;
 /// `list` and `remove` on the local directory.
 mod inspect;
+/// Builds Qwen Code's extension manifest from the shared plugin assets.
+mod qwen;
 /// The local plugins directory and its marker.
 pub(crate) mod store;
 
@@ -37,12 +39,8 @@ pub(crate) struct Local {
 impl Local {
   /// The setup of `target` for a binary at `cx.version` cloning from `cx.origin`.
   pub(crate) fn new(cx: &crate::dispatch::Context<'_>, target: Target) -> Res<Local> {
-    let subdir = if target == Target::Opencode {
-      OPENCODE_SUBDIR
-    } else {
-      CURSOR_SUBDIR
-    };
-    let checkout = Checkout::locate_in(&cx.env, cx.version, &cx.origin, subdir)?;
+    let subdir = format!("toolu/{}-marketplace", target.name());
+    let checkout = Checkout::locate_in(&cx.env, cx.version, &cx.origin, &subdir)?;
     // Only `git` runs through this driver; the adapter is never asked for a plugin command.
     let git = Driver {
       adapter: Adapter::Claude,

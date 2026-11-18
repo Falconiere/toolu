@@ -14,7 +14,7 @@ pub(crate) fn presence(spec: &str, env: &Env, host: Host) -> Installed {
     Host::Cursor | Host::Hermes => Host::Claude,
     Host::Claude | Host::Codex => host,
     // Neither keeps an install record the engine reads: unknown runs the rules.
-    Host::Muse | Host::Opencode => {
+    Host::Muse | Host::Opencode | Host::Qwen => {
       return if spec.is_empty() {
         Installed::Absent
       } else {
@@ -35,9 +35,10 @@ pub(crate) fn install_command(spec: &str, host: Host) -> String {
   match host {
     Host::Codex => format!("codex plugin add {spec}"),
     Host::Muse => format!("muse plugins install {spec}"),
-    Host::Opencode => format!(
-      "toolu plugins install {} --host opencode",
-      spec.split('@').next().unwrap_or(spec)
+    Host::Opencode | Host::Qwen => format!(
+      "toolu plugins install {} --host {}",
+      spec.split('@').next().unwrap_or(spec),
+      host.name()
     ),
     Host::Claude | Host::Cursor | Host::Hermes => format!("/plugin install {spec}"),
   }

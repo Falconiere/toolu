@@ -82,7 +82,7 @@ fn legacy(config: &Path) -> Vec<PathBuf> {
 
 /// The plugin directories toolu installed (they carry its marker), sorted, and
 /// why the directory could not be read in full; a missing directory has none.
-fn ours(dir: &Path) -> (Vec<(String, PathBuf)>, Option<String>) {
+pub(super) fn ours(dir: &Path) -> (Vec<(String, PathBuf)>, Option<String>) {
   let entries = match std::fs::read_dir(dir) {
     Ok(entries) => entries,
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => return (Vec::new(), None),

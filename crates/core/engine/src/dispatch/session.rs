@@ -93,7 +93,9 @@ impl<'a> Session<'a> {
   pub(crate) fn cwd(&self) -> &Path {
     match self.host {
       Host::Cursor => &self.project_root,
-      Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Opencode => self.options.cwd,
+      Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Opencode | Host::Qwen => {
+        self.options.cwd
+      }
     }
   }
 }
@@ -106,7 +108,9 @@ fn post_cwd(host: Host, roots: &Roots, cwd: &Path) -> PathBuf {
     Host::Cursor => roots
       .project_root(Some(cwd))
       .unwrap_or_else(|| cwd.to_path_buf()),
-    Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Opencode => cwd.to_path_buf(),
+    Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Opencode | Host::Qwen => {
+      cwd.to_path_buf()
+    }
   }
 }
 
