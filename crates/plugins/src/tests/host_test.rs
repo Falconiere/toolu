@@ -6,11 +6,12 @@ use crate::args::Scope;
 use crate::support::{Answer, Sandbox};
 
 #[test]
-fn installer_targets_include_qwen_code() {
+fn installer_accepts_supported_plugin_hosts() {
   assert_eq!(target_of(Host::Claude), Ok(Target::Claude));
   assert_eq!(target_of(Host::Codex), Ok(Target::Codex));
   assert_eq!(target_of(Host::Muse), Ok(Target::Muse));
   assert_eq!(target_of(Host::Cursor), Ok(Target::Cursor));
+  assert_eq!(target_of(Host::Grok), Ok(Target::Grok));
   assert_eq!(target_of(Host::Opencode), Ok(Target::Opencode));
   assert_eq!(target_of(Host::Qwen), Ok(Target::Qwen));
   let Err(fail) = target_of(Host::Hermes) else {
@@ -20,7 +21,7 @@ fn installer_targets_include_qwen_code() {
   assert!(
     fail
       .message
-      .contains("claude, codex, muse, cursor, opencode or qwen"),
+      .contains("claude, codex, muse, cursor, grok, opencode or qwen"),
     "{}",
     fail.message
   );
@@ -293,5 +294,24 @@ fn list_and_remove_offer_cursor_only_when_it_holds_toolu_plugins() {
   assert_eq!(
     labels(&asked),
     [("claude", Some("Claude Code")), ("cursor", Some("Cursor"))]
+  );
+}
+
+#[test]
+fn grok_keeps_foreign_marketplaces_distinct() {
+  let list = r#"[
+    {"status":"installed","name":"toolu","version":"10.0.0","marketplace":"toolu"},
+    {"status":"installed","name":"toolu","version":"10.0.0","marketplace":null}
+  ]"#;
+  let entries = super::grok_plugins(list).unwrap();
+  assert_eq!(entries[0].source.as_deref(), Some("toolu"));
+  assert_eq!(entries[1].source, None);
+  let markets = r#"[
+    {"name":"toolu","kind":"local","source":{"path":"/other/toolu"}},
+    {"name":"external","kind":"git","source":{"url":"https://example.test/toolu.git"}}
+  ]"#;
+  assert_eq!(
+    super::official_grok_marketplace(markets).unwrap(),
+    Some(false)
   );
 }

@@ -97,6 +97,7 @@ pub(crate) fn driver(target: Target, request: &Request, cx: &Context<'_>) -> Res
   let (adapter, checkout) = match target {
     Target::Claude => (Adapter::Claude, None),
     Target::Codex => (Adapter::Codex, None),
+    Target::Grok => (Adapter::Grok, None),
     Target::Muse => (
       Adapter::Muse,
       Some(Checkout::locate(&cx.env, cx.version, &cx.origin)?),
@@ -270,7 +271,7 @@ fn install_on(
         local::install(&Local::new(cx, target)?, catalog, names, request.dry_run)
       })
     }
-    Target::Claude | Target::Codex | Target::Muse => {
+    Target::Claude | Target::Codex | Target::Grok | Target::Muse => {
       let driver = driver(target, request, cx)?;
       verbs::install::run(&driver, catalog, names, request.scope, request.dry_run)
     }
@@ -298,7 +299,7 @@ fn remove(
     Target::Cursor | Target::Opencode | Target::Qwen => {
       local::remove(&Local::new(cx, target)?, &request.names, request.dry_run)
     }
-    Target::Claude | Target::Codex | Target::Muse => verbs::remove::run(
+    Target::Claude | Target::Codex | Target::Grok | Target::Muse => verbs::remove::run(
       &driver(target, request, cx)?,
       &request.names,
       request.dry_run,
@@ -326,7 +327,7 @@ fn list(
     Target::Cursor | Target::Opencode | Target::Qwen => {
       local::list(&Local::new(cx, target)?, catalog)
     }
-    Target::Claude | Target::Codex | Target::Muse => {
+    Target::Claude | Target::Codex | Target::Grok | Target::Muse => {
       verbs::list::run(&driver(target, request, cx)?, catalog)?
     }
   };

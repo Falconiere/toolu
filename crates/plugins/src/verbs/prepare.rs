@@ -35,6 +35,10 @@ pub(crate) struct Prepared {
 /// fails after removing it.
 pub(crate) fn run(driver: &Driver, verb: Verb) -> Res<Prepared> {
   match (driver.adapter, &driver.checkout, &driver.pin) {
+    (Adapter::Grok, _checkout, _pin) => {
+      grok_marketplace(driver, verb == Verb::Install)?;
+      Ok(Prepared::default())
+    }
     (Adapter::Muse, Some(checkout), _pin) => {
       sync(driver, checkout)?;
       register(driver, checkout)?;
@@ -47,6 +51,20 @@ pub(crate) fn run(driver: &Driver, verb: Verb) -> Res<Prepared> {
       repinned: false,
     }),
     (Adapter::Claude | Adapter::Codex, _checkout, _pin) => Ok(Prepared::default()),
+  }
+}
+
+/// Check Grok's source before trusting or changing a plugin from it.
+pub(crate) fn grok_marketplace(driver: &Driver, add: bool) -> Res<()> {
+  let listing = ["grok", "plugin", "marketplace", "list", "--json"].map(str::to_owned);
+  let rows = must(driver, &listing)?;
+  match crate::host::official_grok_marketplace(&rows).map_err(Fail::failed)? {
+    Some(true) => Ok(()),
+    None if add => must(driver, &driver.adapter.add_marketplace(None)).map(drop),
+    None => Err(Fail::failed("Grok's toolu marketplace is missing")),
+    _ => Err(Fail::failed(
+      "Grok's toolu marketplace is not the official GitHub source",
+    )),
   }
 }
 

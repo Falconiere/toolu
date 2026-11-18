@@ -76,6 +76,7 @@ impl Roots {
       Host::Claude => own("CLAUDE_CONFIG_DIR", ".claude"),
       Host::Codex => own("CODEX_HOME", ".codex"),
       Host::Cursor => env.home().join(".cursor"),
+      Host::Grok => own("GROK_HOME", ".grok"),
       Host::Hermes => own("HERMES_HOME", ".hermes"),
       Host::Muse => env.get("MUSE_CONFIG_DIR").map_or_else(
         || {
@@ -100,6 +101,7 @@ impl Roots {
     let own = match self.host {
       Host::Claude => self.env.get("CLAUDE_PROJECT_DIR"),
       Host::Cursor => self.env.get("CURSOR_PROJECT_DIR"),
+      Host::Grok => self.env.get("GROK_WORKSPACE_ROOT"),
       Host::Qwen => self.env.get("QWEN_PROJECT_DIR"),
       Host::Codex | Host::Hermes | Host::Muse | Host::Opencode => None,
     };
@@ -119,6 +121,8 @@ impl Roots {
     match self.env.get("TOOLU_PROJECT_CONFIG_DIRNAME") {
       Some(name) => name.to_owned(),
       None if self.host == Host::Muse => ".agents".to_owned(),
+      // Existing Grok workers and their plan ledgers use the Claude project layout.
+      None if self.host == Host::Grok => ".claude".to_owned(),
       None => format!(".{}", self.host.name()),
     }
   }
@@ -167,6 +171,7 @@ impl Roots {
     let own = match self.host {
       Host::Codex => self.env.get("PLUGIN_ROOT"),
       Host::Cursor => self.env.get("CURSOR_PLUGIN_ROOT"),
+      Host::Grok => self.env.get("GROK_PLUGIN_ROOT"),
       Host::Muse => self.env.get("MUSE_PLUGIN_ROOT"),
       Host::Qwen => self.env.get("TOOLU_PLUGIN_ROOT"),
       // The OpenCode bridge exports `CLAUDE_PLUGIN_ROOT` to the hooks it runs.
@@ -181,6 +186,7 @@ impl Roots {
   pub fn plugin_data(&self) -> Option<PathBuf> {
     let own = match self.host {
       Host::Codex => self.env.get("PLUGIN_DATA"),
+      Host::Grok => self.env.get("GROK_PLUGIN_DATA"),
       Host::Muse => self.env.get("MUSE_PLUGIN_DATA_DIR"),
       Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode | Host::Qwen => None,
     };
@@ -188,7 +194,9 @@ impl Roots {
       .or(self.env.get("CLAUDE_PLUGIN_DATA"))
       .map(PathBuf::from)
   }
+}
 
+impl Roots {
   /// How a user invokes skill or command `name` of plugin `namespace` here.
   ///
   /// # Errors
@@ -196,12 +204,8 @@ impl Roots {
   pub fn invocation(&self, namespace: &str, name: &str) -> Result<String, CallerError> {
     require("invocation", "namespace", namespace)?;
     require("invocation", "name", name)?;
-    Ok(match self.host {
-      Host::Codex => format!("${namespace}:{name}"),
-      Host::Claude | Host::Cursor | Host::Hermes | Host::Muse | Host::Opencode | Host::Qwen => {
-        format!("/{namespace}:{name}")
-      }
-    })
+    let prefix = if self.host == Host::Codex { '$' } else { '/' };
+    Ok(format!("{prefix}{namespace}:{name}"))
   }
 
   /// The host-native command that installs `spec`, or `None` where none exists yet.
@@ -213,6 +217,7 @@ impl Roots {
     Ok(match self.host {
       Host::Claude => Some(format!("/plugin install {spec}")),
       Host::Codex => Some(format!("codex plugin add {spec}")),
+      Host::Grok => Some(format!("grok plugin install {spec}")),
       Host::Muse => Some(format!("muse plugins install {spec}")),
       Host::Cursor | Host::Hermes | Host::Opencode | Host::Qwen => None,
     })
@@ -227,6 +232,7 @@ impl Roots {
     Ok(match self.host {
       Host::Claude => Some(format!("claude plugin uninstall {name}@toolu")),
       Host::Codex => Some(format!("codex plugin remove {name}@toolu")),
+      Host::Grok => Some(format!("grok plugin uninstall {name}")),
       Host::Muse => Some(format!("muse plugins remove {name}")),
       Host::Cursor | Host::Hermes | Host::Opencode | Host::Qwen => None,
     })

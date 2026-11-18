@@ -20,11 +20,11 @@ To write a new GitHub epic in the shape this engine reads, use the
 toolu plugins install delivery-flow epic-orchestrator --host codex
 toolu plugins install delivery-flow epic-orchestrator --host cursor
 toolu plugins install delivery-flow epic-orchestrator --host muse --approve
+toolu plugins install delivery-flow --host grok
 ```
 
-Grok Build runs workers only, with the plugins installed for Claude Code,
-which it loads through its Claude compatibility layer; its `SessionStart`
-hooks do not run (see the plugin README).
+Grok Build workers use Grok's native plugin installation. The plan ledger
+stays under `.claude/tmp/plan-ledger/` for existing worktrees.
 
 Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `toolu`, `gh`, and the selected multiplexer: `herdr` or `tmux`.
 

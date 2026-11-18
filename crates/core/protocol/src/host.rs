@@ -9,6 +9,8 @@ pub enum Host {
   Codex,
   /// Cursor.
   Cursor,
+  /// Grok Build.
+  Grok,
   /// Hermes.
   Hermes,
   /// Muse Code.
@@ -21,10 +23,11 @@ pub enum Host {
 
 impl Host {
   /// Every host, in `--host` order.
-  pub const ALL: [Host; 7] = [
+  pub const ALL: [Host; 8] = [
     Host::Claude,
     Host::Codex,
     Host::Cursor,
+    Host::Grok,
     Host::Hermes,
     Host::Muse,
     Host::Opencode,
@@ -37,6 +40,7 @@ impl Host {
       Host::Claude => "claude",
       Host::Codex => "codex",
       Host::Cursor => "cursor",
+      Host::Grok => "grok",
       Host::Hermes => "hermes",
       Host::Muse => "muse",
       Host::Opencode => "opencode",

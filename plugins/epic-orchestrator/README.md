@@ -64,20 +64,24 @@ that line.
 
 ### Grok Build (workers)
 
-Grok Build has no toolu install of its own. It loads the plugins installed for
-Claude Code through its Claude compatibility layer, so install them there:
+Install the worker plugins through Grok Build:
 
 ```bash
-toolu plugins install delivery-flow --host claude
+toolu plugins install delivery-flow --host grok
 ```
 
-Grok 1.0.77 runs their `UserPromptSubmit`, `PreToolUse` and `PostToolUse`
-hooks but never their `SessionStart` hooks. Its start sources are `new` and
-`load`, while toolu's matchers name Claude's `startup|resume|clear|compact`.
-So on a Grok worker the session-start context is missing, and the rules that
-register at session start, such as git-better's commit checks, are off.
-Inside Grok, toolu acts for Claude Code, so a Grok worker's plan ledger is
-under `.claude/tmp/plan-ledger/`.
+Grok runs the delivery and quality startup hooks on new and resumed sessions. The startup
+hooks register rules such as git-better, and Grok displays gate feedback on
+tool calls. Its startup hook output is passive, so the worker brief carries
+the delivery instructions. The plan ledger stays under
+`.claude/tmp/plan-ledger/`.
+
+In a local Grok Build 1.0.77 run for #846, new and exact-resumed sessions
+registered git-better. With the strict preset, Grok kept the fixture
+`.env` unchanged, recorded a TypeScript quality failure, and rejected the
+commit and an unreviewed push to a bare local remote. Exact resume used
+the same session directory. The install, list, doctor, update, and
+removal checks ran in a separate Grok profile.
 
 ### Before a run
 

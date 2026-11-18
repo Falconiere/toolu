@@ -6,6 +6,9 @@
 //! there and `OpenCode` when its config directory or `opencode` is. `update`
 //! without `--host` asks nothing: it takes `with_toolu`.
 
+use self::adapter::Installed;
+use serde_json::Value;
+
 use std::path::Path;
 
 use toolu_protocol::host::Host;
@@ -40,6 +43,8 @@ pub(crate) enum Target {
   Muse,
   /// Cursor, through its local plugins directory (#589).
   Cursor,
+  /// Grok Build, through `grok plugin`.
+  Grok,
   /// `OpenCode` V2, through its plugins directory and a generated shim.
   Opencode,
   /// Qwen Code, through its local extensions directory.
@@ -57,6 +62,7 @@ impl Target {
       Target::Codex => "codex",
       Target::Muse => "muse",
       Target::Cursor => "cursor",
+      Target::Grok => "grok",
       Target::Opencode => "opencode",
       Target::Qwen => "qwen",
     }
@@ -69,6 +75,7 @@ impl Target {
       Target::Codex => "Codex",
       Target::Muse => "Muse",
       Target::Cursor => "Cursor",
+      Target::Grok => "Grok Build",
       Target::Opencode => "OpenCode",
       Target::Qwen => "Qwen Code",
     }
@@ -80,7 +87,12 @@ impl Target {
   /// name, from any source. A new target must decide here.
   pub(crate) fn removes_only_toolu(self) -> bool {
     match self {
-      Target::Claude | Target::Codex | Target::Cursor | Target::Opencode | Target::Qwen => true,
+      Target::Claude
+      | Target::Codex
+      | Target::Cursor
+      | Target::Opencode
+      | Target::Grok
+      | Target::Qwen => true,
       Target::Muse => false,
     }
   }
@@ -96,10 +108,11 @@ pub(crate) fn target_of(host: Host) -> Res<Target> {
     Host::Codex => Ok(Target::Codex),
     Host::Muse => Ok(Target::Muse),
     Host::Cursor => Ok(Target::Cursor),
+    Host::Grok => Ok(Target::Grok),
     Host::Opencode => Ok(Target::Opencode),
     Host::Qwen => Ok(Target::Qwen),
     Host::Hermes => Err(Fail::usage(format!(
-      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse, cursor, opencode or qwen",
+      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse, cursor, grok, opencode or qwen",
       host.name()
     ))),
   }
@@ -240,15 +253,44 @@ pub(crate) fn resolve(
 
 /// Claude Code takes every scope, the other hosts none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
-  match (scope, target) {
-    (Some(_), Target::Codex | Target::Muse | Target::Cursor | Target::Opencode | Target::Qwen) => {
-      Err(Fail::usage(format!(
-        "--scope is for Claude Code; {} has no scope concept",
-        target.name()
-      )))
-    }
-    (None, _) | (Some(_), Target::Claude) => Ok(()),
+  if scope.is_some() && target != Target::Claude {
+    return Err(Fail::usage(format!(
+      "--scope is for Claude Code; {} has no scope concept",
+      target.name()
+    )));
   }
+  Ok(())
+}
+
+/// Read the version and marketplace Grok records for each installation.
+pub(crate) fn grok_plugins(text: &str) -> Result<Vec<Installed>, String> {
+  let entries: Vec<Value> = serde_json::from_str(text).map_err(|err| err.to_string())?;
+  entries.iter().map(grok_entry).collect()
+}
+
+fn grok_entry(value: &Value) -> Result<Installed, String> {
+  let field = |key: &str| value.get(key).and_then(Value::as_str);
+  Ok(Installed {
+    name: field("name")
+      .ok_or("Grok plugin entry has no name")?
+      .to_owned(),
+    version: field("version").unwrap_or("?").to_owned(),
+    enabled: true,
+    source: field("marketplace").map(str::to_owned),
+  })
+}
+
+/// Whether Grok has one official source for its toolu marketplace.
+pub(crate) fn official_grok_marketplace(text: &str) -> Result<Option<bool>, String> {
+  let rows: Vec<Value> = serde_json::from_str(text).map_err(|err| err.to_string())?;
+  let mut sources = rows
+    .iter()
+    .filter(|row| row["name"] == adapter::MARKETPLACE);
+  Ok(sources.next().map(|row| {
+    sources.next().is_none()
+      && row.pointer("/source/url").and_then(Value::as_str) == Some(checkout::ORIGIN)
+      && row.pointer("/source/branch").is_none_or(Value::is_null)
+  }))
 }
 
 #[cfg(test)]

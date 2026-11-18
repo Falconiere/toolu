@@ -107,3 +107,12 @@ fn unmatched_muse_mcp_and_internal_tool_are_silent() {
     );
   }
 }
+
+#[test]
+fn grok_mcp_hook_checks_native_qualified_names() {
+  let (dir, env) = fixture("grok");
+  let payload = r#"{"tool_name":"exampleblocked__search","tool_input":{}}"#;
+  let out = evaluate(payload, None, env, &dir.path().join("project"));
+  let json: Value = serde_json::from_str(&out.stdout.expect("decision")).unwrap();
+  assert_eq!(json["hookSpecificOutput"]["permissionDecision"], "ask");
+}

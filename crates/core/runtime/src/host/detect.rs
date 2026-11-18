@@ -14,11 +14,9 @@ pub struct Detected {
   pub warning: Option<String>,
 }
 
-/// Resolves the host, first hit wins: `TOOLU_HOST_OVERRIDE`, a hook event name
-/// only one host uses, Cursor's per-hook variables, Muse's identity variables,
-/// Qwen's hook environment, Codex's `PLUGIN_ROOT`, `OpenCode`'s shell variables, then Claude. Hermes
-/// documents no hook environment, so only its event names (or the override)
-/// select it. The `OpenCode` bridge sets the override for the hooks it runs.
+/// Resolves the host using an explicit override, a unique hook event name,
+/// then the Grok, Cursor, Muse and Qwen hook environment. Codex's plugin
+/// marker and Grok and `OpenCode` shell markers follow. Claude is the fallback.
 pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
   let mut warning = None;
   if let Some(name) = env.get("TOOLU_HOST_OVERRIDE") {
@@ -35,6 +33,7 @@ pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
     .unwrap_or_default();
   let host = match owners.as_slice() {
     [owner] => *owner,
+    _ if env.get("GROK_HOOK_EVENT").is_some() => Host::Grok,
     _ if env
       .get("CURSOR_VERSION")
       .or(env.get("CURSOR_PROJECT_DIR"))
@@ -55,6 +54,7 @@ pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
       Host::Qwen
     }
     _ if env.get("PLUGIN_ROOT").is_some() => Host::Codex,
+    _ if env.get("GROK_AGENT") == Some("1") && env.get("CLAUDECODE").is_none() => Host::Grok,
     _ if opencode(env) => Host::Opencode,
     _ => Host::Claude,
   };

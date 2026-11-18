@@ -164,3 +164,16 @@ fn empty_variables_count_as_unset() {
     }
   );
 }
+
+#[test]
+fn detects_grok_hooks_and_agent_shells() {
+  let hook = Env::from_pairs([("GROK_HOOK_EVENT", "pre_tool_use")]);
+  assert_eq!(detect(&hook, Some("PreToolUse")).host, Host::Grok);
+
+  let shell = Env::from_pairs([("GROK_AGENT", "1")]);
+  assert_eq!(detect(&shell, None).host, Host::Grok);
+  assert_eq!(
+    detect(&shell.with("CLAUDECODE", "1"), None).host,
+    Host::Claude
+  );
+}

@@ -87,7 +87,7 @@ pub(crate) enum Approval {
 
 const ABOUT: &str = "Install, list, remove, update and doctor toolu plugins on every host";
 
-const AFTER: &str = "Claude Code, Codex and Muse are driven through their own plugin CLIs; \
+const AFTER: &str = "Claude Code, Codex, Grok Build and Muse are driven through their own plugin CLIs; \
   Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local, \
   and --host opencode copies each into ~/.config/opencode/plugins with a generated \
   server.js. Install the native binary, then run these verbs. `doctor` diagnoses plugin \

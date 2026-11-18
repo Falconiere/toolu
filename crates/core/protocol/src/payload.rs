@@ -55,6 +55,8 @@ pub enum Payload {
   Codex(HookPayload),
   /// Cursor.
   Cursor(CursorPayload),
+  /// Grok Build: Claude-shaped JSON with Grok tool names.
+  Grok(HookPayload),
   /// Hermes.
   Hermes(HermesPayload),
   /// Muse Code: Claude's shape with Muse's own tool names.
@@ -76,6 +78,7 @@ pub fn parse(host: Host, text: &str) -> Result<Payload, serde_json::Error> {
     Host::Claude => Payload::Claude(serde_json::from_str(text)?),
     Host::Codex => Payload::Codex(serde_json::from_str(text)?),
     Host::Cursor => Payload::Cursor(serde_json::from_str(text)?),
+    Host::Grok => Payload::Grok(serde_json::from_str(text)?),
     Host::Hermes => Payload::Hermes(serde_json::from_str(text)?),
     Host::Muse => Payload::Muse(serde_json::from_str(text)?),
     Host::Opencode => Payload::Opencode(serde_json::from_str(text)?),

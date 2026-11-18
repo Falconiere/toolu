@@ -23,7 +23,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -43,7 +43,7 @@ Options:
   -s, --state <STATE>     State to judge: text, @FILE, or - for stdin
   -m, --model <MODEL>     The Jev model [default: jev-latest]
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
   -i, --image <REF=PATH>  A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --long-context      Raise the context limit to 262k tokens (slower, less accurate)
@@ -69,7 +69,7 @@ Options:
   -s, --state <STATE>        State to judge: text, @FILE, or - for stdin
   -m, --model <MODEL>        The Jev model [default: jev-latest]
   -q, --quiet                Drop the diagnostics of a successful run
-      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
   -i, --image <REF=PATH>     A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image
       --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
       --long-context         Raise the context limit to 262k tokens (slower, less accurate)
@@ -94,7 +94,7 @@ Options:
   -s, --state <STATE>     State to judge: text, @FILE, or - for stdin
   -m, --model <MODEL>     The Jev model [default: jev-latest]
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
   -i, --image <REF=PATH>  A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --long-context      Raise the context limit to 262k tokens (slower, less accurate)
@@ -119,7 +119,7 @@ Options:
   -s, --state <STATE>     State to judge: text, @FILE, or - for stdin
   -m, --model <MODEL>     The Jev model [default: jev-latest]
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
   -i, --image <REF=PATH>  A PNG or JPEG for REF, written where it belongs in the state or question; repeat per image
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --long-context      Raise the context limit to 262k tokens (slower, less accurate)

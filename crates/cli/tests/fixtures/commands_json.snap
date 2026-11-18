@@ -5936,6 +5936,7 @@ source: crates/cli/tests/helpers/schema.rs
         "claude",
         "codex",
         "cursor",
+        "grok",
         "hermes",
         "muse",
         "opencode",

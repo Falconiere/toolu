@@ -64,6 +64,7 @@ impl Hook {
     match self.host {
       Host::Codex => self.sb.path("codex"),
       Host::Claude | Host::Cursor | Host::Hermes => self.sb.path("home/.claude"),
+      Host::Grok => self.sb.path("home/.grok"),
       Host::Muse => self.sb.path("home/.config/muse"),
       Host::Opencode => self.sb.path("home/.config/opencode"),
       Host::Qwen => self.sb.path("home/.qwen"),
@@ -99,6 +100,7 @@ impl Hook {
       Host::Claude | Host::Cursor | Host::Hermes => {
         env.with("CLAUDE_PROJECT_DIR", &self.sb.text("project"))
       }
+      Host::Grok => env.with("GROK_HOOK_EVENT", "pre_tool_use"),
       Host::Muse => env.with("MUSE_PLUGIN_ROOT", &self.sb.text("plugin")),
       Host::Opencode => env
         .with("TOOLU_HOST_OVERRIDE", "opencode")

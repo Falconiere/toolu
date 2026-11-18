@@ -5,8 +5,8 @@ that installs toolu's plugins on each host (#438). The generated reference of
 every verb and flag is [plugins.md](plugins.md). The
 [README](../../README.md#install) install snippets use these commands.
 
-Claude Code, Codex and Muse are driven through their own plugin CLIs. For Cursor,
-OpenCode and Qwen Code, toolu copies plugins into the directory each loads. The
+Claude Code, Codex, Grok Build and Muse are driven through their own plugin CLIs.
+For Cursor, OpenCode and Qwen Code, toolu copies plugins into the directory each loads. The
 code is `crates/plugins` (`toolu-plugins`); Muse is [below](#muse), then
 [Cursor](#cursor), [OpenCode](#opencode), and [Qwen Code](#qwen-code).
 
@@ -55,7 +55,7 @@ toolu plugins update [name...]    Update toolu's plugins on every host that has 
 
 | Flag | Meaning |
 |------|---------|
-| `--host <id>` | `claude`, `codex`, `muse`, `cursor`, `opencode` or `qwen`. Detected when omitted; see [Choosing hosts](#choosing-hosts). Without `--host`, `update` acts on every host that has toolu plugins. `hermes` is not an installer target and exits `64`. |
+| `--host <id>` | `claude`, `codex`, `muse`, `cursor`, `grok`, `opencode` or `qwen`. Detected when omitted; see [Choosing hosts](#choosing-hosts). Without `--host`, `update` acts on every host that has toolu plugins. `hermes` is not an installer target and exits `64`. |
 | `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with another host exits `64`, except `update` without `--host`, which does not use it. |
 | `--approve` | `install` and `update` only: approve each plugin's pending hooks on Muse. Does nothing on Claude Code and Codex. |
 | `--config <path>` | `install` only: replay a [`.toolu/plugins.json`](#tooluplugins-json) selection. Not combined with names. |
@@ -107,6 +107,16 @@ documentation-gate routing). Fix hints name the
 exact command; secret values never appear. Exit is `1` only when a finding
 fails. Top-level `toolu doctor` stays the install-wide umbrella (binary, config,
 registry, tools); use `plugins doctor` for the plugins domain.
+
+## Grok Build
+
+```bash
+toolu plugins install delivery-flow --host grok
+```
+
+Name Grok explicitly with `--host grok` in installer commands. The installer uses Grok's native plugin CLI and trusts plugins from the
+official toolu GitHub marketplace. Use `toolu plugins update --host grok`
+to refresh them. Start a new session after installing or updating.
 
 ## Behavior worth knowing
 

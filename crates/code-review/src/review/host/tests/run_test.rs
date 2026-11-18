@@ -23,11 +23,11 @@ fn invocation(
 }
 
 #[test]
-fn only_supported_review_workers_have_binaries() {
+fn hosts_without_a_review_transport_are_excluded() {
   for host in Host::ALL {
     assert_eq!(
       binary(host).is_some(),
-      !matches!(host, Host::Hermes | Host::Qwen)
+      !matches!(host, Host::Grok | Host::Hermes | Host::Qwen)
     );
   }
 }

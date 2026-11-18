@@ -1,0 +1,14 @@
+{
+  "hookEventName": "pre_tool_use",
+  "hook_event_name": "PreToolUse",
+  "toolName": "run_terminal_command",
+  "tool_name": "run_terminal_command",
+  "toolInput": {
+    "command": "printenv GROK_AGENT",
+    "description": "Print GROK_AGENT and capture exit code"
+  },
+  "tool_input": {
+    "command": "printenv GROK_AGENT",
+    "description": "Print GROK_AGENT and capture exit code"
+  }
+}

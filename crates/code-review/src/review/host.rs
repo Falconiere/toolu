@@ -22,12 +22,14 @@ use super::{Input, Options};
 #[path = "tests/host_test.rs"]
 mod tests;
 
+/// Native review response decoding.
 pub(crate) mod extract;
+/// Native review invocation.
 pub(crate) mod run;
 
+// shortcut: unlink argv delivery once every host reads stdin or a file.
 /// Above this prompt size the argv-only hosts refuse the call: argv cannot
 /// carry a review prompt, and secrets must not appear in a process listing.
-// shortcut: unlink argv delivery once every host reads stdin or a file.
 pub(crate) const MAX_ARGV_PROMPT_BYTES: usize = 90_000;
 
 /// How the prompt reaches the host CLI.
@@ -62,7 +64,7 @@ pub(crate) fn binary(host: Host) -> Option<&'static str> {
     Host::Claude => Some("claude"),
     Host::Codex => Some("codex"),
     Host::Cursor => Some("cursor-agent"),
-    Host::Hermes | Host::Qwen => None,
+    Host::Hermes | Host::Grok | Host::Qwen => None,
     Host::Muse => Some("muse"),
     Host::Opencode => Some("opencode"),
   }
@@ -87,18 +89,18 @@ pub(crate) fn delivery(host: Host) -> Delivery {
   match host {
     Host::Claude | Host::Codex => Delivery::Stdin,
     Host::Muse => Delivery::PromptFile,
-    Host::Cursor | Host::Opencode | Host::Hermes | Host::Qwen => Delivery::Argv,
+    Host::Cursor | Host::Opencode | Host::Hermes | Host::Grok | Host::Qwen => Delivery::Argv,
   }
 }
 
+// shortcut: refresh from `cursor-agent --list-models` / `opencode models` when a model id fails.
 /// The pinned non-default model, when the spike verified one. Model catalogs
 /// drift, so entries here are re-pinned by hand; a stale id can fail the review.
-// shortcut: refresh from `cursor-agent --list-models` / `opencode models` when a model id fails.
 pub(crate) fn premium_model(host: Host) -> Option<&'static str> {
   match host {
     Host::Cursor => Some("claude-opus-5-thinking-high"),
     Host::Opencode => Some("anthropic/claude-opus-5"),
-    Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Qwen => None,
+    Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Grok | Host::Qwen => None,
   }
 }
 
@@ -195,7 +197,7 @@ fn flags(spec: &Argv<'_>) -> Result<Vec<String>, String> {
     Host::Opencode => {
       args.extend(["run".into(), "--format".into(), "json".into()]);
     }
-    Host::Hermes => return Err("hermes has no review CLI".to_owned()),
+    Host::Grok | Host::Hermes => return Err(format!("{} has no review CLI", host.name())),
     Host::Qwen => return Err("qwen is not supported as a review worker".to_owned()),
   }
   Ok(args)

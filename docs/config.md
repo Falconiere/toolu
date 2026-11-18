@@ -13,6 +13,8 @@ disable what you do not want.
 - Muse: `${XDG_CONFIG_HOME:-~/.config}/muse/toolu.config.json` and
   `<repo>/.agents/toolu.config.json` (`MUSE_CONFIG_DIR` overrides the user root).
 - Cursor: `~/.cursor/toolu.config.json` and `<repo>/.cursor/toolu.config.json`.
+- Grok Build: `${GROK_HOME:-~/.grok}/toolu.config.json` and
+  `<repo>/.claude/toolu.config.json`. Grok keeps project state under `<repo>/.claude/tmp/`.
 - OpenCode: `${XDG_CONFIG_HOME:-~/.config}/opencode/toolu.config.json` and
   `<repo>/.opencode/toolu.config.json`.
 - Qwen Code: `${QWEN_HOME:-~/.qwen}/toolu.config.json` and

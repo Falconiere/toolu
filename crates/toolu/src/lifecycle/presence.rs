@@ -12,7 +12,7 @@ use toolu_runtime::host::snapshot::Installed;
 pub(crate) fn presence(spec: &str, env: &Env, host: Host) -> Installed {
   let mapped = match host {
     Host::Cursor | Host::Hermes => Host::Claude,
-    Host::Claude | Host::Codex => host,
+    Host::Claude | Host::Codex | Host::Grok => host,
     // Neither keeps an install record the engine reads: unknown runs the rules.
     Host::Muse | Host::Opencode | Host::Qwen => {
       return if spec.is_empty() {
@@ -35,7 +35,7 @@ pub(crate) fn install_command(spec: &str, host: Host) -> String {
   match host {
     Host::Codex => format!("codex plugin add {spec}"),
     Host::Muse => format!("muse plugins install {spec}"),
-    Host::Opencode | Host::Qwen => format!(
+    Host::Opencode | Host::Grok | Host::Qwen => format!(
       "toolu plugins install {} --host {}",
       spec.split('@').next().unwrap_or(spec),
       host.name()

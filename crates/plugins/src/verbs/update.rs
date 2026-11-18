@@ -114,6 +114,14 @@ fn one(
   if dry_run {
     return Step::new(name, Status::Skipped, "dry run", argv);
   }
+  if driver.adapter == Adapter::Grok && !driver.owns_grok_plugin(name) {
+    return Step::new(
+      name,
+      Status::Failed,
+      "no unique toolu-owned Grok install",
+      argv,
+    );
+  }
   let ran = driver.run(&argv);
   if driver.adapter == Adapter::Claude {
     return claude::update_step(name, &ran, argv);

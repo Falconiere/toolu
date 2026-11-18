@@ -15,8 +15,14 @@ fn expected() -> [(&'static str, Entries); 6] {
     (
       "SessionStart",
       vec![
-        ("session-start", Some("startup|resume|clear|compact")),
-        ("check-binary", Some("startup|resume|clear|compact")),
+        (
+          "session-start",
+          Some("^(startup|resume|clear|compact|new|load)$"),
+        ),
+        (
+          "check-binary",
+          Some("^(startup|resume|clear|compact|new|load)$"),
+        ),
       ],
     ),
     ("PreCompact", vec![("pre-compact", Some("auto"))]),

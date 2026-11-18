@@ -91,11 +91,10 @@ impl<'a> Session<'a> {
   /// The hook process's working directory; on Cursor, whose plugin hooks start
   /// outside the project, the project root (#589).
   pub(crate) fn cwd(&self) -> &Path {
-    match self.host {
-      Host::Cursor => &self.project_root,
-      Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Opencode | Host::Qwen => {
-        self.options.cwd
-      }
+    if self.host == Host::Cursor {
+      &self.project_root
+    } else {
+      self.options.cwd
     }
   }
 }
@@ -104,14 +103,12 @@ impl<'a> Session<'a> {
 /// Cursor, whose plugin hooks start elsewhere and name the project in
 /// `CURSOR_PROJECT_DIR` (#589).
 fn post_cwd(host: Host, roots: &Roots, cwd: &Path) -> PathBuf {
-  match host {
-    Host::Cursor => roots
-      .project_root(Some(cwd))
-      .unwrap_or_else(|| cwd.to_path_buf()),
-    Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Opencode | Host::Qwen => {
-      cwd.to_path_buf()
-    }
+  if host == Host::Cursor
+    && let Some(root) = roots.project_root(Some(cwd))
+  {
+    return root;
   }
+  cwd.to_path_buf()
 }
 
 /// `PROJECT_ROOT` and the post-tool environment.

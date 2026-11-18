@@ -21,8 +21,11 @@ const CURSOR_ALIASES: [(&str, HostEvent); 4] = [
 /// `host`'s name for `event`, or `None` when the host has no such event.
 pub fn native_event(host: Host, event: HostEvent) -> Option<&'static str> {
   match host {
+    Host::Grok if event == HostEvent::PermissionEvaluate => None,
     Host::Codex | Host::Opencode if event == HostEvent::Stop => None,
-    Host::Claude | Host::Muse | Host::Codex | Host::Opencode | Host::Qwen => Some(pascal(event)),
+    Host::Claude | Host::Muse | Host::Codex | Host::Opencode | Host::Grok | Host::Qwen => {
+      Some(pascal(event))
+    }
     Host::Cursor => cursor(event),
     Host::Hermes => hermes(event),
   }
@@ -34,12 +37,14 @@ pub fn canonical_event(host: Host, native: &str) -> Option<HostEvent> {
   let row = HostEvent::ALL
     .into_iter()
     .find(|event| native_event(host, *event) == Some(native));
-  row.or_else(|| match host {
-    Host::Cursor => CURSOR_ALIASES
+  if host != Host::Cursor {
+    return row;
+  }
+  row.or_else(|| {
+    CURSOR_ALIASES
       .into_iter()
       .find(|(alias, _)| *alias == native)
-      .map(|(_, event)| event),
-    Host::Claude | Host::Codex | Host::Hermes | Host::Muse | Host::Opencode | Host::Qwen => None,
+      .map(|(_, event)| event)
   })
 }
 

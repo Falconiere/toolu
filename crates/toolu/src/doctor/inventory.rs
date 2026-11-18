@@ -12,6 +12,8 @@ use toolu_runtime::process::{Spec, run};
 
 use super::checks::{Check, Status};
 
+mod grok;
+
 /// How long `codex plugin list --json` may run. Only a Codex host starts it.
 const CODEX_LIST_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -64,6 +66,7 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
     Host::Muse => super::muse::collect(roots),
     Host::Cursor => super::cursor::collect(roots),
     Host::Opencode => super::opencode::collect(roots),
+    Host::Grok => grok::collect(roots, cwd),
     Host::Qwen => qwen(roots),
     Host::Hermes => Inventory::warn("plugin inventory is unknown for this host"),
   }
@@ -257,13 +260,7 @@ fn codex(roots: &Roots) -> Inventory {
   spec.timeout = CODEX_LIST_TIMEOUT;
   spec.env = Some(roots.env().clone());
   spec.max_output_bytes = 1_048_576;
-  let Ok(output) = run(&spec) else {
-    return Inventory::warn("plugin inventory is unavailable");
-  };
-  if output.exit_code != 0 || output.timed_out || output.truncated {
-    return Inventory::warn("plugin inventory is unavailable");
-  }
-  let Some(list) = parse_codex(&output.stdout) else {
+  let Some(list) = query(&spec).and_then(|stdout| parse_codex(&stdout)) else {
     return Inventory::warn("plugin inventory is unavailable");
   };
   let notices: Vec<String> = [
@@ -318,6 +315,11 @@ fn flag_on(entry: &Map<String, Value>, key: &str) -> bool {
   entry
     .get(key)
     .is_none_or(|value| value == &Value::Bool(true))
+}
+
+fn query(spec: &Spec) -> Option<String> {
+  let output = run(spec).ok()?;
+  (output.exit_code == 0 && !output.timed_out && !output.truncated).then_some(output.stdout)
 }
 
 #[cfg(test)]
