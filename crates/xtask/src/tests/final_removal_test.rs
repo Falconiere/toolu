@@ -38,6 +38,30 @@ fn tracked_typescript_bun_and_shell_files_are_findings() {
 }
 
 #[test]
+fn only_eval_case_scaffolds_are_kept_among_shell_files() {
+  let files: Vec<String> = [
+    "plugins/delivery-flow/evals/minimal-docs/scaffold.sh",
+    "plugins/x/evals/c/setup.sh",
+    "plugins/x/evals/scaffold.sh",
+    "plugins/x/evals/c/d/scaffold.sh",
+    "plugins/x/scripts/scaffold.sh",
+    "evals/c/scaffold.sh",
+  ]
+  .map(str::to_owned)
+  .to_vec();
+  assert_eq!(
+    super::tracked_problems(&files),
+    [
+      "tracked shell file: plugins/x/evals/c/setup.sh",
+      "tracked shell file: plugins/x/evals/scaffold.sh",
+      "tracked shell file: plugins/x/evals/c/d/scaffold.sh",
+      "tracked shell file: plugins/x/scripts/scaffold.sh",
+      "tracked shell file: evals/c/scaffold.sh",
+    ]
+  );
+}
+
+#[test]
 fn a_shellcheckrc_is_a_finding() {
   let tmp = tempfile::tempdir().unwrap();
   let root = tmp.path();

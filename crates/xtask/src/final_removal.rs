@@ -15,6 +15,13 @@ use crate::{Verdict, output};
 /// The one shell file that stays: the curl installer.
 const SHELL_KEEP: &str = "install.sh";
 
+/// An eval case's setup script, `plugins/<plugin>/evals/<case>/scaffold.sh`: `claude plugin
+/// eval --scaffold` runs it with bash, outside the agent sandbox that refuses to create `.git`.
+fn eval_scaffold(file: &str) -> bool {
+  let parts: Vec<&str> = file.split('/').collect();
+  matches!(parts.as_slice(), ["plugins", _, "evals", _, "scaffold.sh"])
+}
+
 /// Where TypeScript may remain: input files of the deterministic benchmark.
 const TS_KEEP: &str = "benchmarks/fixtures/";
 
@@ -82,7 +89,7 @@ pub(crate) fn tracked_problems(files: &[String]) -> Vec<String> {
     if matches!(name, "bun.lock" | "bun.lockb" | "bunfig.toml") {
       found.push(format!("tracked Bun file: {file}"));
     }
-    if matches!(ext, Some("sh" | "bash" | "bats")) && file != SHELL_KEEP {
+    if matches!(ext, Some("sh" | "bash" | "bats")) && file != SHELL_KEEP && !eval_scaffold(file) {
       found.push(format!("tracked shell file: {file}"));
     }
   }
