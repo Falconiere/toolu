@@ -1,6 +1,6 @@
 # toolu
 
-Engineering discipline for Claude Code, Codex, Muse Code, Cursor, Grok Build, OpenCode and Qwen Code through workflow skills,
+Engineering discipline for Claude Code, Codex, Muse Code, Cursor, OpenCode and Qwen Code through workflow skills,
 agents, commands, and registry-driven quality hooks. This is the core plugin;
 domain plugins (`rust-quality`, `ts-quality`, …) register into it.
 

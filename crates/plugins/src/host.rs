@@ -87,7 +87,12 @@ impl Target {
   /// name, from any source. A new target must decide here.
   pub(crate) fn removes_only_toolu(self) -> bool {
     match self {
-      Target::Claude | Target::Codex | Target::Cursor | Target::Opencode | Target::Grok | Target::Qwen => true,
+      Target::Claude
+      | Target::Codex
+      | Target::Cursor
+      | Target::Opencode
+      | Target::Grok
+      | Target::Qwen => true,
       Target::Muse => false,
     }
   }
@@ -249,12 +254,18 @@ pub(crate) fn resolve(
 /// Claude Code takes every scope, the other hosts none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
   match (scope, target) {
-    (Some(_), Target::Codex | Target::Muse | Target::Cursor | Target::Opencode | Target::Grok | Target::Qwen) => {
-      Err(Fail::usage(format!(
-        "--scope is for Claude Code; {} has no scope concept",
-        target.name()
-      )))
-    }
+    (
+      Some(_),
+      Target::Codex
+      | Target::Muse
+      | Target::Cursor
+      | Target::Opencode
+      | Target::Grok
+      | Target::Qwen,
+    ) => Err(Fail::usage(format!(
+      "--scope is for Claude Code; {} has no scope concept",
+      target.name()
+    ))),
     (None, _) | (Some(_), Target::Claude) => Ok(()),
   }
 }

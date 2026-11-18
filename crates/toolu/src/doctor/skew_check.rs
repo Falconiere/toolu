@@ -125,11 +125,13 @@ pub(super) fn removal(roots: &Roots, retired: &[&str]) -> Option<String> {
         .join("; "),
     ),
     Host::Hermes => None,
-    Host::Claude | Host::Codex | Host::Cursor | Host::Opencode | Host::Grok | Host::Qwen => Some(format!(
-      "toolu plugins remove {} --host {} --yes",
-      retired.join(" "),
-      host.name()
-    )),
+    Host::Claude | Host::Codex | Host::Cursor | Host::Opencode | Host::Grok | Host::Qwen => {
+      Some(format!(
+        "toolu plugins remove {} --host {} --yes",
+        retired.join(" "),
+        host.name()
+      ))
+    }
   }
 }
 

@@ -68,7 +68,7 @@ impl Store {
     let dir = match target {
       Target::Opencode => plugins_dir(&roots(Host::Opencode)),
       Target::Qwen => roots(Host::Qwen).config_root().join("extensions"),
-      Target::Claude | Target::Codex | Target::Muse | Target::Cursor => {
+      Target::Claude | Target::Codex | Target::Grok | Target::Muse | Target::Cursor => {
         local_dir(&roots(Host::Cursor))
       }
     };

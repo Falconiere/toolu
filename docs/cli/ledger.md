@@ -26,7 +26,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 
@@ -49,7 +49,7 @@ Options:
       --activity <LABEL>  What the running step is doing; needs --step
   -q, --quiet             Drop the diagnostics of a successful run
       --force             Re-run steps that are already fresh-green
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --verify            Re-run steps without paths and steps whose paths changed, and stamp the verified hash
       --detach            Return a job id while a copy runs the checks and records the result
@@ -66,7 +66,7 @@ Usage: toolu ledger status [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -84,7 +84,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -99,7 +99,7 @@ Usage: toolu ledger path [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -114,7 +114,7 @@ Usage: toolu ledger root [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -129,7 +129,7 @@ Usage: toolu ledger {self-test|--self-test} [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -147,7 +147,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```

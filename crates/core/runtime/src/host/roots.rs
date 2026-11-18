@@ -206,7 +206,13 @@ impl Roots {
     require("invocation", "name", name)?;
     Ok(match self.host {
       Host::Codex => format!("${namespace}:{name}"),
-      Host::Claude | Host::Cursor | Host::Hermes | Host::Muse | Host::Opencode | Host::Grok | Host::Qwen => {
+      Host::Claude
+      | Host::Cursor
+      | Host::Hermes
+      | Host::Muse
+      | Host::Opencode
+      | Host::Grok
+      | Host::Qwen => {
         format!("/{namespace}:{name}")
       }
     })

@@ -23,7 +23,7 @@ pub enum Host {
 
 impl Host {
   /// Every host, in `--host` order.
-  pub const ALL: [Host; 7] = [
+  pub const ALL: [Host; 8] = [
     Host::Claude,
     Host::Codex,
     Host::Cursor,

@@ -18,7 +18,7 @@ Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --repo <PATH>       A checkout to sweep, besides this one and those the epic records name
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode, qwen]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, grok, hermes, muse, opencode, qwen]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
