@@ -58,7 +58,7 @@ pub(crate) fn run(driver: &Driver, verb: Verb) -> Res<Prepared> {
 pub(crate) fn grok_marketplace(driver: &Driver, add: bool) -> Res<()> {
   let listing = ["grok", "plugin", "marketplace", "list", "--json"].map(str::to_owned);
   let rows = must(driver, &listing)?;
-  match crate::host::grok::official_marketplace(&rows).map_err(Fail::failed)? {
+  match crate::host::official_grok_marketplace(&rows).map_err(Fail::failed)? {
     Some(true) => Ok(()),
     None if add => must(driver, &driver.adapter.add_marketplace(None)).map(drop),
     None => Err(Fail::failed("Grok's toolu marketplace is missing")),

@@ -6,6 +6,9 @@
 //! there and `OpenCode` when its config directory or `opencode` is. `update`
 //! without `--host` asks nothing: it takes `with_toolu`.
 
+use self::adapter::Installed;
+use serde_json::Value;
+
 use std::path::Path;
 
 use toolu_protocol::host::Host;
@@ -24,8 +27,6 @@ pub(crate) mod checkout;
 pub(crate) mod claude;
 /// Codex's plugin listing and marketplace commands.
 pub(crate) mod codex;
-/// Grok Build's installed plugin reports.
-pub(crate) mod grok;
 /// Muse's plugin documents and marketplace commands.
 pub(crate) mod muse;
 /// Host commands with a deadline.
@@ -256,6 +257,37 @@ pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
     }
     (None, _) | (Some(_), Target::Claude) => Ok(()),
   }
+}
+
+/// Read the version and marketplace Grok records for each installation.
+pub(crate) fn grok_plugins(text: &str) -> Result<Vec<Installed>, String> {
+  let entries: Vec<Value> = serde_json::from_str(text).map_err(|err| err.to_string())?;
+  entries.iter().map(grok_entry).collect()
+}
+
+fn grok_entry(value: &Value) -> Result<Installed, String> {
+  let field = |key: &str| value.get(key).and_then(Value::as_str);
+  Ok(Installed {
+    name: field("name")
+      .ok_or("Grok plugin entry has no name")?
+      .to_owned(),
+    version: field("version").unwrap_or("?").to_owned(),
+    enabled: true,
+    source: field("marketplace").map(str::to_owned),
+  })
+}
+
+/// Whether Grok has one official source for its toolu marketplace.
+pub(crate) fn official_grok_marketplace(text: &str) -> Result<Option<bool>, String> {
+  let rows: Vec<Value> = serde_json::from_str(text).map_err(|err| err.to_string())?;
+  let mut sources = rows
+    .iter()
+    .filter(|row| row["name"] == adapter::MARKETPLACE);
+  Ok(sources.next().map(|row| {
+    sources.next().is_none()
+      && row.pointer("/source/url").and_then(Value::as_str) == Some(checkout::ORIGIN)
+      && row.pointer("/source/branch").is_none_or(Value::is_null)
+  }))
 }
 
 #[cfg(test)]

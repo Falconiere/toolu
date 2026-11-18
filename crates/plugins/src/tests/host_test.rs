@@ -99,7 +99,7 @@ fn an_explicit_host_wins_and_one_found_host_is_used() {
   assert_eq!(none.exit, Exit::Usage);
   assert_eq!(
     none.message,
-    "no host found on PATH (probed claude, codex, muse, qwen). Choose one with --host."
+    "no host found on PATH (probed claude, codex, muse, grok, qwen). Choose one with --host."
   );
   sb.stub("codex", "exit 0");
   assert_eq!(
@@ -294,5 +294,24 @@ fn list_and_remove_offer_cursor_only_when_it_holds_toolu_plugins() {
   assert_eq!(
     labels(&asked),
     [("claude", Some("Claude Code")), ("cursor", Some("Cursor"))]
+  );
+}
+
+#[test]
+fn grok_keeps_foreign_marketplaces_distinct() {
+  let list = r#"[
+    {"status":"installed","name":"toolu","version":"10.0.0","marketplace":"toolu"},
+    {"status":"installed","name":"toolu","version":"10.0.0","marketplace":null}
+  ]"#;
+  let entries = super::grok_plugins(list).unwrap();
+  assert_eq!(entries[0].source.as_deref(), Some("toolu"));
+  assert_eq!(entries[1].source, None);
+  let markets = r#"[
+    {"name":"toolu","kind":"local","source":{"path":"/other/toolu"}},
+    {"name":"external","kind":"git","source":{"url":"https://example.test/toolu.git"}}
+  ]"#;
+  assert_eq!(
+    super::official_grok_marketplace(markets).unwrap(),
+    Some(false)
   );
 }

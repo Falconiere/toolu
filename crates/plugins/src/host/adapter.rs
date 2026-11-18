@@ -3,7 +3,7 @@
 //! normalizes its plugin listing into `Installed`.
 
 use crate::args::Scope;
-use crate::host::{claude, codex, grok, muse};
+use crate::host::{claude, codex, muse};
 
 /// One plugin as a host reports it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,7 +156,7 @@ impl Adapter {
     let parsed = match self {
       Adapter::Claude => claude::parse(stdout),
       Adapter::Codex => codex::parse(stdout),
-      Adapter::Grok => grok::parse(stdout),
+      Adapter::Grok => super::grok_plugins(stdout),
       Adapter::Muse => muse::parse(stdout),
     };
     parsed.map_err(|detail| format!("{} {} list --json: {detail}", self.bin(), self.noun()))
