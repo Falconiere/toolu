@@ -27,6 +27,8 @@ jobs:
   # outputs one boolean per group. pull_request: base...head; push: before..after;
   # workflow_dispatch, an unmatched path, .github/**, package-lock.json, an empty diff or
   # a diff error: every group on. A release-please version bump: every group off.
+  # `rust_release` is not a path group. It is true only for this repository's
+  # release-please branch, so the `rust` and `rust-macos` legs run there and nowhere else.
   changes:
     name: changes
     runs-on: ubuntu-24.04
@@ -36,6 +38,7 @@ jobs:
       rust: ${{ steps.groups.outputs.rust }}
       ports: ${{ steps.groups.outputs.ports }}
       changed: ${{ steps.groups.outputs.changed }}
+      rust_release: ${{ (github.event_name == 'pull_request' && github.head_ref == 'release-please--branches--main--components--toolu' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name != 'pull_request' && github.ref_name == 'release-please--branches--main--components--toolu') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -78,10 +81,12 @@ jobs:
   # The Rust workspace gate (#407): format, clippy with warnings denied, build,
   # tests and the layer graph, on both declared platforms. The toolchain comes
   # from rust-toolchain.toml; --locked keeps Cargo.lock authoritative.
+  # Other pull requests and pushes to main skip both legs. A version-only
+  # release PR still runs them: `rust_release` does not follow the path groups.
   rust:
     name: ${{ matrix.check }}
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    if: needs.changes.outputs.rust_release == 'true'
     strategy:
       fail-fast: false
       matrix:

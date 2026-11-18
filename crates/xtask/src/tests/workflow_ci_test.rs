@@ -22,6 +22,19 @@ fn the_supported_macos_runner_executes_both_rust_gates() {
 }
 
 #[test]
+fn a_rust_job_that_ignores_the_release_branch_is_rejected() {
+  let mut tests = committed_tests_workflow();
+  tests["jobs"]["changes"]["outputs"]["rust_release"] = json!("${{ github.ref_name == 'main' }}");
+  tests["jobs"]["rust"]["if"] = json!("needs.changes.outputs.rust == 'true'");
+  let lines = found(|f| rust_legs(&tests, f));
+  assert!(
+    lines
+      .contains(&"tests.yml:changes rust_release must be the same-repo release branch".to_owned())
+  );
+  assert!(lines.contains(&"tests.yml:rust must run only when rust_release is true".to_owned()));
+}
+
+#[test]
 fn a_retired_macos_runner_is_rejected() {
   let mut tests = committed_tests_workflow();
   let mac = tests["jobs"]["rust"]["strategy"]["matrix"]["include"]
@@ -115,6 +128,10 @@ fn an_aggregate_missing_a_gated_job_is_named() {
 fn rust_legs_and_review_name_what_is_missing() {
   let lines = found(|f| rust_legs(&json!({}), f));
   assert!(lines.contains(&"tests.yml:rust lacks rust-macos on macos-15".to_owned()));
+  assert!(
+    lines
+      .contains(&"tests.yml:changes rust_release must be the same-repo release branch".to_owned())
+  );
   assert!(lines.iter().all(|line| !line.contains("macos-14")));
   assert!(lines.contains(&"tests.yml:rust-musl lacks aarch64-unknown-linux-musl".to_owned()));
   let root = tempfile::tempdir().unwrap();

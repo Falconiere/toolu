@@ -34,7 +34,8 @@ reasons.
    violating fixture under `fixtures/guardrails/rust/`, run against this
    repository's real gate data by `cargo test -p xtask`.
 6. **Same gate everywhere.** `cargo xtask gate` is the `rust` CI job on
-   Linux, the `lefthook.yml` pre-push hook, and what an agent runs locally.
+   Linux (that job runs on the release-please branch), the `lefthook.yml`
+   pre-push hook, and what an agent runs locally.
    macOS runs the clippy and tests steps plus the shell-latency and
    launcher checks (the `rust-macos` matrix leg on `macos-15`), not the full gate.
    The gate collects findings from its first 19 steps, through clippy, and skips

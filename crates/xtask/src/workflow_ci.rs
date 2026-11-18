@@ -156,6 +156,7 @@ pub(crate) fn rust_legs(tests: &Value, found: &mut Findings) {
     );
   }
   leg_steps(rust, found);
+  release_branch(tests, found);
   let command = runs(rust);
   for required in [
     "cargo xtask gate --only guardrails",
@@ -170,6 +171,27 @@ pub(crate) fn rust_legs(tests: &Value, found: &mut Findings) {
     );
   }
   musl(tests, found);
+}
+
+/// `rust` and `rust-macos` run only on this repository's release-please branch.
+fn release_branch(tests: &Value, found: &mut Findings) {
+  let branch = "release-please--branches--main--components--toolu";
+  let output = text(at(tests, &["jobs", "changes", "outputs", "rust_release"]));
+  let same_repo = "github.event.pull_request.head.repo.full_name == github.repository";
+  found.need(
+    output.contains(branch)
+      && output.contains(same_repo)
+      && output.contains("github.head_ref")
+      && output.contains("github.ref_name"),
+    "tests.yml:changes rust_release must be the same-repo release branch",
+  );
+  found.need(
+    includes(
+      at(tests, &["jobs", "rust", "if"]),
+      "needs.changes.outputs.rust_release == 'true'",
+    ),
+    "tests.yml:rust must run only when rust_release is true",
+  );
 }
 
 /// The Linux leg's gate steps and the macOS leg's clippy and tests.
