@@ -20,7 +20,7 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
     .unwrap_or_else(|| Inventory::warn("Grok plugin inventory is unavailable"))
 }
 
-pub(super) fn parse(report: &Value) -> Option<Inventory> {
+fn parse(report: &Value) -> Option<Inventory> {
   let names = plugin_names(BUILT_IN);
   let plugins = report
     .get("plugins")?
@@ -37,3 +37,7 @@ pub(super) fn parse(report: &Value) -> Option<Inventory> {
     warning: None,
   })
 }
+
+#[cfg(test)]
+#[path = "tests/grok_test.rs"]
+mod tests;

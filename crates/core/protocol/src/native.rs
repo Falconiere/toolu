@@ -37,18 +37,14 @@ pub fn canonical_event(host: Host, native: &str) -> Option<HostEvent> {
   let row = HostEvent::ALL
     .into_iter()
     .find(|event| native_event(host, *event) == Some(native));
-  row.or_else(|| match host {
-    Host::Cursor => CURSOR_ALIASES
+  if host != Host::Cursor {
+    return row;
+  }
+  row.or_else(|| {
+    CURSOR_ALIASES
       .into_iter()
       .find(|(alias, _)| *alias == native)
-      .map(|(_, event)| event),
-    Host::Claude
-    | Host::Codex
-    | Host::Hermes
-    | Host::Muse
-    | Host::Opencode
-    | Host::Grok
-    | Host::Qwen => None,
+      .map(|(_, event)| event)
   })
 }
 

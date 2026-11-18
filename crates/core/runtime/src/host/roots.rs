@@ -204,18 +204,8 @@ impl Roots {
   pub fn invocation(&self, namespace: &str, name: &str) -> Result<String, CallerError> {
     require("invocation", "namespace", namespace)?;
     require("invocation", "name", name)?;
-    Ok(match self.host {
-      Host::Codex => format!("${namespace}:{name}"),
-      Host::Claude
-      | Host::Cursor
-      | Host::Hermes
-      | Host::Muse
-      | Host::Opencode
-      | Host::Grok
-      | Host::Qwen => {
-        format!("/{namespace}:{name}")
-      }
-    })
+    let prefix = if self.host == Host::Codex { '$' } else { '/' };
+    Ok(format!("{prefix}{namespace}:{name}"))
   }
 
   /// The host-native command that installs `spec`, or `None` where none exists yet.

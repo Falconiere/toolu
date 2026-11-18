@@ -16,7 +16,7 @@ pub struct Detected {
 
 /// Resolves the host using an explicit override, a unique hook event name,
 /// then the Grok, Cursor, Muse and Qwen hook environment. Codex's plugin
-/// marker and Grok and OpenCode shell markers follow. Claude is the fallback.
+/// marker and Grok and `OpenCode` shell markers follow. Claude is the fallback.
 pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
   let mut warning = None;
   if let Some(name) = env.get("TOOLU_HOST_OVERRIDE") {

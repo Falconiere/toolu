@@ -253,21 +253,13 @@ pub(crate) fn resolve(
 
 /// Claude Code takes every scope, the other hosts none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
-  match (scope, target) {
-    (
-      Some(_),
-      Target::Codex
-      | Target::Muse
-      | Target::Cursor
-      | Target::Opencode
-      | Target::Grok
-      | Target::Qwen,
-    ) => Err(Fail::usage(format!(
+  if scope.is_some() && target != Target::Claude {
+    return Err(Fail::usage(format!(
       "--scope is for Claude Code; {} has no scope concept",
       target.name()
-    ))),
-    (None, _) | (Some(_), Target::Claude) => Ok(()),
+    )));
   }
+  Ok(())
 }
 
 /// Read the version and marketplace Grok records for each installation.

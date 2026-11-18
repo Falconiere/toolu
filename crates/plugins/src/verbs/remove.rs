@@ -26,15 +26,18 @@ fn one(driver: &Driver, name: &str, dry_run: bool) -> Step {
   if dry_run {
     return Step::new(name, Status::Skipped, "dry run", argv);
   }
-  if driver.adapter == Adapter::Grok
-    && (super::prepare::grok_marketplace(driver, false).is_err() || !driver.owns_grok_plugin(name))
-  {
-    return Step::new(
-      name,
-      Status::Failed,
-      "no unique official Grok install",
-      argv,
-    );
+  if driver.adapter == Adapter::Grok {
+    if let Err(fail) = super::prepare::grok_marketplace(driver, false) {
+      return Step::new(name, Status::Failed, fail.message, argv);
+    }
+    if !driver.owns_grok_plugin(name) {
+      return Step::new(
+        name,
+        Status::Failed,
+        "no unique official Grok install",
+        argv,
+      );
+    }
   }
   let ran = driver.run(&argv);
   if ran.ok() {
