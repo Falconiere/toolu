@@ -6,6 +6,14 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [10.1.0](https://github.com/Falconiere/toolu/compare/v10.0.0...v10.1.0) (2026-11-18)
+
+
+### Features
+
+* **epic:** activate toolu hooks for Grok workers ([#914](https://github.com/Falconiere/toolu/issues/914)) ([85bffa5](https://github.com/Falconiere/toolu/commit/85bffa55202e2d78124707bff91e7b2c64cd043d))
+* **qwen:** add Qwen Code plugin host support ([#913](https://github.com/Falconiere/toolu/issues/913)) ([14ea2e3](https://github.com/Falconiere/toolu/commit/14ea2e3c6a9a19754b8b1b9f3ea714c5afbf7ca7))
+
 ## [10.0.0](https://github.com/Falconiere/toolu/compare/v9.1.0...v10.0.0) (2026-11-16)
 
 
