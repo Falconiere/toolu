@@ -1,6 +1,6 @@
 # toolu
 
-Engineering discipline for Claude Code, Codex, Muse Code, Cursor and OpenCode: workflow skills,
+Engineering discipline for Claude Code, Codex, Muse Code, Cursor, OpenCode and Qwen Code through workflow skills,
 agents, commands, and registry-driven quality hooks. This is the core plugin;
 domain plugins (`rust-quality`, `ts-quality`, …) register into it.
 
@@ -23,7 +23,7 @@ codex plugin add toolu@toolu
 
 - **Supporting skills** — `orchestrator`, `debug`, `deep-research`, and `test-writer` (few spec-derived tests, cheap runs; `/toolu:test-writer`). The end-to-end workflow lives in the separate `delivery-flow` plugin, which depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`.
 - **Quality gate engine** — the `PreToolUse` / `PostToolUse` / `SessionStart` hook dispatcher and runtime **registry** that domain plugins contribute checks to (fail-closed; a module runs only while its owning plugin is installed).
-- **\`push-review\` gate** — gates \`git push\` on a feature branch until the diff has been run through an accepted reviewer (native \`code-review:review\`, or its \`toolu-review:review\` fallback), with a round cap that escalates instead of looping (5 rewrites against an unchanged diff; a changed diff restarts the count). Gated per target repo — `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file. **Delivery is configurable** (`gates.pushReview.mode`): the shipped default advises rather than blocking; `ask` is opt-in and a yes is remembered for that diff. See [hooks/docs/gates.md](hooks/docs/gates.md).
+- **\`push-review\` gate** — gates \`git push\` on a feature branch until the diff has been run through an accepted reviewer (native \`code-review:review\`, or its \`toolu-review:review\` fallback), with a round cap that escalates instead of looping (5 rewrites against an unchanged diff; a changed diff restarts the count). Gated per target repo — `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file. **Delivery is configurable** (`gates.pushReview.mode`): the shipped default advises rather than blocking; `ask` is opt-in. Claude Code remembers approval for the diff. Qwen Code applies it to the current push only. See [hooks/docs/gates.md](hooks/docs/gates.md).
 - **Runtime diagnostic** — on session start and resume, a one-line message names the native binary and version. If it is missing, enforcing hooks fail closed and the launcher says how to install the binary; see [docs/runtime.md](../../docs/runtime.md#hook-launcher).
 - **`pr-size` gate** — holds the branch a `git push` sends to 300 added code lines and 100 changed files (`gates.prSize.maxLines`, `maxFiles`; tests, docs and generated files add no code lines). Blocks by default; edit the budgets in `toolu.config.json`.
 - **docs-sync backstop** — checks documentation on push using the configured `docsSync` mode. With `documentation-gate` active it requires a current committed-diff worker review; otherwise it uses the legacy documentation-surface check.

@@ -1,14 +1,17 @@
 # Push review
 
 The push-review gate checks the target repository's branch diff against review
-state in the host's `.claude/tmp/push-review/` or `.codex/tmp/push-review/`
-directory (`$STATE_DIR` overrides it). It follows the configured
-mode: balanced defaults to `advise`; `block` denies, `ask` requests a waiver,
-and `off` is silent. On Codex, `ask` degrades to `advise`. See [gates.md](gates.md)
+state in the host's project state directory, under `push-review/`
+(`$STATE_DIR` overrides the review directory). On Qwen Code the default is
+`.qwen/tmp/push-review/` in the target repository. The balanced preset uses
+`advise`, `block` denies, `ask` requests approval, and `off` is silent.
+On Codex, `ask` degrades to `advise`. Qwen Code asks for each push that
+requires approval. See [gates.md](gates.md)
 for modes and waiver behavior.
 
-Run `code-review:review` on the committed diff; it falls back to
-`toolu-review:review` when necessary. Fix findings and rerun review after changes.
+In Qwen Code, run `/toolu-review:review` when the gate requests review.
+On a supported native review host, run `code-review:review` on the committed
+diff. It falls back to `toolu-review:review` when necessary. Fix findings and rerun review after changes.
 The native `toolu review write-state` writer records version 2 state; do not
 fabricate review coverage. State must match the current diff SHA, contain zero
 findings, an accepted reviewer, and exactly the changed paths in `reviewed_files`.

@@ -230,6 +230,16 @@ fn host_must_be_a_known_host_and_config_dir_is_accepted() {
 }
 
 #[test]
+fn qwen_capability_probe_recognizes_only_known_hosts() {
+  let protocol = toolu(&["--hook-protocol"]).unwrap();
+  let qwen = toolu(&["--host", "qwen", "--hook-protocol"]).unwrap();
+  assert!(qwen.status.success());
+  assert_eq!(qwen.stdout, protocol.stdout);
+  let unknown = toolu(&["--host", "unknown", "--hook-protocol"]).unwrap();
+  assert_eq!(unknown.status.code(), Some(64));
+}
+
+#[test]
 fn every_generated_hook_form_is_in_the_clap_tree() {
   for args in [
     &["hook", "--help"][..],

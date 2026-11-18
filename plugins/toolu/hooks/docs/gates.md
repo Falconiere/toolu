@@ -92,7 +92,8 @@ typo mis-delivers nothing.
 
 ## The push waiver
 
-`pushReview` in `ask` mode (opt-in) remembers a "yes":
+On Qwen Code, `pushReview` in `ask` mode grants approval for the current push only.
+On hosts that remember approval for the diff, the gate follows these steps.
 
 1. The gate asks, and records a **pending** waiver naming the diff SHA it asked
    about (`.claude/tmp/push-review/<branch>.pending-waiver.json`).
@@ -130,6 +131,10 @@ wrapper `tools/<name>/{check,test,format}.sh`. Wrappers (`timeout`, `sudo`,
 `bash -c` and `bash <script>` are followed; `yarn run <tool>`, `npx -p pkg
 tool` and `bash -x script` are not. Text that only names one
 (`echo "run bun test later"`, a commit message) does nothing.
+
+Qwen Code 0.28.0 supplies its shell exit code as display text. The gate updates
+command status only from a structured exit code, so those calls leave the
+command status unchanged. Post-edit file checks still update their own entries.
 
 A zero exit must prove every quality command in the line passed: each one runs
 last, or is joined to what follows by `&&`, and none is piped into another

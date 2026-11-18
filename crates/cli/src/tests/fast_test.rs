@@ -30,11 +30,6 @@ fn the_toolu_and_plugin_forms_parse() {
     }))
   );
   assert_eq!(parsed("--hook-protocol"), Some(Fast::HookProtocol));
-  assert_eq!(
-    parsed("--host qwen --hook-protocol"),
-    Some(Fast::HookProtocol)
-  );
-  assert_eq!(parsed("--host unknown --hook-protocol"), None);
   let Some(Fast::Hook(review)) = parsed("toolu-review hook check --event Stop") else {
     panic!("not a hook")
   };

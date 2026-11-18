@@ -6,7 +6,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 
 | # | Plugin | Type | Depends On | Quick Summary |
 |:--:|--------|------|:----------:|---------------|
-| 1 | [**toolu**](../toolu/README.md) | Core | — | Native hook engine for Claude Code, Codex, Muse, Cursor and OpenCode, push-review gate, and agent routing |
+| 1 | [**toolu**](../toolu/README.md) | Core | — | Native hook engine for Claude Code, Codex, Muse, Cursor, OpenCode and Qwen Code, push-review gate, and agent routing |
 | 2 | [**ast-grep**](../ast-grep/README.md) | Code Intel | — | Structural code search & rewrite (tree-sitter AST patterns) |
 | 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Fallback pre-push review and push-review state writer (prefer native `code-review`) |
 | 4 | [**delivery-flow**](../../plugins/delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery |
@@ -45,7 +45,7 @@ Hook entries and registry contributions run the native `toolu` binary through th
 All plugins share the same host-native config: `~/.claude/toolu.config.json`
 and `<repo>/.claude/toolu.config.json` on Claude Code, or
 `${CODEX_HOME:-~/.codex}/toolu.config.json` and
-`<repo>/.codex/toolu.config.json` on Codex. Muse, Cursor and OpenCode roots
+`<repo>/.codex/toolu.config.json` on Codex. Muse, Cursor, OpenCode and Qwen Code roots
 are listed in [config locations](../config.md#locations). Configure hook
 behavior and MCP access without uninstalling:
 

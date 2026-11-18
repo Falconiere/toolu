@@ -39,7 +39,9 @@ On OpenCode, hooks.json is not run by the host: each installed plugin's generate
 
 On Qwen Code, the installer adapts the shared hooks into each extension's
 `qwen-extension.json`. Qwen runs the native launcher through its command-hook
-interface. Shell and file tool IDs are mapped to the names the gates use.
+interface. The launcher probes each candidate with `--host qwen --hook-protocol`.
+Shell and file tool IDs are mapped to the names the gates use. For a shell tool
+with an absolute `directory`, gates resolve Git targets from that directory.
 [Qwen Code installation](cli/installer.md#qwen-code)
 
 Agent command tools use a non-login shell. Their plain `toolu` reachability and the SessionStart absolute-path advice are checked separately; see [Agent command shell](install.md#agent-command-shell).

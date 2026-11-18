@@ -193,7 +193,8 @@ command and `toolu` with it.
   (`~/.config/opencode`) exists or `opencode` is on `PATH`. Several can be chosen.
 - `list` and `remove` ask for one host. They offer Cursor and OpenCode only when
   toolu installed a plugin there, so a leftover config directory never adds the
-  question.
+  question. Qwen Code is offered when `qwen` is on `PATH` or toolu owns an
+  installed extension there.
 - An `install` with no plugin names and no `--config` then asks which plugins,
   every catalog entry selected.
 
@@ -378,6 +379,7 @@ installers, it reads plugins from the release tag matching the toolu binary.
 The launcher verifies Qwen host support when resolving the native binary.
 
 Qwen Code 0.28.0 exposes shell exit codes as display text in hook payloads.
-toolu's shell gate-status recording and push-waiver promotion require a
-structured exit status. Pre-tool gates and post-edit checks run through the
-native extension hooks.
+toolu records a shell quality result only from a structured exit status.
+Approving a push-review prompt applies to that push only. When the gate asks
+for a review, run `/toolu-review:review` in Qwen Code. Pre-tool gates and
+post-edit checks run through the native extension hooks.

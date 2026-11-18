@@ -15,6 +15,8 @@ disable what you do not want.
 - Cursor: `~/.cursor/toolu.config.json` and `<repo>/.cursor/toolu.config.json`.
 - OpenCode: `${XDG_CONFIG_HOME:-~/.config}/opencode/toolu.config.json` and
   `<repo>/.opencode/toolu.config.json`.
+- Qwen Code: `${QWEN_HOME:-~/.qwen}/toolu.config.json` and
+  `<repo>/.qwen/toolu.config.json`.
 - `TOOLU_CONFIG_DIR`, `TOOLU_PROJECT_DIR`, and
   `TOOLU_PROJECT_CONFIG_DIRNAME` are explicit cross-host overrides.
 - `TOOLU_USER_CONFIG_DIR` names the directory of the user-level file when it
@@ -321,7 +323,8 @@ gate is red. `MY_CLAUDE_QUALITY=off` remains a full kill switch.
 
 #### Push waivers
 
-`pushReview` in `ask` mode (opt-in) remembers a "yes" for that exact diff:
+When `pushReview` is set to `ask` on Qwen Code, approval allows that push only.
+On hosts that remember approval for the diff,
 the gate writes a pending marker, the PostToolUse push-waiver module promotes
 it once the push actually succeeds, and the next push of the same code is
 silent. A new commit changes the diff SHA and the gate asks again. A refused
