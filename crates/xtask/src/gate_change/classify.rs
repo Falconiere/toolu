@@ -32,6 +32,11 @@ const CONFIGS: &[&str] = &[".claude/toolu.config.json", ".codex/toolu.config.jso
 
 /// xtask modules that implement the gate itself, rather than product behavior.
 const GATE_CODE: &[&str] = &[
+  "crates/xtask/src/check_changed.rs",
+  "crates/xtask/src/tests/check_changed_test.rs",
+  "crates/xtask/src/guardrails.rs",
+  "crates/xtask/src/tests/guardrails_test.rs",
+  "crates/xtask/tests/fixtures_guardrails.rs",
   "crates/xtask/src/gate.rs",
   "crates/xtask/src/tests/gate_test.rs",
   "crates/xtask/src/tests/gate_change_test.rs",
@@ -58,6 +63,7 @@ pub(super) fn classify(
     return Ok(gate(format!("{name} changed")));
   }
   if name.starts_with("tooling/conventions/guardrails/web/")
+    || name.starts_with("crates/xtask/src/guardrails/")
     || name.starts_with("crates/xtask/src/gate/web/")
     || name.starts_with("crates/xtask/src/gate/tests/web_")
     || name == "crates/xtask/src/gate/web.rs"

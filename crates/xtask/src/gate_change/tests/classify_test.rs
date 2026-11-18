@@ -63,6 +63,13 @@ fn gate_files_configs_and_product_paths() {
     "crates/xtask/src/gate/web.rs",
     "crates/xtask/src/gate/web/checks.rs",
     "crates/xtask/src/gate.rs",
+    "crates/xtask/src/guardrails.rs",
+    "crates/xtask/src/guardrails/colocated.rs",
+    "crates/xtask/src/guardrails/tests/colocated_test.rs",
+    "crates/xtask/src/tests/guardrails_test.rs",
+    "crates/xtask/tests/fixtures_guardrails.rs",
+    "crates/xtask/src/check_changed.rs",
+    "crates/xtask/src/tests/check_changed_test.rs",
   ] {
     assert!(gate(path, None, Some("x")).is_some(), "{path}");
     assert!(!of(path, None, Some("x")).product, "{path}");

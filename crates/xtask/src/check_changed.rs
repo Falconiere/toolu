@@ -1,13 +1,13 @@
 //! Scoped pre-check for the current branch.
 
 use std::collections::BTreeSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::metadata::{self, Metadata};
 use crate::options::Options;
 use crate::{Verdict, gate, gate_change, output};
 
-/// Run collected gate checks, then tests for changed crates and their dependents.
+/// Run collected checks, then scoped clippy and tests including test consumers.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let root = options.root.as_path();
   let base_ref = options.base.as_deref().unwrap_or("origin/main");
@@ -18,42 +18,50 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   gated.only = gate::STEPS
     .iter()
     .take(gate::COLLECTED)
+    .filter(|step| **step != "clippy")
     .map(|step| (*step).to_owned())
     .collect();
   if gate::run(&gated)? == Verdict::Findings {
     return Ok(Verdict::Findings);
   }
-  let result = match selected {
-    None => gate::cargo(
-      root,
-      &[
-        "nextest",
-        "run",
-        "--locked",
-        "--no-tests=pass",
-        "--workspace",
-      ],
-    ),
-    Some(names) if names.is_empty() => Ok(Verdict::Clean),
-    Some(names) => {
-      let mut args = vec!["nextest", "run", "--locked", "--no-tests=pass"];
-      for name in &names {
-        args.extend(["-p", name]);
-      }
-      gate::cargo(root, &args)
-    }
-  }?;
+  let result = check_packages(root, selected.as_deref())?;
   if result == Verdict::Clean {
     output::say("check-changed: ok — run cargo xtask gate before pushing");
   }
   Ok(result)
 }
 
-/// `None` selects the workspace; otherwise select owning crates and linked dependents.
+fn check_packages(root: &Path, names: Option<&[String]>) -> Result<Verdict, String> {
+  let scope: Vec<_> = match names {
+    None => vec!["--workspace"],
+    Some([]) => return Ok(Verdict::Clean),
+    Some(names) => names
+      .iter()
+      .flat_map(|name| ["-p", name.as_str()])
+      .collect(),
+  };
+  let mut clippy = vec!["clippy", "--all-targets", "--locked"];
+  clippy.extend(scope.iter().copied());
+  clippy.extend(["--", "-D", "warnings"]);
+  if gate::cargo(root, &clippy)? == Verdict::Findings {
+    return Ok(Verdict::Findings);
+  }
+  let mut tests = vec!["nextest", "run", "--locked", "--no-tests=pass"];
+  tests.extend(scope);
+  gate::cargo(root, &tests)
+}
+
+/// Plain documentation needs no Rust run; unknown inputs select the workspace.
 fn packages(metadata: &Metadata, paths: &[PathBuf]) -> Option<Vec<String>> {
   let members: Vec<_> = metadata.members().collect();
   let mut names = BTreeSet::new();
   for path in paths {
+    if path == Path::new("AGENTS.md")
+      || path == Path::new("README.md")
+      || (path.starts_with("docs") && path.extension().is_some_and(|ext| ext == "md"))
+    {
+      continue;
+    }
     let absolute = metadata.workspace_root.join(path);
     let owner = members
       .iter()
@@ -70,11 +78,10 @@ fn packages(metadata: &Metadata, paths: &[PathBuf]) -> Option<Vec<String>> {
       .collect();
     for member in &members {
       if member.dependencies.iter().any(|dep| {
-        dep.is_linked()
-          && dep
-            .path
-            .as_deref()
-            .is_some_and(|path| selected_dirs.contains(path))
+        dep
+          .path
+          .as_deref()
+          .is_some_and(|path| selected_dirs.contains(path))
       }) {
         names.insert(member.name.as_str());
       }

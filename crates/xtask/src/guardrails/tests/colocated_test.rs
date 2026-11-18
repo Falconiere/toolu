@@ -5,13 +5,13 @@ const WIRED: &str =
   "//! q\npub fn f() {}\n#[cfg(test)]\n#[path = \"tests/queue_test.rs\"]\nmod tests;\n";
 
 #[test]
-fn a_module_with_a_function_and_no_test_file_names_the_expected_path() {
+fn a_declared_test_module_with_no_file_names_the_expected_path() {
   let missing = tree(&[("crates/demo/src/queue.rs", WIRED)]);
   let found = check(&context(&missing.workspace));
   assert_eq!(found.len(), 1);
   assert_eq!(
     found[0].message,
-    "defines functions but has no crates/demo/src/tests/queue_test.rs beside it"
+    "declares tests but has no crates/demo/src/tests/queue_test.rs beside it"
   );
 }
 
@@ -55,11 +55,11 @@ fn an_unwired_or_empty_test_file_fails() {
 }
 
 #[test]
-fn nested_modules_look_beside_themselves_and_files_without_bodies_need_nothing() {
+fn nested_test_modules_look_beside_themselves() {
   let nested = tree(&[
     (
       "crates/demo/src/gates/commit_gate.rs",
-      "//! g\nimpl S { fn f(&self) {} }\nstruct S;\n",
+      "//! g\nimpl S { fn f(&self) {} }\nstruct S;\n#[cfg(test)]\n#[path = \"tests/commit_gate_test.rs\"]\nmod tests;\n",
     ),
     (
       "crates/demo/src/types.rs",
@@ -76,10 +76,10 @@ fn nested_modules_look_beside_themselves_and_files_without_bodies_need_nothing()
 }
 
 #[test]
-fn a_default_trait_method_is_a_function() {
+fn functions_and_default_methods_do_not_require_separate_unit_tests() {
   let with_default = tree(&[(
     "crates/demo/src/x.rs",
-    "//! x\ntrait X { fn f(&self) {} }\n",
+    "//! x\npub fn f() {}\nstruct S;\nimpl S { fn f(&self) {} }\ntrait X { fn f(&self) {} }\n",
   )]);
-  assert_eq!(check(&context(&with_default.workspace)).len(), 1);
+  assert_eq!(check(&context(&with_default.workspace)), Vec::new());
 }

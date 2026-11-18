@@ -53,8 +53,9 @@ reasons.
   fallback if these prove too tight, changed in a `chore(gates):` PR.
 - **Unit tests beside the module** (`src/<dir>/tests/<module>_test.rs`, wired
   by `#[cfg(test)] #[path = …] mod tests;`). Production files stay readable,
-  tests keep private access, and the guardrails can check that every module
-  with a function has its test file.
+  tests keep private access, and the guardrails check that authored test files
+  are wired and non-empty. There is no per-module test quota: test distinct
+  behavior, and reuse integration coverage across modules.
 - **Behaviour inventory.** Each hook entry, gate, rule, CLI verb and engine
   transition names a passing and a failing test, so a deny path is never
   untested. Discovery is data (`rules.json`): today the `cargo xtask` task
@@ -113,7 +114,8 @@ target in the `fuzz` job of `tests.yml` and for 30 minutes in the scheduled
 
 ## Budget
 
-`cargo xtask gate` on a warm cache: about 20 seconds locally for the tests and
-coverage steps of today's workspace; the CI duration per runner is recorded
-in the pull request that introduced the gate and tracked by #410 (10 minutes
-or less).
+`cargo xtask gate` reports elapsed time for each step and the complete run.
+Compare measurements on the same host with the same cache state and test
+concurrency. Include the coverage rebuild and real integration subprocesses;
+a focused test duration is not a full-gate budget. Use scoped checks during
+development and one complete gate for the final tree.
