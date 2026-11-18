@@ -45,3 +45,36 @@ fn invalid_base_is_a_setup_error() {
     "{err}"
   );
 }
+
+#[test]
+fn documentation_does_not_expand_the_rust_test_scope() {
+  let metadata = metadata::load(Path::new(REPO)).unwrap();
+  let docs = [
+    "AGENTS.md",
+    "README.md",
+    "docs/testing.md",
+    "docs/cli/gate.md",
+  ];
+  let mut paths: Vec<_> = docs.iter().map(PathBuf::from).collect();
+  assert_eq!(packages(&metadata, &paths), Some(Vec::new()));
+  paths.push(PathBuf::from("crates/xtask/src/gate.rs"));
+  assert_eq!(packages(&metadata, &paths), Some(vec!["xtask".to_owned()]));
+  paths.push(PathBuf::from("docs/cli/commands.json"));
+  assert_eq!(packages(&metadata, &paths), None);
+}
+
+#[test]
+fn test_support_changes_include_dev_dependency_consumers() {
+  let metadata = metadata::load(Path::new(REPO)).unwrap();
+  let selected = packages(
+    &metadata,
+    &[PathBuf::from("crates/http-test-support/src/lib.rs")],
+  )
+  .unwrap();
+  for name in ["toolu-http-test-support", "toolu-http", "toolu-cli"] {
+    assert!(
+      selected.contains(&name.to_owned()),
+      "{name} missing: {selected:?}"
+    );
+  }
+}
