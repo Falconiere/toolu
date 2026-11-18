@@ -99,7 +99,7 @@ fn an_explicit_host_wins_and_one_found_host_is_used() {
   assert_eq!(none.exit, Exit::Usage);
   assert_eq!(
     none.message,
-    "no host found on PATH (probed claude, codex, muse, grok, qwen). Choose one with --host."
+    "no host found on PATH (probed claude, codex, muse, qwen). Choose one with --host."
   );
   sb.stub("codex", "exit 0");
   assert_eq!(

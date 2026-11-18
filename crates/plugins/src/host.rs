@@ -52,7 +52,7 @@ pub(crate) enum Target {
 }
 
 /// The probe order for hosts which have a CLI on `PATH`.
-const PROBED: [Target; 5] = [Target::Claude, Target::Codex, Target::Muse, Target::Grok, Target::Qwen];
+const PROBED: [Target; 4] = [Target::Claude, Target::Codex, Target::Muse, Target::Qwen];
 
 impl Target {
   /// The `--host` value, which is also the binary probed on `PATH`.

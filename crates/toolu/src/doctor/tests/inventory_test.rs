@@ -205,7 +205,7 @@ fn doctor_counts_only_active_toolu_plugins() {
     {"name":"toolu","path":"/profile/toolu","enabled":false},
     {"name":"other","path":"/profile/other","enabled":true}
   ]});
-  let found = super::grok_inventory(&report).unwrap();
+  let found = super::grok::parse(&report).unwrap();
   assert_eq!(found.plugins.len(), 1);
   assert_eq!(found.plugins[0].name, "delivery-flow");
   assert_eq!(

@@ -28,7 +28,7 @@ Options:
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 
-Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local, and --host opencode copies each into ~/.config/opencode/plugins with a generated server.js. Install the native binary, then run these verbs. `doctor` diagnoses plugin health; `toolu doctor` covers the binary, config, registry and tools. The npm package @toolu/plugins is deprecated. Its guide is docs/cli/installer.md.
+Claude Code, Codex, Grok Build and Muse are driven through their own plugin CLIs; Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local, and --host opencode copies each into ~/.config/opencode/plugins with a generated server.js. Install the native binary, then run these verbs. `doctor` diagnoses plugin health; `toolu doctor` covers the binary, config, registry and tools. The npm package @toolu/plugins is deprecated. Its guide is docs/cli/installer.md.
 ```
 
 ## `toolu plugins install`

@@ -2,7 +2,7 @@
 
 ## Purpose and source of truth
 
-toolu is a Rust plugin marketplace for Claude Code, Codex, Muse Code, Cursor, OpenCode, and Qwen Code. Its hooks, skills, and agent commands run the installed native `toolu` binary. This file is the agent instruction source of truth for Codex, Cursor, and Claude Code; edit it directly rather than maintaining a host-specific copy. Keep it short and current. Follow the linked source files for details that change with the implementation.
+toolu is a Rust plugin marketplace for Claude Code, Codex, Muse Code, Cursor, Grok Build, OpenCode, and Qwen Code. Its hooks, skills, and agent commands run the installed native `toolu` binary. This file is the agent instruction source of truth for Codex, Cursor, and Claude Code; edit it directly rather than maintaining a host-specific copy. Keep it short and current. Follow the linked source files for details that change with the implementation.
 
 ## Work in this repository
 

@@ -4,12 +4,12 @@
 
 ### Engineering discipline, wired into your AI coding agent.
 
-AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce an adaptive design-to-delivery workflow, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code, Codex, Muse Code, Cursor, OpenCode V2, and Qwen Code**.
+AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce an adaptive design-to-delivery workflow, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code, Codex, Muse Code, Cursor, Grok Build, OpenCode V2, and Qwen Code**.
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Tests](https://img.shields.io/badge/tests-Rust%20suite-brightgreen)](#testing)
-[![Hosts](https://img.shields.io/badge/hosts-Claude%20%7C%20Codex%20%7C%20Muse%20%7C%20Cursor%20%7C%20OpenCode%20%7C%20Qwen-d97757)](#install)
+[![Hosts](https://img.shields.io/badge/hosts-Claude%20%7C%20Codex%20%7C%20Muse%20%7C%20Cursor%20%7C%20Grok%20%7C%20OpenCode%20%7C%20Qwen-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
 [Why](#why) · [The quality gate](#the-quality-gate) · [Install](#install) · [What's inside](#whats-inside) · [Delivery workflow](#delivery-workflow) · [Architecture](#architecture) · [Configuration](#configuration)
@@ -84,12 +84,14 @@ checksum before it writes anything. Upgrade, uninstall, a pinned version,
 rollback and installing from a fork: **[docs/install.md](docs/install.md)**.
 The npm package `@toolu/plugins` is deprecated and does not install toolu.
 
-toolu supports Claude Code, Codex, Muse Code, Cursor, OpenCode V2, and Qwen Code. Codex support covers
+toolu supports Claude Code, Codex, Muse Code, Cursor, Grok Build, OpenCode V2, and Qwen Code. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux. Muse Code
 is installed through `toolu plugins install --host muse`; see
 [docs/install.md](docs/install.md#on-muse) for the install, approve and verify steps.
 Cursor is installed through `toolu plugins install --host cursor`; see
 [the installer guide](docs/cli/installer.md#cursor).
+Grok Build workers are installed through `toolu plugins install delivery-flow --host grok`; see
+[the installer guide](docs/cli/installer.md#grok-build).
 OpenCode V2 is installed through `toolu plugins install --host opencode`; see
 [docs/opencode.md](docs/opencode.md).
 Qwen Code is installed through `toolu plugins install --host qwen`. See
@@ -100,7 +102,7 @@ Qwen Code is installed through `toolu plugins install --host qwen`. See
 ### The plugin installer
 
 `toolu plugins` installs plugins in catalog dependency order. It drives the
-Claude Code, Codex and Muse plugin CLIs, and installs local plugin directories
+Claude Code, Codex, Grok Build and Muse plugin CLIs, and installs local plugin directories
 for Cursor, OpenCode, and Qwen Code.
 
 ```bash

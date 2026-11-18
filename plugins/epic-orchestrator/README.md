@@ -70,11 +70,18 @@ Install the worker plugins through Grok Build:
 toolu plugins install delivery-flow --host grok
 ```
 
-Grok starts the toolu hooks on both new and resumed sessions. The startup
+Grok runs the delivery and quality startup hooks on new and resumed sessions. The startup
 hooks register rules such as git-better, and Grok displays gate feedback on
 tool calls. Its startup hook output is passive, so the worker brief carries
 the delivery instructions. The plan ledger stays under
 `.claude/tmp/plan-ledger/`.
+
+In a local Grok Build 1.0.77 run for #846, new and exact-resumed sessions
+registered git-better. With the strict preset, Grok kept the fixture
+`.env` unchanged, recorded a TypeScript quality failure, and rejected the
+commit and an unreviewed push to a bare local remote. Exact resume used
+the same session directory. The install, list, doctor, update, and
+removal checks ran in a separate Grok profile.
 
 ### Before a run
 

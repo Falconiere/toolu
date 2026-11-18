@@ -1,11 +1,11 @@
 [
   {
-    "id": "ast-grep:hooks.json:SessionStart:hook_register:^(startup|resume|clear|compact|new|load)",
+    "id": "ast-grep:hooks.json:SessionStart:hook_register:startup|resume|clear|compact",
     "sourcePath": "plugins/ast-grep/hooks/hooks.json",
     "plugin": "ast-grep",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook register",
     "parentId": null,
     "semantics": "SessionStart runs the native toolu ast-grep register hook, which writes two compiled rule manifests and removes stale ast-grep Bun modules; an absent native binary yields the launcher install notice (#429).",
@@ -20,12 +20,12 @@
     "bashRequired": false
   },
   {
-    "id": "documentation-gate:hooks.json:SessionStart:hook_check-toolu:^(startup|resume|clear|compact|new|load)",
+    "id": "documentation-gate:hooks.json:SessionStart:hook_check-toolu:startup|resume|clear|compact",
     "sourcePath": "plugins/documentation-gate/hooks/hooks.json",
     "plugin": "documentation-gate",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook check-toolu",
     "parentId": null,
     "semantics": "Reports the missing toolu dependency during session startup.",
@@ -40,12 +40,12 @@
     "bashRequired": false
   },
   {
-    "id": "documentation-gate:hooks.json:SessionStart:hook_register:^(startup|resume|clear|compact|new|load)",
+    "id": "documentation-gate:hooks.json:SessionStart:hook_register:startup|resume|clear|compact",
     "sourcePath": "plugins/documentation-gate/hooks/hooks.json",
     "plugin": "documentation-gate",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook register",
     "parentId": null,
     "semantics": "Registers the native documentation review rule; validates committed report identity, Jev route, worker, and file coverage before push.",
@@ -60,12 +60,12 @@
     "bashRequired": false
   },
   {
-    "id": "epic-orchestrator:hooks.json:SessionStart:hook_check-binary:^(startup|resume|clear|compact|new|load)",
+    "id": "epic-orchestrator:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact",
     "sourcePath": "plugins/epic-orchestrator/hooks/hooks.json",
     "plugin": "epic-orchestrator",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook check-binary",
     "parentId": null,
     "semantics": "SessionStart runs toolu epic-orchestrator hook check-binary, which checks whether the non-login agent command shell resolves a native toolu binary and emits at most one actionable notice per session (#443, native in #435).",
@@ -80,12 +80,12 @@
     "bashRequired": false
   },
   {
-    "id": "epic-orchestrator:hooks.json:SessionStart:hook_check-deps:^(startup|resume|clear|compact|new|load)",
+    "id": "epic-orchestrator:hooks.json:SessionStart:hook_check-deps:startup|resume|clear|compact",
     "sourcePath": "plugins/epic-orchestrator/hooks/hooks.json",
     "plugin": "epic-orchestrator",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook check-deps",
     "parentId": null,
     "semantics": "SessionStart runs toolu epic-orchestrator hook check-deps: on Codex, which has no plugin-dependency field, it names each missing or disabled plugin the epic drives with its install command; silent elsewhere (#269, native in #435).",
@@ -100,12 +100,12 @@
     "bashRequired": false
   },
   {
-    "id": "epic-orchestrator:hooks.json:SessionStart:hook_engine-ensure:^(startup|resume|clear|compact|new|load)",
+    "id": "epic-orchestrator:hooks.json:SessionStart:hook_engine-ensure:startup|resume|clear|compact",
     "sourcePath": "plugins/epic-orchestrator/hooks/hooks.json",
     "plugin": "epic-orchestrator",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook engine-ensure",
     "parentId": null,
     "semantics": "SessionStart runs toolu epic-orchestrator hook engine-ensure, which starts the resident engine in process when an epic is registered and reports a malformed registry.json as a systemMessage (#434, native in #435).",
@@ -180,12 +180,12 @@
     "bashRequired": false
   },
   {
-    "id": "jev:hooks.json:SessionStart:hook_check-binary:^(startup|resume|clear|compact|new|load)",
+    "id": "jev:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact",
     "sourcePath": "plugins/jev/hooks/hooks.json",
     "plugin": "jev",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook check-binary",
     "parentId": null,
     "semantics": "SessionStart checks whether the non-login agent command shell resolves a native toolu binary and emits at most one actionable notice per session (#443).",
@@ -200,12 +200,12 @@
     "bashRequired": false
   },
   {
-    "id": "jev:hooks.json:SessionStart:hook_session-start:^(startup|resume|clear|compact|new|load)",
+    "id": "jev:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact",
     "sourcePath": "plugins/jev/hooks/hooks.json",
     "plugin": "jev",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook session-start",
     "parentId": null,
     "semantics": "Host routes SessionStart (^(startup|resume|clear|compact|new|load)$) through the Bun launcher to hooks/dist/session-start.js; without Bun the launcher prints an advisory systemMessage (#269).",
@@ -360,12 +360,12 @@
     "bashRequired": false
   },
   {
-    "id": "statusline:hooks.json:SessionStart:hook_session-start:^(startup|resume|clear|compact|new|load)",
+    "id": "statusline:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact",
     "sourcePath": "plugins/statusline/hooks/hooks.json",
     "plugin": "statusline",
     "kind": "hooks.json",
     "event": "SessionStart",
-    "matcher": "^(startup|resume|clear|compact|new|load)$",
+    "matcher": "startup|resume|clear|compact",
     "commandOrModule": "hook session-start",
     "parentId": null,
     "semantics": "Native SessionStart publishes the compatibility shim and migrates legacy Claude settings once; a missing native binary emits install guidance (#431).",

@@ -114,7 +114,7 @@ registry, tools); use `plugins doctor` for the plugins domain.
 toolu plugins install delivery-flow --host grok
 ```
 
-The installer uses Grok's native plugin CLI and trusts plugins from the
+Name Grok explicitly with `--host grok` in installer commands. The installer uses Grok's native plugin CLI and trusts plugins from the
 official toolu GitHub marketplace. Use `toolu plugins update --host grok`
 to refresh them. Start a new session after installing or updating.
 
