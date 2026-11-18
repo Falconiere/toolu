@@ -3,7 +3,7 @@
 //! normalizes its plugin listing into `Installed`.
 
 use crate::args::Scope;
-use crate::host::{claude, codex, muse};
+use crate::host::{claude, codex, grok, muse};
 
 /// One plugin as a host reports it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,6 +25,8 @@ pub(crate) enum Adapter {
   Claude,
   /// `codex plugin …`.
   Codex,
+  /// `grok plugin …`, from the official toolu marketplace.
+  Grok,
   /// `muse plugins …`, from the local toolu checkout (#549).
   Muse,
 }
@@ -49,6 +51,7 @@ impl Adapter {
     match self {
       Adapter::Claude => "claude",
       Adapter::Codex => "codex",
+      Adapter::Grok => "grok",
       Adapter::Muse => "muse",
     }
   }
@@ -68,6 +71,7 @@ impl Adapter {
   pub(crate) fn install(self, name: &str, scope: Option<Scope>) -> Vec<String> {
     let id = format!("{name}@{MARKETPLACE}");
     match (self, scope) {
+      (Adapter::Grok, _any) => words(&["grok", "plugin", "install", &id, "--trust"], &[]),
       (Adapter::Muse, _any) => muse::argv(&["plugins", "install", &id, "--json"]),
       (Adapter::Claude, Some(scope)) => words(
         &["claude", "plugin", "install"],
@@ -83,6 +87,7 @@ impl Adapter {
     let verb = match self {
       Adapter::Claude => "uninstall",
       Adapter::Codex => "remove",
+      Adapter::Grok => return words(&["grok", "plugin", "uninstall", name], &[]),
       Adapter::Muse => return muse::argv(&["plugins", "remove", name, "--json"]),
     };
     words(
@@ -98,6 +103,7 @@ impl Adapter {
     match self {
       Adapter::Claude => words(&["claude", "plugin", "update"], &[id, "--json".to_owned()]),
       Adapter::Codex => words(&["codex", "plugin", "add"], &[id]),
+      Adapter::Grok => words(&["grok", "plugin", "update", name], &[]),
       Adapter::Muse => muse::argv(&["plugins", "update", name, "--json"]),
     }
   }
@@ -105,7 +111,7 @@ impl Adapter {
   /// The host's plugin noun: Muse says `plugins`.
   fn noun(self) -> &'static str {
     match self {
-      Adapter::Claude | Adapter::Codex => "plugin",
+      Adapter::Claude | Adapter::Codex | Adapter::Grok => "plugin",
       Adapter::Muse => "plugins",
     }
   }
@@ -119,7 +125,7 @@ impl Adapter {
   /// `--available` listing carries no versions for what is installed.
   pub(crate) fn list_available(self) -> Option<Vec<String>> {
     match self {
-      Adapter::Claude => None,
+      Adapter::Claude | Adapter::Grok => None,
       Adapter::Codex | Adapter::Muse => Some(words(
         &[self.bin(), self.noun(), "list", "--available", "--json"],
         &[],
@@ -130,7 +136,7 @@ impl Adapter {
   /// Reads `name`'s trust state; `None` on a host without an approval step.
   pub(crate) fn inspect(self, name: &str) -> Option<Vec<String>> {
     match self {
-      Adapter::Claude | Adapter::Codex => None,
+      Adapter::Claude | Adapter::Codex | Adapter::Grok => None,
       Adapter::Muse => Some(muse::argv(&["plugins", "inspect", name, "--json"])),
     }
   }
@@ -139,7 +145,7 @@ impl Adapter {
   /// without an approval step.
   pub(crate) fn approve(self, name: &str) -> Option<Vec<String>> {
     match self {
-      Adapter::Claude | Adapter::Codex => None,
+      Adapter::Claude | Adapter::Codex | Adapter::Grok => None,
       Adapter::Muse => Some(muse::argv(&["plugins", "approve", name, "--json"])),
     }
   }
@@ -150,6 +156,7 @@ impl Adapter {
     let parsed = match self {
       Adapter::Claude => claude::parse(stdout),
       Adapter::Codex => codex::parse(stdout),
+      Adapter::Grok => grok::parse(stdout),
       Adapter::Muse => muse::parse(stdout),
     };
     parsed.map_err(|detail| format!("{} {} list --json: {detail}", self.bin(), self.noun()))

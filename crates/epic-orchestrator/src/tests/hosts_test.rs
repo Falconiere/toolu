@@ -140,9 +140,9 @@ fn unsafe_arguments_are_refused() {
 /// toolu inside a Grok Build pane wrote its ledger under `.claude/tmp/`
 /// (`toolu ledger path`, 2026-11-08); the other hosts keep their own.
 #[test]
-fn a_grok_worker_ledger_lives_under_claude_code() {
+fn a_grok_worker_resolves_its_native_host() {
   use toolu_protocol::host::Host;
-  assert_eq!(ledger_host("grok"), Some(Host::Claude));
+  assert_eq!(ledger_host("grok"), Some(Host::Grok));
   assert_eq!(ledger_host("muse"), Some(Host::Muse));
   assert_eq!(ledger_host("codex"), Some(Host::Codex));
   assert_eq!(ledger_host("cursor"), Some(Host::Cursor));

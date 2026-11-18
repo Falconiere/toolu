@@ -74,7 +74,7 @@ fn tool_name(text: &str, doc: Option<&Ordered>, session: &Session<'_>) -> Result
   if session.host == Host::Qwen {
     return Ok(qwen_tool_name(&read_field(doc, &["tool_name"])).to_owned());
   }
-  if session.host != Host::Muse {
+  if !matches!(session.host, Host::Grok | Host::Muse) {
     return Ok(read_field(doc, &["tool_name"]));
   }
   let root = Text::new(session.project_root.to_string_lossy().into_owned())
@@ -83,18 +83,18 @@ fn tool_name(text: &str, doc: Option<&Ordered>, session: &Session<'_>) -> Result
     project_root: root.clone(),
     worktree: root,
   };
-  let payload: HostPayload = parse(Host::Muse, text).map_err(|err| err.to_string())?;
+  let payload: HostPayload = parse(session.host, text).map_err(|err| err.to_string())?;
   let event = match session.phase {
     Phase::Pre => HostEvent::ToolPre,
     Phase::Post => HostEvent::ToolPost,
   };
   let normalized = payload
     .normalize(event, &roots)
-    .ok_or_else(|| "Muse tool event could not be normalized".to_owned())?;
+    .ok_or_else(|| format!("{} tool event could not be normalized", session.host.name()))?;
   normalized
     .tool()
     .map(|tool| tool.name.as_str().to_owned())
-    .ok_or_else(|| "Muse tool event has no tool".to_owned())
+    .ok_or_else(|| format!("{} tool event has no tool", session.host.name()))
 }
 
 /// The path a calling dispatcher already split out, from the `TOOLU_EDIT_*` it
@@ -133,7 +133,7 @@ pub(crate) fn dispatch_input(
   let doc = match parse_document(text) {
     Ok(doc) => Some(doc),
     Err(Unreadable::TooDeep) => return refusal(session.phase, session.host, TOO_DEEP),
-    Err(Unreadable::NotJson) if session.host == Host::Muse => {
+    Err(Unreadable::NotJson) if matches!(session.host, Host::Grok | Host::Muse) => {
       return refusal(
         session.phase,
         session.host,

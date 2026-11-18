@@ -75,7 +75,7 @@ fn on(
         )
       })
     }
-    Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
+    Target::Claude | Target::Codex | Target::Grok | Target::Muse => verbs::update::run(
       &driver(target, request, cx)?,
       catalog,
       &have.names,

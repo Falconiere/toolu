@@ -24,6 +24,8 @@ pub(crate) mod checkout;
 pub(crate) mod claude;
 /// Codex's plugin listing and marketplace commands.
 pub(crate) mod codex;
+/// Grok Build's installed plugin reports.
+pub(crate) mod grok;
 /// Muse's plugin documents and marketplace commands.
 pub(crate) mod muse;
 /// Host commands with a deadline.
@@ -40,6 +42,8 @@ pub(crate) enum Target {
   Muse,
   /// Cursor, through its local plugins directory (#589).
   Cursor,
+  /// Grok Build, through `grok plugin`.
+  Grok,
   /// `OpenCode` V2, through its plugins directory and a generated shim.
   Opencode,
   /// Qwen Code, through its local extensions directory.
@@ -47,7 +51,7 @@ pub(crate) enum Target {
 }
 
 /// The probe order for hosts which have a CLI on `PATH`.
-const PROBED: [Target; 4] = [Target::Claude, Target::Codex, Target::Muse, Target::Qwen];
+const PROBED: [Target; 5] = [Target::Claude, Target::Codex, Target::Muse, Target::Grok, Target::Qwen];
 
 impl Target {
   /// The `--host` value, which is also the binary probed on `PATH`.
@@ -57,6 +61,7 @@ impl Target {
       Target::Codex => "codex",
       Target::Muse => "muse",
       Target::Cursor => "cursor",
+      Target::Grok => "grok",
       Target::Opencode => "opencode",
       Target::Qwen => "qwen",
     }
@@ -69,6 +74,7 @@ impl Target {
       Target::Codex => "Codex",
       Target::Muse => "Muse",
       Target::Cursor => "Cursor",
+      Target::Grok => "Grok Build",
       Target::Opencode => "OpenCode",
       Target::Qwen => "Qwen Code",
     }
@@ -80,7 +86,7 @@ impl Target {
   /// name, from any source. A new target must decide here.
   pub(crate) fn removes_only_toolu(self) -> bool {
     match self {
-      Target::Claude | Target::Codex | Target::Cursor | Target::Opencode | Target::Qwen => true,
+      Target::Claude | Target::Codex | Target::Cursor | Target::Opencode | Target::Grok | Target::Qwen => true,
       Target::Muse => false,
     }
   }
@@ -96,10 +102,11 @@ pub(crate) fn target_of(host: Host) -> Res<Target> {
     Host::Codex => Ok(Target::Codex),
     Host::Muse => Ok(Target::Muse),
     Host::Cursor => Ok(Target::Cursor),
+    Host::Grok => Ok(Target::Grok),
     Host::Opencode => Ok(Target::Opencode),
     Host::Qwen => Ok(Target::Qwen),
     Host::Hermes => Err(Fail::usage(format!(
-      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse, cursor, opencode or qwen",
+      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse, cursor, grok, opencode or qwen",
       host.name()
     ))),
   }
@@ -241,7 +248,7 @@ pub(crate) fn resolve(
 /// Claude Code takes every scope, the other hosts none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
   match (scope, target) {
-    (Some(_), Target::Codex | Target::Muse | Target::Cursor | Target::Opencode | Target::Qwen) => {
+    (Some(_), Target::Codex | Target::Muse | Target::Cursor | Target::Opencode | Target::Grok | Target::Qwen) => {
       Err(Fail::usage(format!(
         "--scope is for Claude Code; {} has no scope concept",
         target.name()

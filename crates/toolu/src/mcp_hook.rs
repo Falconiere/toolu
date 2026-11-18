@@ -66,7 +66,7 @@ fn normalized(doc: &Map<String, Value>, tool: String, root: &Path) -> Option<Nor
 
 fn encoded(host: Host, decision: &Decision) -> Outcome {
   let target = match host {
-    Host::Codex | Host::Muse | Host::Qwen => host,
+    Host::Codex | Host::Muse | Host::Grok | Host::Qwen => host,
     Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => Host::Claude,
   };
   match encode(target, HostEvent::ToolPre, decision) {
@@ -108,11 +108,14 @@ fn evaluate(payload: &str, plugin_root: Option<&Path>, env: Env, cwd: &Path) -> 
   let Ok(Value::Object(doc)) = serde_json::from_str::<Value>(payload) else {
     return silent();
   };
-  let tool = field(&doc, "tool_name", "");
+  let host = detect(&env, None).host;
+  let mut tool = field(&doc, "tool_name", "");
+  if host == Host::Grok && !tool.starts_with("mcp__") && tool.contains("__") {
+    tool.insert_str(0, "mcp__");
+  }
   if server(&tool).is_none() {
     return silent();
   }
-  let host = detect(&env, None).host;
   let roots = Roots::new(env.clone(), Some(host));
   let project = roots.project_root(None);
   let env = project.as_ref().map_or(env.clone(), |root| {

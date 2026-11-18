@@ -1,5 +1,6 @@
 //! `remove`: each name uninstalled independently, on any host.
 
+use crate::host::adapter::Adapter;
 use crate::host::run::first_line;
 use crate::step::{Status, Step};
 use crate::verbs::Driver;
@@ -24,6 +25,16 @@ fn one(driver: &Driver, name: &str, dry_run: bool) -> Step {
   let argv = driver.adapter.remove(name);
   if dry_run {
     return Step::new(name, Status::Skipped, "dry run", argv);
+  }
+  if driver.adapter == Adapter::Grok
+    && (super::prepare::grok_marketplace(driver, false).is_err() || !driver.owns_grok_plugin(name))
+  {
+    return Step::new(
+      name,
+      Status::Failed,
+      "no unique official Grok install",
+      argv,
+    );
   }
   let ran = driver.run(&argv);
   if ran.ok() {

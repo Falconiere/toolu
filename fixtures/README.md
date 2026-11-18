@@ -25,6 +25,7 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Shared quality runner | `quality/runner.json` | 16 | `crates/core/engine/tests/quality_{fixture,run_fixture,scan_fixture}.rs` |
 | Host roots | `host/root.json` | 18 | `crates/core/runtime/tests/host_roots_fixture.rs` |
 | Host output encoders | `host/encode.json` | 241 | `crates/core/protocol/tests/encode_fixture.rs` |
+| Grok shell payload | `host/grok-payload.json` | 1 | `crates/core/protocol/src/tests/normalize_test.rs` |
 | Muse payloads | `host/muse-payload.json` | 86 | `crates/core/protocol/tests/muse_payload_fixture.rs` |
 | Config resolution | `config/expected.json` | 35 | `crates/core/runtime/tests/config_fixture.rs` |
 | State | `state/cases.json` | 77 | `crates/core/state/tests/{state_cases,diff_cases,io_cases,gate_cases,interleave}.rs` |

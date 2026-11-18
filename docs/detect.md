@@ -18,12 +18,17 @@ The layer shells out to `git` only, and for most questions not even that (see **
 
 1. `TOOLU_HOST_OVERRIDE` (an invalid value warns and falls through);
 2. a hook event name only one host uses;
-3. Cursor's `CURSOR_VERSION` or `CURSOR_PROJECT_DIR`;
-4. Muse's `MUSE_PLUGIN_ID` or `MUSE_SESSION_ID`;
-5. Qwen Code's `QWEN_PROJECT_DIR` or `QWEN_CODE=1`, unless `CLAUDECODE` is set;
-6. Codex's `PLUGIN_ROOT`;
-7. OpenCode's `OPENCODE_SESSION_ID` or `OPENCODE=1`, unless `CLAUDECODE` is set;
-8. otherwise Claude Code.
+3. Grok's `GROK_HOOK_EVENT`;
+4. Cursor's `CURSOR_VERSION` or `CURSOR_PROJECT_DIR`;
+5. Muse's `MUSE_PLUGIN_ID` or `MUSE_SESSION_ID`;
+6. Qwen Code's `QWEN_PROJECT_DIR` or `QWEN_CODE=1`, unless `CLAUDECODE` is set;
+7. Codex's `PLUGIN_ROOT`;
+8. Grok's `GROK_AGENT=1`, then OpenCode's session markers, unless `CLAUDECODE` is set;
+9. otherwise Claude Code.
+
+Grok's config root is `GROK_HOME`, else `~/.grok`, and its hook
+project root is `GROK_WORKSPACE_ROOT`. It keeps project config and state
+in the Claude-compatible `.claude/` layout, including existing worker ledgers.
 
 On Muse the config root is `MUSE_CONFIG_DIR`, else `$XDG_CONFIG_HOME/muse`, else `~/.config/muse`; `TOOLU_CONFIG_DIR` wins on every host. The plugin root and data directory are `MUSE_PLUGIN_ROOT` and `MUSE_PLUGIN_DATA_DIR`. Muse has no project-directory variable, so the project root is the git toplevel.
 

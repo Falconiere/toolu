@@ -22,6 +22,7 @@ struct Candidate {
   description: String,
 }
 
+/// Choose an available worker profile for the documentation review.
 pub(crate) fn run(args: &ArgMatches, env: &Env) -> Result<String, String> {
   let candidates: Vec<Candidate> =
     serde_json::from_value(read_json(required(args, "candidates")?)?)
@@ -70,6 +71,7 @@ fn efforts(host: Option<Host>) -> &'static [&'static str] {
   match host {
     Some(Host::Claude) => &["low", "medium", "high", "xhigh", "max"],
     Some(Host::Codex) => &["low", "medium", "high", "xhigh", "max", "ultra"],
+    Some(Host::Grok) => &["none", "minimal", "low", "medium", "high", "xhigh", "max"],
     Some(Host::Muse) => &[
       "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
     ],

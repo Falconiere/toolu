@@ -10,6 +10,7 @@ mod checks;
 mod codex_pin;
 mod config_check;
 mod cursor;
+mod grok;
 mod inventory;
 mod multiplexer;
 mod muse;

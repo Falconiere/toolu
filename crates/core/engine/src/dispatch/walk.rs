@@ -26,7 +26,7 @@ use crate::trace::{Step, StepKind, StepStatus};
 /// for Codex, Claude output for Claude-shaped hosts, and native Muse output.
 pub(crate) fn encoded(host: Host, event: HostEvent, decision: &Decision) -> String {
   let target = match host {
-    Host::Codex | Host::Muse | Host::Qwen => host,
+    Host::Codex | Host::Muse | Host::Grok | Host::Qwen => host,
     Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => Host::Claude,
   };
   match encode(target, event, decision) {

@@ -39,7 +39,7 @@ fn heal_ledger_for(opts: &LedgerOptions) -> String {
 /// Where a refused preflight sends the agent.
 fn review_remedy(host: Host, phase: &str) -> String {
   let action = match host {
-    Host::Claude | Host::Codex => "run /delivery-flow:delivery-flow",
+    Host::Claude | Host::Codex | Host::Grok => "run /delivery-flow:delivery-flow",
     Host::Cursor | Host::Hermes | Host::Muse | Host::Opencode | Host::Qwen => {
       "load the delivery-flow skill"
     }

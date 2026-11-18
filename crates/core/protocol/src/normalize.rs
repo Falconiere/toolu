@@ -42,6 +42,7 @@ impl Payload {
         hook_view(payload)
       }
       Payload::Cursor(payload) => cursor_view(payload),
+      Payload::Grok(payload) => grok_view(payload),
       Payload::Hermes(payload) => hermes_view(payload),
       Payload::Muse(payload) => muse::view(payload),
       Payload::Qwen(payload) => {
@@ -190,6 +191,21 @@ fn hook_view(payload: &HookPayload) -> View<'_> {
       payload.event.as_ref(),
     ],
   }
+}
+
+/// The Claude-shaped view with Grok tool names canonicalized.
+fn grok_view(payload: &HookPayload) -> View<'_> {
+  let mut view = hook_view(payload);
+  view.tool_name = match view.tool_name {
+    Some("run_terminal_command" | "run_terminal_cmd") => Some("Bash"),
+    Some("write" | "write_file") => Some("Write"),
+    Some("edit" | "search_replace") => Some("Edit"),
+    Some("read_file") => Some("Read"),
+    Some("grep" | "grep_search") => Some("Grep"),
+    Some("spawn_agent" | "spawn_subagent") => Some("Agent"),
+    name => name,
+  };
+  view
 }
 
 /// Cursor names the session `session_id` or `conversation_id`, sends a shell

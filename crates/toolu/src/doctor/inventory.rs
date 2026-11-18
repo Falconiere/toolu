@@ -38,7 +38,8 @@ pub(super) struct Inventory {
 }
 
 impl Inventory {
-  fn warn(warning: impl Into<String>) -> Inventory {
+  /// Report a plugin inventory that could not be read.
+  pub(super) fn warn(warning: impl Into<String>) -> Inventory {
     Inventory {
       plugins: Vec::new(),
       warning: Some(warning.into()),
@@ -64,6 +65,7 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
     Host::Muse => super::muse::collect(roots),
     Host::Cursor => super::cursor::collect(roots),
     Host::Opencode => super::opencode::collect(roots),
+    Host::Grok => super::grok::collect(roots, cwd),
     Host::Qwen => qwen(roots),
     Host::Hermes => Inventory::warn("plugin inventory is unknown for this host"),
   }
@@ -162,7 +164,8 @@ fn plugin_json(plugin: &Plugin) -> Value {
   Value::Object(map)
 }
 
-fn plugin_at(name: &str, root: PathBuf) -> Plugin {
+/// Report the manifest version of a plugin at a known root.
+pub(super) fn plugin_at(name: &str, root: PathBuf) -> Plugin {
   let version = manifest::read(&root).ok().map(|read| read.version);
   Plugin {
     name: name.to_owned(),

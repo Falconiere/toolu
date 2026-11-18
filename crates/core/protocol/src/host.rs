@@ -9,6 +9,8 @@ pub enum Host {
   Codex,
   /// Cursor.
   Cursor,
+  /// Grok Build.
+  Grok,
   /// Hermes.
   Hermes,
   /// Muse Code.
@@ -25,6 +27,7 @@ impl Host {
     Host::Claude,
     Host::Codex,
     Host::Cursor,
+    Host::Grok,
     Host::Hermes,
     Host::Muse,
     Host::Opencode,
@@ -37,6 +40,7 @@ impl Host {
       Host::Claude => "claude",
       Host::Codex => "codex",
       Host::Cursor => "cursor",
+      Host::Grok => "grok",
       Host::Hermes => "hermes",
       Host::Muse => "muse",
       Host::Opencode => "opencode",

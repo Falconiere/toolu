@@ -35,6 +35,7 @@ pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
     .unwrap_or_default();
   let host = match owners.as_slice() {
     [owner] => *owner,
+    _ if env.get("GROK_HOOK_EVENT").is_some() => Host::Grok,
     _ if env
       .get("CURSOR_VERSION")
       .or(env.get("CURSOR_PROJECT_DIR"))
@@ -55,6 +56,7 @@ pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
       Host::Qwen
     }
     _ if env.get("PLUGIN_ROOT").is_some() => Host::Codex,
+    _ if env.get("GROK_AGENT") == Some("1") && env.get("CLAUDECODE").is_none() => Host::Grok,
     _ if opencode(env) => Host::Opencode,
     _ => Host::Claude,
   };

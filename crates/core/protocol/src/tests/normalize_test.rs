@@ -297,3 +297,17 @@ fn text_or_takes_a_non_empty_string_and_otherwise_its_fallback() {
   assert_eq!(text_or(Some(""), &fallback), fallback);
   assert_eq!(text_or(None, &fallback), fallback);
 }
+
+#[test]
+fn grok_terminal_call_is_a_shell_event() {
+  let event = normalize(
+    Host::Grok,
+    HostEvent::ToolPre,
+    include_str!("../../../../../fixtures/host/grok-payload.json"),
+  );
+  let NormalizedEvent::ShellPre { tool, command, .. } = event else {
+    panic!("expected shell/pre, got {event:?}");
+  };
+  assert_eq!(tool.name.as_str(), "Bash");
+  assert_eq!(command.as_str(), "printenv GROK_AGENT");
+}

@@ -6,11 +6,12 @@ use crate::args::Scope;
 use crate::support::{Answer, Sandbox};
 
 #[test]
-fn installer_targets_include_qwen_code() {
+fn installer_accepts_supported_plugin_hosts() {
   assert_eq!(target_of(Host::Claude), Ok(Target::Claude));
   assert_eq!(target_of(Host::Codex), Ok(Target::Codex));
   assert_eq!(target_of(Host::Muse), Ok(Target::Muse));
   assert_eq!(target_of(Host::Cursor), Ok(Target::Cursor));
+  assert_eq!(target_of(Host::Grok), Ok(Target::Grok));
   assert_eq!(target_of(Host::Opencode), Ok(Target::Opencode));
   assert_eq!(target_of(Host::Qwen), Ok(Target::Qwen));
   let Err(fail) = target_of(Host::Hermes) else {
@@ -20,7 +21,7 @@ fn installer_targets_include_qwen_code() {
   assert!(
     fail
       .message
-      .contains("claude, codex, muse, cursor, opencode or qwen"),
+      .contains("claude, codex, muse, cursor, grok, opencode or qwen"),
     "{}",
     fail.message
   );

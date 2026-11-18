@@ -6,7 +6,7 @@ fn every_host_name_parses_back_to_its_host() {
   assert_eq!(
     names,
     [
-      "claude", "codex", "cursor", "hermes", "muse", "opencode", "qwen"
+      "claude", "codex", "cursor", "grok", "hermes", "muse", "opencode", "qwen"
     ]
   );
   for host in Host::ALL {

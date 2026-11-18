@@ -76,14 +76,9 @@ pub(crate) fn host_kind(name: &str) -> Result<HostKind, String> {
     .ok_or_else(|| format!("unknown host {name}; use one of claude, codex, cursor, muse, grok"))
 }
 
-/// The toolu host a worker launched as `name` runs its own `toolu` as, which
-/// places its plan ledger. Grok Build exports no marker toolu detects, so
-/// toolu there acts for Claude Code (`.claude/tmp/plan-ledger/`).
+/// The toolu host whose project state holds the worker's plan ledger.
 pub(crate) fn ledger_host(name: &str) -> Option<Host> {
-  match parse_host_kind(name) {
-    Some(HostKind::Grok) => Some(Host::Claude),
-    _ => Host::parse(name),
-  }
+  Host::parse(name)
 }
 
 /// Whether `text` holds a provider-limit message.

@@ -191,7 +191,7 @@ fn plugin_root(target: Target, entry: &Installed, cx: &Context<'_>) -> Option<Pa
       .map(PathBuf::from)
       .filter(|path| path.is_dir()),
     Target::Claude => claude_root(&entry.name, &cx.env),
-    Target::Codex => None,
+    Target::Codex | Target::Grok => None,
   }
 }
 

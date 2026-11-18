@@ -104,9 +104,19 @@ impl Driver {
     self.adapter.parse_list(&ran.stdout).unwrap_or_default()
   }
 
+  /// Grok changes plugins by bare name, so require one unambiguous toolu install.
+  pub(crate) fn owns_grok_plugin(&self, name: &str) -> bool {
+    let installed = self.versions(&self.adapter.list_installed());
+    let mut matches = installed.iter().filter(|entry| entry.name == name);
+    matches.next().is_some_and(|entry| !self.foreign(entry)) && matches.next().is_none()
+  }
+
   /// Whether the host installed `entry` from outside toolu's marketplace, which
   /// leaves it for the user to change (only Muse reports a source).
   pub(crate) fn foreign(&self, entry: &Installed) -> bool {
+    if self.adapter == Adapter::Grok {
+      return entry.source.as_deref() != Some(crate::host::adapter::MARKETPLACE);
+    }
     match (&self.checkout, &entry.source) {
       (Some(checkout), Some(path)) => !checkout.owns(path),
       _unknown => false,
@@ -117,11 +127,16 @@ impl Driver {
 /// The step for a plugin the host installed from outside toolu's marketplace.
 pub(crate) fn foreign_step(name: &str, have: &Installed, argv: Vec<String>) -> Step {
   let source = have.source.as_deref().unwrap_or("elsewhere");
+  let (host, fix) = if argv.first().is_some_and(|word| word == "grok") {
+    ("grok", format!("grok plugin uninstall {name}"))
+  } else {
+    ("muse", format!("muse plugins remove {name}"))
+  };
   Step::new(
     name,
     Status::Skew,
     format!(
-      "installed from {source}, outside the toolu marketplace; left untouched. Run `muse plugins remove {name}`, then `toolu plugins install {name} --host muse`."
+      "installed from {source}, outside the toolu marketplace; left untouched. Run `{fix}`, then `toolu plugins install {name} --host {host}`."
     ),
     argv,
   )
