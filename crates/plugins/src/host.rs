@@ -1,10 +1,11 @@
 //! The hosts the installer targets and how `install`, `list` and `remove` choose
 //! one: an explicit `--host` always wins, a single host on `PATH` is used
 //! without asking, and several are never resolved silently (a terminal asks,
-//! otherwise the run refuses). At a terminal, install offers every supported
-//! host on the machine, Cursor included when `~/.cursor` or `cursor-agent` is
-//! there and `OpenCode` when its config directory or `opencode` is. `update`
-//! without `--host` asks nothing: it takes `with_toolu`.
+//! otherwise the run refuses). PATH hosts are Claude Code, Codex, Muse, Qwen
+//! Code and Grok Build. At a terminal, install also offers Cursor when
+//! `~/.cursor` or `cursor-agent` is there and `OpenCode` when its config
+//! directory or `opencode` is. `update` without `--host` asks nothing: it
+//! takes `with_toolu`.
 
 use self::adapter::Installed;
 use serde_json::Value;
@@ -52,7 +53,13 @@ pub(crate) enum Target {
 }
 
 /// The probe order for hosts which have a CLI on `PATH`.
-const PROBED: [Target; 4] = [Target::Claude, Target::Codex, Target::Muse, Target::Qwen];
+const PROBED: [Target; 5] = [
+  Target::Claude,
+  Target::Codex,
+  Target::Muse,
+  Target::Qwen,
+  Target::Grok,
+];
 
 impl Target {
   /// The `--host` value, which is also the binary probed on `PATH`.
@@ -296,3 +303,7 @@ pub(crate) fn official_grok_marketplace(text: &str) -> Result<Option<bool>, Stri
 #[cfg(test)]
 #[path = "tests/host_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/host_picker_test.rs"]
+mod picker_tests;

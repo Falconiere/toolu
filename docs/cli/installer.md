@@ -114,7 +114,7 @@ registry, tools); use `plugins doctor` for the plugins domain.
 toolu plugins install delivery-flow --host grok
 ```
 
-Name Grok explicitly with `--host grok` in installer commands. The installer uses Grok's native plugin CLI and trusts plugins from the
+Grok is chosen when `grok` is on `PATH`, the same way as Claude Code, Codex, Muse and Qwen Code. `--host grok` still forces it. The installer uses Grok's native plugin CLI and trusts plugins from the
 official toolu GitHub marketplace. Use `toolu plugins update --host grok`
 to refresh them. Start a new session after installing or updating.
 
@@ -195,10 +195,10 @@ command and `toolu` with it.
 ## Choosing hosts
 
 `--host` always wins. Without it, one host on `PATH` (`claude`, `codex`,
-`muse`, `qwen`) is used without asking. When several are found, a terminal asks:
+`muse`, `qwen`, `grok`) is used without asking. When several are found, a terminal asks:
 
 - `install` offers every supported host on the machine: Claude Code, Codex,
-  Muse and Qwen Code on `PATH`, Cursor when its config directory (`~/.cursor`) exists or
+  Muse, Qwen Code and Grok Build on `PATH`, Cursor when its config directory (`~/.cursor`) exists or
   `cursor-agent` is on `PATH`, and OpenCode when its config directory
   (`~/.config/opencode`) exists or `opencode` is on `PATH`. Several can be chosen.
 - `list` and `remove` ask for one host. They offer Cursor and OpenCode only when
