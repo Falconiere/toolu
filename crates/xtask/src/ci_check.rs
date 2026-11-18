@@ -10,6 +10,9 @@ use crate::{Verdict, output};
 
 const CHANGES: &str = "changes";
 
+/// Set on the `changes` job from the release branch, not from a path group.
+const RELEASE_BRANCH: &str = "rust_release";
+
 /// Run the static check.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let config = load_repo(&options.root)?;
@@ -89,7 +92,7 @@ fn check_gated(
     return vec![format!("{file}: gated job {id} does not exist")];
   };
   let mut problems = Vec::new();
-  if group != CHANGED && !config.group_defined(group) {
+  if group != CHANGED && group != RELEASE_BRANCH && !config.group_defined(group) {
     problems.push(format!(
       "{file}: job {id} is mapped to undefined group {group}"
     ));

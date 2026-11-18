@@ -15,7 +15,8 @@ fn outputs(docs: bool, rust: bool) -> Value {
     "docs": if docs { "true" } else { "false" },
     "rust": if rust { "true" } else { "false" },
     "ports": "false",
-    "changed": "true"
+    "changed": "true",
+    "rust_release": "false"
   })
 }
 
@@ -56,6 +57,35 @@ fn a_failed_changes_job_exits_1() {
   assert_eq!(
     report.lines,
     vec!["changes: failure; no group decision to trust".to_owned()]
+  );
+}
+
+#[test]
+fn the_rust_job_may_skip_off_the_release_branch() {
+  let mut groups = outputs(false, true);
+  groups["rust_release"] = json!("false");
+  let raw = json!({
+    "changes": { "result": "success", "outputs": groups },
+    "docs": { "result": "skipped" },
+    "rust": { "result": "skipped" },
+    "rust-musl": { "result": "success" },
+    "fuzz": { "result": "success" },
+    "hook-bench": { "result": "skipped" }
+  })
+  .to_string();
+  let report = evaluate(&repo(), "tests.yml", Some(&raw)).unwrap();
+  assert!(report.ok, "{:?}", report.lines);
+}
+
+#[test]
+fn the_rust_job_must_run_when_the_release_branch_is_on() {
+  let mut groups = outputs(false, false);
+  groups["rust_release"] = json!("true");
+  let raw = suite(&groups, "skipped", "skipped");
+  let report = evaluate(&repo(), "tests.yml", Some(&raw)).unwrap();
+  assert_eq!(
+    report.lines,
+    vec!["rust (rust_release on): skipped, but its group is on".to_owned()]
   );
 }
 

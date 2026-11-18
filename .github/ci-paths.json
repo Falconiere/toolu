@@ -73,7 +73,7 @@
       "required": [],
       "jobs": {
         "docs": "docs",
-        "rust": "rust",
+        "rust": "rust_release",
         "rust-musl": "rust",
         "fuzz": "rust",
         "hook-bench": "ports"
