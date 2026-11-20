@@ -78,9 +78,10 @@ toolu git-better pr --squash    # squash message with every commit's trailers me
 toolu git-better pr --base feat/740-x-parent  # one stacked layer, drafted against its parent branch
 ```
 
-`--base <ref>` on `context` and `pr` reads `<ref>..HEAD` instead of the
-default branch: in a stack of dependent PRs it keeps each layer's draft and
-summary to its own commits.
+`--base <ref>` on `context` and `pr` reads `<ref>..HEAD`. In a stack of
+dependent PRs, this keeps each layer's draft and summary to its own commits.
+Use a branch name, tag, commit ID, or revision expression such as `HEAD^`.
+Both commands report an error if the ref does not resolve to a commit.
 
 Read why from the commits and what from the digest. `toolu code-review digest`
 lists each changed file with its `+N -M` counts, the items its changes sit in

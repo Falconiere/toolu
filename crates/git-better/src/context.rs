@@ -68,6 +68,17 @@ fn base_ref(env: &Env, dir: &Path, base: &str) -> Option<String> {
   .find(|reference| exists(env, dir, reference))
 }
 
+fn explicit_base_ref(env: &Env, dir: &Path, base: &str) -> Result<String, String> {
+  if let Some(reference) = base_ref(env, dir, base) {
+    return Ok(reference);
+  }
+  let commit = format!("{base}^{{commit}}");
+  if !base.starts_with('-') && exists(env, dir, &commit) {
+    return Ok(base.to_owned());
+  }
+  Err(format!("the base ref {base} does not resolve to a commit"))
+}
+
 /// `git status --porcelain -z`, counted.
 ///
 /// # Errors
@@ -110,7 +121,7 @@ fn branch_of(env: &Env, dir: &Path) -> String {
 pub(crate) struct Reads<'a> {
   /// The revision range, as `log`'s positional argument.
   pub(crate) range: Option<&'a str>,
-  /// The base branch, overriding the repository default.
+  /// The base revision, overriding the repository default.
   pub(crate) base: Option<&'a str>,
 }
 
@@ -133,10 +144,12 @@ pub(crate) fn gather(
   let base = reads
     .base
     .map_or_else(|| base_branch(env, None, dir), str::to_owned);
-  let reference = (branch != base)
-    .then(|| base_ref(env, dir, &base))
-    .flatten();
   let on_base = branch == base;
+  let reference = match reads.base {
+    Some(base) => Some(explicit_base_ref(env, dir, base)?),
+    None if !on_base => base_ref(env, dir, &base),
+    None => None,
+  };
   let base_found = on_base || reference.is_some();
   let range = match (reads.range, &reference) {
     (Some(given), _) => given.to_owned(),

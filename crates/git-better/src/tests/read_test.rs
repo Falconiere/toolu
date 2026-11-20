@@ -209,6 +209,46 @@ fn base_reads_a_stacked_layer_against_its_parent() {
   .stdout
   .unwrap();
   assert!(text.contains("ahead of feat/1-x"), "{text}");
+}
+
+#[test]
+fn context_and_pr_read_against_a_git_revision() {
+  let (_repo, place) = branch();
+  let as_json = Ctx {
+    json: true,
+    ..Ctx::default()
+  };
+  let revision = json(&context(
+    &verb(&["git-better", "context", "--base", "HEAD^"]),
+    &as_json,
+    &place,
+  ));
+  assert_eq!(revision["range"], "HEAD^..HEAD");
+  assert_eq!(revision["total"], 1);
+  let draft = pr(
+    &verb(&["git-better", "pr", "--base", "HEAD^"]),
+    &Ctx::default(),
+    &place,
+  )
+  .stdout
+  .unwrap();
+  assert!(draft.contains("readers find a"), "{draft}");
+  assert!(!draft.contains("a is needed"), "{draft}");
+}
+
+#[test]
+fn context_and_pr_name_a_missing_explicit_base_ref() {
+  let (_repo, place) = branch();
+  let context_missing = context(
+    &verb(&["git-better", "context", "--base", "nope"]),
+    &Ctx::default(),
+    &place,
+  );
+  assert_eq!(context_missing.exit, Exit::Failure);
+  assert_eq!(
+    context_missing.stderr.as_deref(),
+    Some("the base ref nope does not resolve to a commit")
+  );
   let missing = pr(
     &verb(&["git-better", "pr", "--base", "nope"]),
     &Ctx::default(),
@@ -217,8 +257,6 @@ fn base_reads_a_stacked_layer_against_its_parent() {
   assert_eq!(missing.exit, Exit::Failure);
   assert_eq!(
     missing.stderr.as_deref(),
-    Some(
-      "the base branch nope exists neither locally nor on origin, so the branch's own commits are unknown"
-    )
+    Some("the base ref nope does not resolve to a commit")
   );
 }
