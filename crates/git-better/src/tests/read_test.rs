@@ -213,11 +213,30 @@ fn base_reads_a_stacked_layer_against_its_parent() {
 
 #[test]
 fn context_and_pr_read_against_a_git_revision() {
-  let (_repo, place) = branch();
+  let (repo, place) = branch();
+  git(
+    &repo.root,
+    &["update-ref", "refs/remotes/origin/main", "main"],
+  );
+  git(
+    &repo.root,
+    &[
+      "symbolic-ref",
+      "refs/remotes/origin/HEAD",
+      "refs/remotes/origin/main",
+    ],
+  );
   let as_json = Ctx {
     json: true,
     ..Ctx::default()
   };
+  let head = json(&context(
+    &verb(&["git-better", "context", "--base", "HEAD"]),
+    &as_json,
+    &place,
+  ));
+  assert_eq!(head["range"], "HEAD..HEAD");
+  assert_eq!(head["total"], 0);
   let revision = json(&context(
     &verb(&["git-better", "context", "--base", "HEAD^"]),
     &as_json,

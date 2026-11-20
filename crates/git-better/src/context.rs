@@ -65,18 +65,24 @@ fn base_ref(env: &Env, dir: &Path, base: &str) -> Option<String> {
     format!("refs/remotes/origin/{base}"),
   ]
   .into_iter()
-  .find(|reference| exists(env, dir, reference))
+  .find(|reference| {
+    git(
+      env,
+      dir,
+      &["show-ref", "--verify", "--quiet", "--", reference],
+      &[],
+    )
+    .is_ok()
+  })
 }
 
 fn explicit_base_ref(env: &Env, dir: &Path, base: &str) -> Result<String, String> {
-  if let Some(reference) = base_ref(env, dir, base) {
-    return Ok(reference);
-  }
   let commit = format!("{base}^{{commit}}");
   if !base.starts_with('-') && exists(env, dir, &commit) {
     return Ok(base.to_owned());
   }
-  Err(format!("the base ref {base} does not resolve to a commit"))
+  base_ref(env, dir, base)
+    .ok_or_else(|| format!("the base ref {base} does not resolve to a commit"))
 }
 
 /// `git status --porcelain -z`, counted.
