@@ -5352,6 +5352,17 @@
               "short": null,
               "takesValue": true,
               "valueName": "N"
+            },
+            {
+              "global": false,
+              "help": "Read against REF instead of the base branch, e.g. a stack's parent branch",
+              "hidden": false,
+              "long": "base",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
             }
           ],
           "hidden": false,
@@ -5391,6 +5402,17 @@
               "short": null,
               "takesValue": true,
               "valueName": "N"
+            },
+            {
+              "global": false,
+              "help": "Read against REF instead of the base branch, e.g. a stack's parent branch",
+              "hidden": false,
+              "long": "base",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
             }
           ],
           "hidden": false,
