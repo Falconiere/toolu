@@ -14,6 +14,9 @@ node_modules/
 # Serena MCP tool cache
 .serena/
 
+# Qwen Code session artifacts (ledger, tmp, background shells) — local only
+.qwen/
+
 # Local, per-machine Claude Code permissions — never shared
 .claude/settings.local.json
 
