@@ -13,7 +13,7 @@ use toolu_runtime::startup::context::{render_hook_output, session_context};
 
 use toolu_state::git::{base_branch, current_branch};
 
-use crate::context::gather;
+use crate::context::{Reads, gather};
 use crate::settings;
 use crate::views::context_text;
 
@@ -40,7 +40,7 @@ pub(crate) fn summary(env: &Env, dir: &Path) -> Option<String> {
   if branch == base_branch(env, None, dir) {
     return Some(FORMAT.to_owned());
   }
-  let context = gather(env, dir, &settings, None, SESSION_LIMIT).ok()?;
+  let context = gather(env, dir, &settings, &Reads::default(), SESSION_LIMIT).ok()?;
   if context.on_base {
     return Some(FORMAT.to_owned());
   }

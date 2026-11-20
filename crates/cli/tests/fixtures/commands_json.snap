@@ -5355,6 +5355,17 @@ source: crates/cli/tests/helpers/schema.rs
               "short": null,
               "takesValue": true,
               "valueName": "N"
+            },
+            {
+              "global": false,
+              "help": "Read against REF instead of the base branch, e.g. a stack's parent branch",
+              "hidden": false,
+              "long": "base",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
             }
           ],
           "hidden": false,
@@ -5394,6 +5405,17 @@ source: crates/cli/tests/helpers/schema.rs
               "short": null,
               "takesValue": true,
               "valueName": "N"
+            },
+            {
+              "global": false,
+              "help": "Read against REF instead of the base branch, e.g. a stack's parent branch",
+              "hidden": false,
+              "long": "base",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
             }
           ],
           "hidden": false,

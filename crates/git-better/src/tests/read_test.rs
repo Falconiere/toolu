@@ -171,3 +171,54 @@ fn pr_reads_past_the_log_default_and_refuses_a_branch_without_a_base() {
     )
   );
 }
+
+#[test]
+fn base_reads_a_stacked_layer_against_its_parent() {
+  let (repo, _place) = branch();
+  git(&repo.root, &["switch", "-qc", "feat/1-y"]);
+  repo.commit(
+    "crates/y/c.rs",
+    "feat(y): add c\n\nIntent: c builds on a",
+    None,
+  );
+  let place = Place {
+    env: repo.env.clone(),
+    dir: repo.root,
+  };
+  let parent = verb(&["git-better", "pr", "--base", "feat/1-x"]);
+  let draft = pr(&parent, &Ctx::default(), &place).stdout.unwrap();
+  assert!(draft.contains("c builds on a"), "{draft}");
+  assert!(!draft.contains("a is needed"), "{draft}");
+  let as_json = Ctx {
+    json: true,
+    ..Ctx::default()
+  };
+  let document = json(&context(
+    &verb(&["git-better", "context", "--base", "feat/1-x"]),
+    &as_json,
+    &place,
+  ));
+  assert_eq!(document["base"], "feat/1-x");
+  assert_eq!(document["total"], 1);
+  assert_eq!(document["commits"].as_array().map(Vec::len), Some(1));
+  let text = context(
+    &verb(&["git-better", "context", "--base", "feat/1-x"]),
+    &Ctx::default(),
+    &place,
+  )
+  .stdout
+  .unwrap();
+  assert!(text.contains("ahead of feat/1-x"), "{text}");
+  let missing = pr(
+    &verb(&["git-better", "pr", "--base", "nope"]),
+    &Ctx::default(),
+    &place,
+  );
+  assert_eq!(missing.exit, Exit::Failure);
+  assert_eq!(
+    missing.stderr.as_deref(),
+    Some(
+      "the base branch nope exists neither locally nor on origin, so the branch's own commits are unknown"
+    )
+  );
+}

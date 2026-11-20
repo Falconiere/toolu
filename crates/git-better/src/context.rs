@@ -104,6 +104,16 @@ fn branch_of(env: &Env, dir: &Path) -> String {
   git(env, dir, &args, &[]).map_or(branch, |name| name.trim().to_owned())
 }
 
+/// What to read: a literal `range`, or a `base` branch to read up to `HEAD`
+/// from — a stacked layer passes its parent as `base`.
+#[derive(Debug, Default)]
+pub(crate) struct Reads<'a> {
+  /// The revision range, as `log`'s positional argument.
+  pub(crate) range: Option<&'a str>,
+  /// The base branch, overriding the repository default.
+  pub(crate) base: Option<&'a str>,
+}
+
 /// The context of the repository at `dir`, reading at most `limit` commits.
 ///
 /// # Errors
@@ -113,20 +123,22 @@ pub(crate) fn gather(
   env: &Env,
   dir: &Path,
   settings: &Settings,
-  range: Option<&str>,
+  reads: &Reads<'_>,
   limit: usize,
 ) -> Result<Context, String> {
   let branch = branch_of(env, dir);
   if branch.is_empty() {
     return Err(format!("{} is not in a git repository", dir.display()));
   }
-  let base = base_branch(env, None, dir);
+  let base = reads
+    .base
+    .map_or_else(|| base_branch(env, None, dir), str::to_owned);
   let reference = (branch != base)
     .then(|| base_ref(env, dir, &base))
     .flatten();
   let on_base = branch == base;
   let base_found = on_base || reference.is_some();
-  let range = match (range, &reference) {
+  let range = match (reads.range, &reference) {
     (Some(given), _) => given.to_owned(),
     (None, Some(reference)) => format!("{reference}..HEAD"),
     (None, None) => "HEAD".to_owned(),

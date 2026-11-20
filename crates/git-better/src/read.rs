@@ -8,7 +8,7 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::host::roots::Roots;
 
 use crate::cli::Place;
-use crate::context::{Context, gather};
+use crate::context::{Context, Reads, gather};
 use crate::pr::draft;
 use crate::settings;
 use crate::views::{commit_json, commit_text, context_json, context_text};
@@ -28,11 +28,17 @@ fn context_of(
   let (env, cwd) = (&place.env, &place.dir);
   let roots = Roots::new(env.clone(), ctx.host);
   let settings = settings::load(&roots, Some(cwd), None);
+  let base = args
+    .try_get_one::<String>("base")
+    .ok()
+    .flatten()
+    .map(String::as_str);
   let limit = args
     .get_one::<u64>("limit")
     .and_then(|limit| usize::try_from(*limit).ok())
     .unwrap_or(default);
-  gather(env, cwd, &settings, range, limit).map_err(|why| Outcome::failed(Exit::Failure, why))
+  gather(env, cwd, &settings, &Reads { range, base }, limit)
+    .map_err(|why| Outcome::failed(Exit::Failure, why))
 }
 
 /// Run `log`.

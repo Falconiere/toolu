@@ -1,14 +1,21 @@
 //! The branch context from real repositories: the base branch, a feature
 //! branch against a local or remote base, the working tree, and no repository.
 
-use super::{Dirty, gather};
+use super::{Dirty, Reads, gather};
 use crate::git_support::{Repo, git};
 use crate::settings::Settings;
 
 #[test]
 fn on_the_base_branch_the_range_is_head() {
   let repo = Repo::new(".claude", None);
-  let found = gather(&repo.env, &repo.root, &Settings::default(), None, 5).unwrap();
+  let found = gather(
+    &repo.env,
+    &repo.root,
+    &Settings::default(),
+    &Reads::default(),
+    5,
+  )
+  .unwrap();
   assert!(found.on_base && found.base_found);
   assert_eq!(
     (found.branch.as_str(), found.range.as_str()),
@@ -26,7 +33,14 @@ fn a_feature_branch_reads_its_commits_and_the_working_tree() {
   std::fs::write(repo.root.join("b.txt"), "staged\n").unwrap();
   git(&repo.root, &["add", "b.txt"]);
   std::fs::write(repo.root.join("c.txt"), "untracked\n").unwrap();
-  let found = gather(&repo.env, &repo.root, &Settings::default(), None, 5).unwrap();
+  let found = gather(
+    &repo.env,
+    &repo.root,
+    &Settings::default(),
+    &Reads::default(),
+    5,
+  )
+  .unwrap();
   assert!(!found.on_base);
   assert_eq!(found.range, "refs/heads/main..HEAD");
   assert_eq!(found.commits.len(), 1);
@@ -38,7 +52,17 @@ fn a_feature_branch_reads_its_commits_and_the_working_tree() {
       untracked: 1
     }
   );
-  let given = gather(&repo.env, &repo.root, &Settings::default(), Some("HEAD"), 5).unwrap();
+  let given = gather(
+    &repo.env,
+    &repo.root,
+    &Settings::default(),
+    &Reads {
+      range: Some("HEAD"),
+      ..Reads::default()
+    },
+    5,
+  )
+  .unwrap();
   assert_eq!(given.commits.len(), 2);
 }
 
@@ -58,13 +82,27 @@ fn a_base_only_on_origin_is_used_and_no_repository_is_an_error() {
     ],
   );
   git(&repo.root, &["switch", "-q", "feat/1-x"]);
-  let found = gather(&repo.env, &repo.root, &Settings::default(), None, 5).unwrap();
+  let found = gather(
+    &repo.env,
+    &repo.root,
+    &Settings::default(),
+    &Reads::default(),
+    5,
+  )
+  .unwrap();
   assert_eq!(
     (found.base.as_str(), found.range.as_str()),
     ("trunk", "refs/remotes/origin/trunk..HEAD")
   );
   let empty = tempfile::tempdir().unwrap();
-  let error = gather(&repo.env, empty.path(), &Settings::default(), None, 5).unwrap_err();
+  let error = gather(
+    &repo.env,
+    empty.path(),
+    &Settings::default(),
+    &Reads::default(),
+    5,
+  )
+  .unwrap_err();
   assert!(error.ends_with("is not in a git repository"), "{error}");
 }
 
@@ -77,9 +115,15 @@ fn a_short_renamed_path_is_counted_once_and_the_total_ignores_the_limit() {
   git(&repo.root, &["mv", "a", "b"]);
   std::fs::write(repo.root.join("zz"), "z\n").unwrap();
   git(&repo.root, &["add", "zz"]);
-  let dirty = gather(&repo.env, &repo.root, &Settings::default(), None, 5)
-    .unwrap()
-    .dirty;
+  let dirty = gather(
+    &repo.env,
+    &repo.root,
+    &Settings::default(),
+    &Reads::default(),
+    5,
+  )
+  .unwrap()
+  .dirty;
   assert_eq!(
     dirty,
     Dirty {
@@ -90,7 +134,14 @@ fn a_short_renamed_path_is_counted_once_and_the_total_ignores_the_limit() {
   );
   git(&repo.root, &["commit", "-q", "-m", "docs(a): move"]);
   repo.commit("c", "docs(c): c", None);
-  let limited = gather(&repo.env, &repo.root, &Settings::default(), None, 1).unwrap();
+  let limited = gather(
+    &repo.env,
+    &repo.root,
+    &Settings::default(),
+    &Reads::default(),
+    1,
+  )
+  .unwrap();
   assert_eq!((limited.commits.len(), limited.total), (1, 2));
 }
 
@@ -99,14 +150,28 @@ fn an_unborn_branch_is_named_and_a_detached_head_is_head() {
   let dir = tempfile::tempdir().unwrap();
   let repo = Repo::new(".claude", None);
   git(dir.path(), &["init", "-q", "-b", "feat/9-new"]);
-  let unborn = gather(&repo.env, dir.path(), &Settings::default(), None, 5).unwrap();
+  let unborn = gather(
+    &repo.env,
+    dir.path(),
+    &Settings::default(),
+    &Reads::default(),
+    5,
+  )
+  .unwrap();
   assert_eq!((unborn.branch.as_str(), unborn.total), ("feat/9-new", 0));
   assert!(!unborn.on_base && !unborn.base_found);
   assert_eq!(unborn.commits, []);
   git(&repo.root, &["switch", "-q", "feat/1-x"]);
   repo.commit("d.txt", "docs(d): d", None);
   git(&repo.root, &["switch", "-q", "--detach", "HEAD"]);
-  let detached = gather(&repo.env, &repo.root, &Settings::default(), None, 5).unwrap();
+  let detached = gather(
+    &repo.env,
+    &repo.root,
+    &Settings::default(),
+    &Reads::default(),
+    5,
+  )
+  .unwrap();
   assert_eq!(detached.branch, "HEAD");
   assert_eq!(
     (detached.range.as_str(), detached.total),
