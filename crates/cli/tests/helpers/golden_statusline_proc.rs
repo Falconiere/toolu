@@ -35,7 +35,8 @@ pub(crate) struct Ran {
 /// Host-session variables, git redirections and real credentials never reach a child.
 fn withheld(key: &str) -> bool {
   [
-    "CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "GIT_", "HERMES_", "OPENCODE",
+    "CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "GIT_", "HERMES_", "OPENCODE", "GROK_", "MUSE_",
+    "QWEN_",
   ]
   .iter()
   .any(|prefix| key.starts_with(prefix))
