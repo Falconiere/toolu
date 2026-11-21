@@ -25,7 +25,8 @@ pub(crate) fn command() -> Command {
     .subcommand(
       Command::new("context")
         .about("What the current branch does against its base: commits, intents, areas, risk, refs and the working tree")
-        .arg(limit()),
+        .arg(limit())
+        .arg(base()),
     )
     .subcommand(
       Command::new("pr")
@@ -36,7 +37,8 @@ pub(crate) fn command() -> Command {
             .action(ArgAction::SetTrue)
             .help("Print the squash commit message, its trailers merged"),
         )
-        .arg(limit()),
+        .arg(limit())
+        .arg(base()),
     )
     .subcommand(Command::new("setup").about(
       "Make amend and rebase carry git-better notes: add refs/notes/git-better to this repository's notes.rewriteRef",
@@ -80,6 +82,14 @@ fn limit() -> Arg {
     .value_name("N")
     .value_parser(clap::value_parser!(u64).range(1..=200))
     .help("Read at most N commits, newest first (default 20; 200 for pr)")
+}
+
+/// `--base REF`: read against another ref, such as a stacked branch's parent.
+fn base() -> Arg {
+  Arg::new("base")
+    .long("base")
+    .value_name("REF")
+    .help("Read against REF instead of the base branch, e.g. a stack's parent branch")
 }
 
 /// Whether the verb reads its message from stdin.

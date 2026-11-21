@@ -65,7 +65,24 @@ fn base_ref(env: &Env, dir: &Path, base: &str) -> Option<String> {
     format!("refs/remotes/origin/{base}"),
   ]
   .into_iter()
-  .find(|reference| exists(env, dir, reference))
+  .find(|reference| {
+    git(
+      env,
+      dir,
+      &["show-ref", "--verify", "--quiet", "--", reference],
+      &[],
+    )
+    .is_ok()
+  })
+}
+
+fn explicit_base_ref(env: &Env, dir: &Path, base: &str) -> Result<String, String> {
+  let commit = format!("{base}^{{commit}}");
+  if !base.starts_with('-') && exists(env, dir, &commit) {
+    return Ok(base.to_owned());
+  }
+  base_ref(env, dir, base)
+    .ok_or_else(|| format!("the base ref {base} does not resolve to a commit"))
 }
 
 /// `git status --porcelain -z`, counted.
@@ -104,6 +121,16 @@ fn branch_of(env: &Env, dir: &Path) -> String {
   git(env, dir, &args, &[]).map_or(branch, |name| name.trim().to_owned())
 }
 
+/// What to read: a literal `range`, or a `base` branch to read up to `HEAD`
+/// from — a stacked layer passes its parent as `base`.
+#[derive(Debug, Default)]
+pub(crate) struct Reads<'a> {
+  /// The revision range, as `log`'s positional argument.
+  pub(crate) range: Option<&'a str>,
+  /// The base revision, overriding the repository default.
+  pub(crate) base: Option<&'a str>,
+}
+
 /// The context of the repository at `dir`, reading at most `limit` commits.
 ///
 /// # Errors
@@ -113,20 +140,24 @@ pub(crate) fn gather(
   env: &Env,
   dir: &Path,
   settings: &Settings,
-  range: Option<&str>,
+  reads: &Reads<'_>,
   limit: usize,
 ) -> Result<Context, String> {
   let branch = branch_of(env, dir);
   if branch.is_empty() {
     return Err(format!("{} is not in a git repository", dir.display()));
   }
-  let base = base_branch(env, None, dir);
-  let reference = (branch != base)
-    .then(|| base_ref(env, dir, &base))
-    .flatten();
+  let base = reads
+    .base
+    .map_or_else(|| base_branch(env, None, dir), str::to_owned);
   let on_base = branch == base;
+  let reference = match reads.base {
+    Some(base) => Some(explicit_base_ref(env, dir, base)?),
+    None if !on_base => base_ref(env, dir, &base),
+    None => None,
+  };
   let base_found = on_base || reference.is_some();
-  let range = match (range, &reference) {
+  let range = match (reads.range, &reference) {
     (Some(given), _) => given.to_owned(),
     (None, Some(reference)) => format!("{reference}..HEAD"),
     (None, None) => "HEAD".to_owned(),

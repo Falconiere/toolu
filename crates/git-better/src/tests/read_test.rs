@@ -171,3 +171,111 @@ fn pr_reads_past_the_log_default_and_refuses_a_branch_without_a_base() {
     )
   );
 }
+
+#[test]
+fn base_reads_a_stacked_layer_against_its_parent() {
+  let (repo, _place) = branch();
+  git(&repo.root, &["switch", "-qc", "feat/1-y"]);
+  repo.commit(
+    "crates/y/c.rs",
+    "feat(y): add c\n\nIntent: c builds on a",
+    None,
+  );
+  let place = Place {
+    env: repo.env.clone(),
+    dir: repo.root,
+  };
+  let parent = verb(&["git-better", "pr", "--base", "feat/1-x"]);
+  let draft = pr(&parent, &Ctx::default(), &place).stdout.unwrap();
+  assert!(draft.contains("c builds on a"), "{draft}");
+  assert!(!draft.contains("a is needed"), "{draft}");
+  let as_json = Ctx {
+    json: true,
+    ..Ctx::default()
+  };
+  let document = json(&context(
+    &verb(&["git-better", "context", "--base", "feat/1-x"]),
+    &as_json,
+    &place,
+  ));
+  assert_eq!(document["base"], "feat/1-x");
+  assert_eq!(document["total"], 1);
+  assert_eq!(document["commits"].as_array().map(Vec::len), Some(1));
+  let text = context(
+    &verb(&["git-better", "context", "--base", "feat/1-x"]),
+    &Ctx::default(),
+    &place,
+  )
+  .stdout
+  .unwrap();
+  assert!(text.contains("ahead of feat/1-x"), "{text}");
+}
+
+#[test]
+fn context_and_pr_read_against_a_git_revision() {
+  let (repo, place) = branch();
+  git(
+    &repo.root,
+    &["update-ref", "refs/remotes/origin/main", "main"],
+  );
+  git(
+    &repo.root,
+    &[
+      "symbolic-ref",
+      "refs/remotes/origin/HEAD",
+      "refs/remotes/origin/main",
+    ],
+  );
+  let as_json = Ctx {
+    json: true,
+    ..Ctx::default()
+  };
+  let head = json(&context(
+    &verb(&["git-better", "context", "--base", "HEAD"]),
+    &as_json,
+    &place,
+  ));
+  assert_eq!(head["range"], "HEAD..HEAD");
+  assert_eq!(head["total"], 0);
+  let revision = json(&context(
+    &verb(&["git-better", "context", "--base", "HEAD^"]),
+    &as_json,
+    &place,
+  ));
+  assert_eq!(revision["range"], "HEAD^..HEAD");
+  assert_eq!(revision["total"], 1);
+  let draft = pr(
+    &verb(&["git-better", "pr", "--base", "HEAD^"]),
+    &Ctx::default(),
+    &place,
+  )
+  .stdout
+  .unwrap();
+  assert!(draft.contains("readers find a"), "{draft}");
+  assert!(!draft.contains("a is needed"), "{draft}");
+}
+
+#[test]
+fn context_and_pr_name_a_missing_explicit_base_ref() {
+  let (_repo, place) = branch();
+  let context_missing = context(
+    &verb(&["git-better", "context", "--base", "nope"]),
+    &Ctx::default(),
+    &place,
+  );
+  assert_eq!(context_missing.exit, Exit::Failure);
+  assert_eq!(
+    context_missing.stderr.as_deref(),
+    Some("the base ref nope does not resolve to a commit")
+  );
+  let missing = pr(
+    &verb(&["git-better", "pr", "--base", "nope"]),
+    &Ctx::default(),
+    &place,
+  );
+  assert_eq!(missing.exit, Exit::Failure);
+  assert_eq!(
+    missing.stderr.as_deref(),
+    Some("the base ref nope does not resolve to a commit")
+  );
+}

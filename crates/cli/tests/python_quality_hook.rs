@@ -252,12 +252,11 @@ fn check_toolu(sb: &Sandbox, installed: &str) -> Res<Output> {
     ])
     .arg("--plugin-root")
     .arg(&root)
+    .env_clear()
     .env("HOME", &sb.home)
     .env("PATH", format!("{}:/usr/bin:/bin", bin.display()))
     .env("CODEX_HOME", sb.home.join(".codex"))
     .env("PLUGIN_ROOT", &root)
-    .env_remove("TOOLU_HOST_OVERRIDE")
-    .env_remove("CLAUDE_PLUGIN_ROOT")
     .stdin(Stdio::null());
   Ok(command.output()?)
 }

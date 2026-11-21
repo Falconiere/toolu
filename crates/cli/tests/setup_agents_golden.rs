@@ -57,9 +57,11 @@ fn capture(output: Output) -> Result<Out, String> {
 /// Host-session variables that must never leak from the developer's own agent.
 fn is_host_key(key: &str) -> bool {
   key == "PLUGIN_ROOT"
-    || ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "OPENCODE"]
-      .iter()
-      .any(|prefix| key.starts_with(prefix))
+    || [
+      "CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "OPENCODE", "GROK_", "MUSE_", "QWEN_",
+    ]
+    .iter()
+    .any(|prefix| key.starts_with(prefix))
 }
 
 fn clear(command: &mut Command) {

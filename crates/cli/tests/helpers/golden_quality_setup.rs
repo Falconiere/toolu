@@ -13,7 +13,9 @@ use crate::proc;
 use crate::sandbox::{Sandbox, inside, write_at};
 
 /// Environment keys of a developer's own session that must not reach a hook.
-const HOST_PREFIXES: &[&str] = &["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "GIT_", "OPENCODE"];
+const HOST_PREFIXES: &[&str] = &[
+  "CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "GIT_", "OPENCODE", "GROK_", "MUSE_", "QWEN_",
+];
 
 /// The repository root.
 pub(crate) fn repo_root() -> PathBuf {
