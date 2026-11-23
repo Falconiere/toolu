@@ -1,7 +1,7 @@
 //! Plugin settings files (`settings-dir.ts`, `settings-files.ts`,
 //! `settings.ts`): where `plugins/toolu/settings/*` live and their typed
 //! loaders, the data the gate modules read. Matching (argv, globs, prefixes)
-//! stays with the gate ports.
+//! stays with the gate ports. Edited files in a versioned `settings/` move forward.
 
 use std::path::{Path, PathBuf};
 
@@ -25,6 +25,10 @@ pub const PROTECTED_FILES: &str = "protected-files.txt";
 pub const RUST_UNSAFE_EXEMPTIONS: &str = "rust-unsafe-exemptions.txt";
 /// `code-edit-rules.json`: the docs a code edit must read.
 pub const CODE_EDIT_RULES: &str = "code-edit-rules.json";
+
+#[path = "settings_migrate.rs"]
+mod migrate;
+pub use migrate::{SettingsMigration, carry_installed_settings, migrate_plugin_settings};
 
 /// `toolu_settings_dir`: `TOOLU_SETTINGS_DIR`, then `~/.claude/settings` when it
 /// is a directory, then `<plugin root>/settings` (`plugin_root`, else the host's).

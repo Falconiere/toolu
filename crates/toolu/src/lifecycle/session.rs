@@ -62,6 +62,7 @@ pub fn session_start(input: &SessionInput<'_>) -> Outcome {
   let roots = Roots::new(input.env.clone(), Some(detected.host));
   let config_root = roots.config_root();
   housekeeping(&roots);
+  let migration = migration_lines(input.plugin_root);
   let event = session_event(input.payload);
   let config = load(&roots, Some(input.cwd));
   let registry: Vec<String> = esm_modules(&config_root)
@@ -73,11 +74,30 @@ pub fn session_start(input: &SessionInput<'_>) -> Outcome {
     advisory: advisory.as_deref(),
     ..*input
   };
-  let (stdout, swept) = render(input, &event, detected.host, &config_root, &config);
+  let (stdout, mut swept) = render(input, &event, detected.host, &config_root, &config);
+  swept.extend(migration);
   Outcome {
     exit: Exit::Success,
     stdout,
     stderr: diagnostics(detected.warning, &config, swept),
+  }
+}
+
+/// One stderr line when a previous version's edited settings were kept.
+fn migration_lines(plugin_root: Option<&Path>) -> Vec<String> {
+  let Some(root) = plugin_root else {
+    return Vec::new();
+  };
+  match toolu_runtime::config::settings::migrate_plugin_settings(root) {
+    Ok(done) if !done.kept.is_empty() => {
+      let from = done.from.as_deref().unwrap_or("previous versions");
+      vec![format!(
+        "toolu: kept settings from {from}: {}",
+        done.kept.join(", ")
+      )]
+    }
+    Ok(_) => Vec::new(),
+    Err(error) => vec![format!("toolu: could not migrate settings: {error}")],
   }
 }
 

@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::time::{Duration, SystemTime};
 
 use toolu_runtime::env::Env;
 
@@ -61,6 +62,41 @@ fn take_removes_a_copy_and_reports_a_missing_one() {
       .take("ast-grep")
       .unwrap_err()
       .contains("cannot remove")
+  );
+}
+
+#[test]
+fn put_keeps_a_settings_file_edited_after_install() {
+  let home = tempfile::tempdir().unwrap();
+  let source = home.path().join("src");
+  std::fs::create_dir_all(source.join(".claude-plugin")).unwrap();
+  std::fs::create_dir_all(source.join("settings")).unwrap();
+  std::fs::write(source.join(".claude-plugin/plugin.json"), "{}\n").unwrap();
+  std::fs::write(source.join("settings/bash-allowlist.txt"), "shipped\n").unwrap();
+  std::fs::write(source.join("settings/bash-denylist.txt"), "old deny\n").unwrap();
+  let store = store(home.path());
+  store.put(&source, "toolu", "v1").unwrap();
+  let allow = store.path("toolu/settings/bash-allowlist.txt");
+  std::fs::write(&allow, "user-rule\n").unwrap();
+  let later = SystemTime::now() + Duration::from_secs(30);
+  let file = std::fs::OpenOptions::new()
+    .write(true)
+    .open(&allow)
+    .unwrap();
+  file.set_modified(later).unwrap();
+  std::fs::write(source.join("settings/bash-allowlist.txt"), "shipped-new\n").unwrap();
+  std::fs::write(source.join("settings/bash-denylist.txt"), "new deny\n").unwrap();
+  store.put(&source, "toolu", "v2").unwrap();
+  std::fs::write(
+    source.join("settings/bash-allowlist.txt"),
+    "shipped-again\n",
+  )
+  .unwrap();
+  store.put(&source, "toolu", "v3").unwrap();
+  assert_eq!(std::fs::read(allow).unwrap(), b"user-rule\n");
+  assert_eq!(
+    std::fs::read(store.path("toolu/settings/bash-denylist.txt")).unwrap(),
+    b"new deny\n"
   );
 }
 

@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, SystemTime};
 
 use serde_json::Value;
 use toolu_protocol::exit::Exit;
@@ -69,6 +70,62 @@ fn muse_startup_keeps_context_in_system_message() {
       .unwrap()
       .starts_with("Session resumed\ntoolu runtime: native")
   );
+}
+
+fn stamp(path: &Path, time: SystemTime) {
+  let file = std::fs::OpenOptions::new().write(true).open(path).unwrap();
+  file.set_modified(time).unwrap();
+}
+
+fn version_settings(plugin: &Path, when: SystemTime, body: &str) {
+  std::fs::create_dir_all(plugin.join(".claude-plugin")).unwrap();
+  std::fs::create_dir_all(plugin.join("settings")).unwrap();
+  std::fs::write(plugin.join(".claude-plugin/plugin.json"), "{}\n").unwrap();
+  std::fs::write(plugin.join("settings/bash-denylist.txt"), body).unwrap();
+  stamp(&plugin.join(".claude-plugin/plugin.json"), when);
+  stamp(&plugin.join("settings/bash-denylist.txt"), when);
+}
+
+#[test]
+fn startup_keeps_settings_edited_in_the_previous_version_when_the_hook_is_disabled() {
+  let (dir, repo, env) = repo_env();
+  let cfg = dir.path().join("cfg");
+  std::fs::create_dir_all(&cfg).unwrap();
+  std::fs::write(
+    cfg.join("toolu.config.json"),
+    r#"{"hooks":{"session-start":false}}"#,
+  )
+  .unwrap();
+  let installed = SystemTime::UNIX_EPOCH + Duration::from_secs(1_700_000_000);
+  let root = dir.path().join("cache/toolu/toolu");
+  let previous = root.join("10.1.1");
+  let current = root.join("10.2.0");
+  version_settings(
+    &previous,
+    installed + Duration::from_secs(120),
+    "user deny\n",
+  );
+  version_settings(&current, installed, "shipped deny\n");
+  stamp(&previous.join(".claude-plugin/plugin.json"), installed);
+  let outcome = session_start(&SessionInput {
+    env: &env,
+    cwd: &repo,
+    plugin_root: Some(&current),
+    version: VERSION,
+    exe: Some(&PathBuf::from(EXE)),
+    advisory: None,
+    payload: r#"{"source":"startup"}"#,
+  });
+  assert_eq!(
+    outcome.stderr.as_deref(),
+    Some("toolu: kept settings from 10.1.1: bash-denylist.txt")
+  );
+  assert_eq!(
+    std::fs::read(current.join("settings/bash-denylist.txt")).unwrap(),
+    b"user deny\n"
+  );
+  let value = document(&outcome);
+  assert!(value.get("hookSpecificOutput").is_none());
 }
 
 #[test]
