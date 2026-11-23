@@ -87,6 +87,12 @@ fn put_keeps_a_settings_file_edited_after_install() {
   std::fs::write(source.join("settings/bash-allowlist.txt"), "shipped-new\n").unwrap();
   std::fs::write(source.join("settings/bash-denylist.txt"), "new deny\n").unwrap();
   store.put(&source, "toolu", "v2").unwrap();
+  std::fs::write(
+    source.join("settings/bash-allowlist.txt"),
+    "shipped-again\n",
+  )
+  .unwrap();
+  store.put(&source, "toolu", "v3").unwrap();
   assert_eq!(std::fs::read(allow).unwrap(), b"user-rule\n");
   assert_eq!(
     std::fs::read(store.path("toolu/settings/bash-denylist.txt")).unwrap(),

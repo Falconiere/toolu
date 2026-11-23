@@ -74,12 +74,13 @@ pub fn carry_installed_settings(previous: &Path, new_root: &Path) -> Result<Vec<
     return Ok(Vec::new());
   }
   let installed = installed_at(previous)?;
+  let landed = installed_at(new_root).ok();
   let mut files = settings_files(&from)?;
   files.sort();
   let mut kept = Vec::new();
   for (name, path) in files {
     let dest = new_root.join("settings").join(&name);
-    if copy_edited(&path, &dest, installed)? {
+    if copy_edited(&path, &dest, installed, landed)? {
       kept.push(name);
     }
   }
@@ -175,26 +176,72 @@ fn note_mtime(path: &Path, latest: &mut Option<SystemTime>) -> Result<(), String
   Ok(())
 }
 
-/// `true` when `old` is missing from `new`, or was edited after the install.
-fn copy_edited(old: &Path, new: &Path, installed: SystemTime) -> Result<bool, String> {
+/// `true` when `old` is missing from `new`, or was edited after its install
+/// and `new` was not. `landed` is the new tree's install time.
+fn copy_edited(
+  old: &Path,
+  new: &Path,
+  installed: SystemTime,
+  landed: Option<SystemTime>,
+) -> Result<bool, String> {
   let old_bytes = std::fs::read(old).map_err(|err| format!("{}: {err}", old.display()))?;
-  if is_file(new) {
-    let new_bytes = std::fs::read(new).map_err(|err| format!("{}: {err}", new.display()))?;
-    if old_bytes == new_bytes {
-      return Ok(false);
-    }
-    let modified = mtime(old)?;
-    let still_install = installed
-      .checked_add(EDIT_AFTER)
-      .is_none_or(|limit| modified <= limit);
-    if still_install {
-      return Ok(false);
-    }
+  if is_file(new) && !replaces(old, new, &old_bytes, installed, landed)? {
+    return Ok(false);
   }
   let text = String::from_utf8(old_bytes).map_err(|err| format!("{}: {err}", old.display()))?;
   crate::atomic::replace_atomic(new, &text)
     .map_err(|err| format!("cannot write {}: {err}", new.display()))?;
+  // A copy has to stay newer than the tree it lands in, or the next update
+  // reads that copy as part of the install and drops it.
+  stamp_kept(new, mtime(old)?, landed)?;
   Ok(true)
+}
+
+fn replaces(
+  old: &Path,
+  new: &Path,
+  old_bytes: &[u8],
+  installed: SystemTime,
+  landed: Option<SystemTime>,
+) -> Result<bool, String> {
+  let new_bytes = std::fs::read(new).map_err(|err| format!("{}: {err}", new.display()))?;
+  if old_bytes == new_bytes || edited_since(new, landed)? {
+    return Ok(false);
+  }
+  edited_since(old, Some(installed))
+}
+
+fn edited_since(path: &Path, installed: Option<SystemTime>) -> Result<bool, String> {
+  let Some(installed) = installed else {
+    return Ok(false);
+  };
+  let modified = mtime(path)?;
+  Ok(
+    installed
+      .checked_add(EDIT_AFTER)
+      .is_some_and(|limit| modified > limit),
+  )
+}
+
+fn stamp_kept(path: &Path, source: SystemTime, landed: Option<SystemTime>) -> Result<(), String> {
+  let file = std::fs::OpenOptions::new()
+    .write(true)
+    .open(path)
+    .map_err(|err| format!("{}: {err}", path.display()))?;
+  file
+    .set_modified(kept_mtime(source, landed))
+    .map_err(|err| format!("{}: {err}", path.display()))
+}
+
+fn kept_mtime(source: SystemTime, landed: Option<SystemTime>) -> SystemTime {
+  let Some(floor) = landed.and_then(|time| {
+    time
+      .checked_add(EDIT_AFTER)
+      .and_then(|after| after.checked_add(Duration::from_secs(1)))
+  }) else {
+    return source;
+  };
+  if source > floor { source } else { floor }
 }
 
 fn write_marker(path: &Path, version: &str) -> Result<(), String> {

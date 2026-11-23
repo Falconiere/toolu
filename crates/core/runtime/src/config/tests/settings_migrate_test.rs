@@ -112,6 +112,24 @@ fn edited_settings_move_forward_and_unmodified_files_stay_on_the_new_release() {
 }
 
 #[test]
+fn an_edit_already_in_the_new_version_is_kept() {
+  let dir = tempfile::tempdir().unwrap();
+  let installed = epoch();
+  let edited = installed + Duration::from_secs(120);
+  let root = dir.path().join("cache/toolu");
+  let previous = version(&root, "10.1.1", "bash-denylist.txt", "old edit\n", edited);
+  touch(&previous.join(".claude-plugin/plugin.json"), installed);
+  let current = version(&root, "10.2.0", "bash-denylist.txt", "new edit\n", edited);
+  touch(&current.join(".claude-plugin/plugin.json"), installed);
+  let done = super::migrate_plugin_settings(&current).unwrap();
+  assert_eq!(done.kept, Vec::<String>::new());
+  assert_eq!(
+    read(&current.join("settings/bash-denylist.txt")),
+    b"new edit\n"
+  );
+}
+
+#[test]
 fn a_version_with_no_older_sibling_records_that_nothing_was_migrated() {
   let dir = tempfile::tempdir().unwrap();
   let current = version(

@@ -95,7 +95,8 @@ no per-project `.claude/settings/` lookup — to override per project, point
 When that plugin directory is a version cache (`…/toolu/<version>/`), the first
 `toolu hook session-start` in the new version copies files you edited under the
 previous version's `settings/` into the new one. A file you left as that
-version shipped it stays on the new release's copy. The copy is the whole
+version shipped it stays on the new release's copy. A file you already
+changed in the new version is left as it is. The copy is the whole
 file, so a new shipped rule is not merged into a file you edited. A copy
 prints `toolu: kept settings from <version>: <files>` on stderr. Cursor,
 OpenCode and Qwen installs are not versioned; `toolu plugins update` keeps an
