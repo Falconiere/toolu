@@ -8,7 +8,6 @@ use std::time::{Duration, SystemTime};
 use super::super::load::is_file;
 use crate::atomic::replace_atomic;
 
-const MIGRATED_FROM: &str = ".migrated-from";
 const EDIT_AFTER: Duration = Duration::from_secs(2);
 
 type Out<T> = Result<T, String>;
@@ -23,7 +22,7 @@ pub struct SettingsMigration {
 }
 
 /// Copies edited settings from older `…/toolu/<version>/` trees into `plugin_root`.
-/// A non-version root, or one that already has `settings/.migrated-from`, does nothing.
+/// A non-version root, or one already recorded beside that directory, does nothing.
 ///
 /// # Errors
 /// A read or write error leaves the marker unwritten, so the next call retries.
@@ -31,7 +30,7 @@ pub fn migrate_plugin_settings(plugin_root: &Path) -> Out<SettingsMigration> {
   let Some(current) = version_dir(plugin_root) else {
     return Ok(SettingsMigration::default());
   };
-  let marker = plugin_root.join("settings").join(MIGRATED_FROM);
+  let marker = migrated_marker(plugin_root);
   if is_file(&marker) {
     return Ok(SettingsMigration::default());
   }
@@ -52,7 +51,7 @@ fn carry_older(older: &[PathBuf], root: &Path) -> Out<(Option<String>, Vec<Strin
   for previous in older {
     let names = carry_installed_settings(previous, root)?;
     // A started sibling is the user's settings. Do not restore what they removed.
-    let started = is_file(&previous.join("settings").join(MIGRATED_FROM));
+    let started = is_file(&migrated_marker(previous));
     if !names.is_empty() {
       mixed |= from.is_some();
       from.get_or_insert_with(|| file_name(previous));
@@ -237,6 +236,11 @@ fn io<T>(path: &Path, result: Result<T, impl std::fmt::Display>) -> Out<T> {
 
 fn shown(path: &Path, err: &str) -> String {
   format!("{}: {err}", path.display())
+}
+
+fn migrated_marker(plugin: &Path) -> PathBuf {
+  let name = file_str(plugin).unwrap_or("none");
+  plugin.with_file_name(format!(".{name}.migrated-from"))
 }
 
 fn file_name(path: &Path) -> String {

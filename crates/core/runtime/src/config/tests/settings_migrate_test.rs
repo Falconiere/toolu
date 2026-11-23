@@ -93,9 +93,10 @@ fn edited_settings_move_forward_and_unmodified_files_stay_on_the_new_release() {
   assert!(!current.join("settings/linked.txt").exists());
   assert_eq!(read(&outside), b"nope\n");
   assert_eq!(
-    std::fs::read_to_string(current.join("settings/.migrated-from")).unwrap(),
+    std::fs::read_to_string(super::migrated_marker(&current)).unwrap(),
     "10.1.1\n"
   );
+  assert!(!current.join("settings/.migrated-from").exists());
   std::fs::write(
     current.join("settings/bash-denylist.txt"),
     "changed-after\n",
@@ -170,7 +171,7 @@ fn a_started_version_does_not_restore_a_file_the_user_removed() {
   let old = version(&root, "10.1.1", "mine.txt", "added\n", edited);
   touch(&old.join(".claude-plugin/plugin.json"), installed);
   let middle = version(&root, "10.2.0", "bash-denylist.txt", "shipped\n", installed);
-  write(&middle, "settings/.migrated-from", "10.1.1\n", installed);
+  std::fs::write(super::migrated_marker(&middle), "10.1.1\n").unwrap();
   let current = version(&root, "10.3.0", "bash-denylist.txt", "shipped\n", installed);
   let done = super::migrate_plugin_settings(&current).unwrap();
   assert_eq!(done.kept, Vec::<String>::new());
@@ -218,9 +219,10 @@ fn a_version_with_no_older_sibling_records_that_nothing_was_migrated() {
     b"shipped\n"
   );
   assert_eq!(
-    std::fs::read_to_string(current.join("settings/.migrated-from")).unwrap(),
+    std::fs::read_to_string(super::migrated_marker(&current)).unwrap(),
     "none\n"
   );
+  assert!(!current.join("settings/.migrated-from").exists());
 }
 
 #[test]
