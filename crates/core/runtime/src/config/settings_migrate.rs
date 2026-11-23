@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
-use super::super::load::is_file;
+use super::load::is_file;
 use crate::atomic::replace_atomic;
 
 const EDIT_AFTER: Duration = Duration::from_secs(2);
