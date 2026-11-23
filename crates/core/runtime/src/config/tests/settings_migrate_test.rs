@@ -112,6 +112,26 @@ fn edited_settings_move_forward_and_unmodified_files_stay_on_the_new_release() {
 }
 
 #[test]
+fn a_host_marker_newer_than_an_edit_does_not_hide_it() {
+  let dir = tempfile::tempdir().unwrap();
+  let installed = epoch();
+  let edited = installed + Duration::from_secs(120);
+  let later = edited + Duration::from_secs(120);
+  let root = dir.path().join("cache/toolu");
+  let previous = version(&root, "10.1.1", "bash-denylist.txt", "user deny\n", edited);
+  touch(&previous.join(".claude-plugin/plugin.json"), installed);
+  write(&previous, ".orphaned_at", "gone\n", later);
+  write(&previous, ".in_use/1", "pid\n", later);
+  let current = version(&root, "10.2.0", "bash-denylist.txt", "shipped\n", installed);
+  let done = super::migrate_plugin_settings(&current).unwrap();
+  assert_eq!(done.kept, ["bash-denylist.txt"]);
+  assert_eq!(
+    read(&current.join("settings/bash-denylist.txt")),
+    b"user deny\n"
+  );
+}
+
+#[test]
 fn an_edit_already_in_the_new_version_is_kept() {
   let dir = tempfile::tempdir().unwrap();
   let installed = epoch();
@@ -121,6 +141,12 @@ fn an_edit_already_in_the_new_version_is_kept() {
   touch(&previous.join(".claude-plugin/plugin.json"), installed);
   let current = version(&root, "10.2.0", "bash-denylist.txt", "new edit\n", edited);
   touch(&current.join(".claude-plugin/plugin.json"), installed);
+  write(
+    &current,
+    ".orphaned_at",
+    "later\n",
+    edited + Duration::from_secs(120),
+  );
   let done = super::migrate_plugin_settings(&current).unwrap();
   assert_eq!(done.kept, Vec::<String>::new());
   assert_eq!(

@@ -156,7 +156,12 @@ fn installed_at(plugin: &Path) -> Result<SystemTime, String> {
 fn note_tree(plugin: &Path, dir: &Path, latest: &mut Option<SystemTime>) -> Result<(), String> {
   for entry in read_dir(dir)? {
     let path = entry.path();
-    if path == plugin.join("settings") {
+    // Claude writes `.orphaned_at` and `.in_use` after the copy. Counting them
+    // makes a later edit look like part of the install.
+    if path == plugin.join("settings")
+      || path == plugin.join(".orphaned_at")
+      || path == plugin.join(".in_use")
+    {
       continue;
     }
     if is_real_dir(&path) {
