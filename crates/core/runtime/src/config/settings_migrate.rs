@@ -74,20 +74,25 @@ fn carry_older(
   let mut mixed = false;
   for previous in older {
     let names = carry_installed_settings(previous, plugin_root)?;
-    if names.is_empty() {
-      continue;
+    // This version already ran migration, so it is the user's current
+    // settings. An older sibling must not restore a file they removed.
+    let started = is_file(&previous.join("settings").join(MIGRATED_FROM));
+    if !names.is_empty() {
+      let version = previous
+        .file_name()
+        .and_then(OsStr::to_str)
+        .unwrap_or("none")
+        .to_owned();
+      if from.is_some() {
+        mixed = true;
+      } else {
+        from = Some(version);
+      }
+      kept.extend(names);
     }
-    let version = previous
-      .file_name()
-      .and_then(OsStr::to_str)
-      .unwrap_or("none")
-      .to_owned();
-    if from.is_some() {
-      mixed = true;
-    } else {
-      from = Some(version);
+    if started {
+      break;
     }
-    kept.extend(names);
   }
   if mixed {
     from = None;

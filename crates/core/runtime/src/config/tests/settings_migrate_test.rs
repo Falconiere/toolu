@@ -162,6 +162,22 @@ fn an_unstarted_version_does_not_hide_an_older_edit() {
 }
 
 #[test]
+fn a_started_version_does_not_restore_a_file_the_user_removed() {
+  let dir = tempfile::tempdir().unwrap();
+  let installed = epoch();
+  let edited = installed + Duration::from_secs(120);
+  let root = dir.path().join("cache/toolu");
+  let old = version(&root, "10.1.1", "mine.txt", "added\n", edited);
+  touch(&old.join(".claude-plugin/plugin.json"), installed);
+  let middle = version(&root, "10.2.0", "bash-denylist.txt", "shipped\n", installed);
+  write(&middle, "settings/.migrated-from", "10.1.1\n", installed);
+  let current = version(&root, "10.3.0", "bash-denylist.txt", "shipped\n", installed);
+  let done = super::migrate_plugin_settings(&current).unwrap();
+  assert_eq!(done.kept, Vec::<String>::new());
+  assert!(!current.join("settings/mine.txt").exists());
+}
+
+#[test]
 fn an_edit_already_in_the_new_version_is_kept() {
   let dir = tempfile::tempdir().unwrap();
   let installed = epoch();
