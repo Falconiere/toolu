@@ -8,6 +8,9 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use super::load::is_file;
+pub use super::settings_migrate::{
+  SettingsMigration, carry_installed_settings, migrate_plugin_settings,
+};
 use crate::host::roots::Roots;
 use crate::json::is_js_space;
 
@@ -25,10 +28,6 @@ pub const PROTECTED_FILES: &str = "protected-files.txt";
 pub const RUST_UNSAFE_EXEMPTIONS: &str = "rust-unsafe-exemptions.txt";
 /// `code-edit-rules.json`: the docs a code edit must read.
 pub const CODE_EDIT_RULES: &str = "code-edit-rules.json";
-
-#[path = "settings_migrate.rs"]
-mod migrate;
-pub use migrate::{SettingsMigration, carry_installed_settings, migrate_plugin_settings};
 
 /// `toolu_settings_dir`: `TOOLU_SETTINGS_DIR`, then `~/.claude/settings` when it
 /// is a directory, then `<plugin root>/settings` (`plugin_root`, else the host's).

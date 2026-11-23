@@ -23,3 +23,4 @@ mod redaction;
 pub mod secrets;
 /// Host settings files.
 pub mod settings;
+mod settings_migrate;
