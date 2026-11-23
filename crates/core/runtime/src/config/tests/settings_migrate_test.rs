@@ -132,6 +132,36 @@ fn a_host_marker_newer_than_an_edit_does_not_hide_it() {
 }
 
 #[test]
+fn an_unstarted_version_does_not_hide_an_older_edit() {
+  let dir = tempfile::tempdir().unwrap();
+  let installed = epoch();
+  let root = dir.path().join("cache/toolu");
+  let old = version(
+    &root,
+    "10.1.1",
+    "bash-denylist.txt",
+    "user deny\n",
+    installed + Duration::from_secs(120),
+  );
+  touch(&old.join(".claude-plugin/plugin.json"), installed);
+  version(&root, "10.2.0", "bash-denylist.txt", "skipped\n", installed);
+  let current = version(
+    &root,
+    "10.3.0",
+    "bash-denylist.txt",
+    "shipped\n",
+    installed + Duration::from_secs(10),
+  );
+  let done = super::migrate_plugin_settings(&current).unwrap();
+  assert_eq!(done.from.as_deref(), Some("10.1.1"));
+  assert_eq!(done.kept, ["bash-denylist.txt"]);
+  assert_eq!(
+    read(&current.join("settings/bash-denylist.txt")),
+    b"user deny\n"
+  );
+}
+
+#[test]
 fn an_edit_already_in_the_new_version_is_kept() {
   let dir = tempfile::tempdir().unwrap();
   let installed = epoch();

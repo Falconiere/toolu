@@ -90,7 +90,7 @@ fn migration_lines(plugin_root: Option<&Path>) -> Vec<String> {
   };
   match toolu_runtime::config::settings::migrate_plugin_settings(root) {
     Ok(done) if !done.kept.is_empty() => {
-      let from = done.from.as_deref().unwrap_or("the previous version");
+      let from = done.from.as_deref().unwrap_or("previous versions");
       vec![format!(
         "toolu: kept settings from {from}: {}",
         done.kept.join(", ")

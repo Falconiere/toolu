@@ -24,8 +24,8 @@ pub struct SettingsMigration {
   pub kept: Vec<String>,
 }
 
-/// Copies settings the user edited under the previous `…/toolu/<version>/`
-/// into `plugin_root`'s `settings/`. A root that is not a version directory,
+/// Copies settings the user edited under older `…/toolu/<version>/`
+/// directories into `plugin_root`'s `settings/`. A root that is not a version directory,
 /// and a version already recorded in `settings/.migrated-from`, do nothing.
 ///
 /// # Errors
@@ -45,21 +45,55 @@ pub fn migrate_plugin_settings(plugin_root: &Path) -> Result<SettingsMigration, 
       kept: Vec::new(),
     });
   }
-  let Some(previous) = previous_version(plugin_root, current)? else {
+  let older = older_versions(plugin_root, current)?;
+  if older.is_empty() {
     write_marker(&marker, "none")?;
     return Ok(SettingsMigration {
       from: None,
       kept: Vec::new(),
     });
-  };
-  let kept = carry_installed_settings(&previous, plugin_root)?;
-  let name = previous
-    .file_name()
+  }
+  let (from, kept) = carry_older(&older, plugin_root)?;
+  let name = older
+    .first()
+    .and_then(|path| path.file_name())
     .and_then(OsStr::to_str)
     .unwrap_or("none");
   write_marker(&marker, name)?;
-  let from = (!kept.is_empty()).then(|| name.to_owned());
   Ok(SettingsMigration { from, kept })
+}
+
+/// Newest older sibling first. A version that was installed and never started
+/// must not hide an edit in the version before it.
+fn carry_older(
+  older: &[PathBuf],
+  plugin_root: &Path,
+) -> Result<(Option<String>, Vec<String>), String> {
+  let mut kept = Vec::new();
+  let mut from = None;
+  let mut mixed = false;
+  for previous in older {
+    let names = carry_installed_settings(previous, plugin_root)?;
+    if names.is_empty() {
+      continue;
+    }
+    let version = previous
+      .file_name()
+      .and_then(OsStr::to_str)
+      .unwrap_or("none")
+      .to_owned();
+    if from.is_some() {
+      mixed = true;
+    } else {
+      from = Some(version);
+    }
+    kept.extend(names);
+  }
+  if mixed {
+    from = None;
+  }
+  kept.sort();
+  Ok((from, kept))
 }
 
 /// Copies user-edited files from `previous`'s `settings/` onto `new_root`'s
@@ -99,15 +133,12 @@ fn version_dir(plugin_root: &Path) -> Option<(u64, u64, u64)> {
     .and_then(crate::version::triple)
 }
 
-/// The greatest older sibling of `plugin_root` that has a `settings/` directory.
-fn previous_version(
-  plugin_root: &Path,
-  current: (u64, u64, u64),
-) -> Result<Option<PathBuf>, String> {
+/// Older siblings that have a `settings/` directory, newest first.
+fn older_versions(plugin_root: &Path, current: (u64, u64, u64)) -> Result<Vec<PathBuf>, String> {
   let Some(parent) = plugin_root.parent() else {
-    return Ok(None);
+    return Ok(Vec::new());
   };
-  let mut best: Option<((u64, u64, u64), PathBuf)> = None;
+  let mut found = Vec::new();
   for entry in read_dir(parent)? {
     let path = entry.path();
     if !is_real_dir(&path) {
@@ -119,11 +150,10 @@ fn previous_version(
     if version >= current || !is_real_dir(&path.join("settings")) {
       continue;
     }
-    if best.as_ref().is_none_or(|(have, _)| version > *have) {
-      best = Some((version, path));
-    }
+    found.push((version, path));
   }
-  Ok(best.map(|(_, path)| path))
+  found.sort_by_key(|item| std::cmp::Reverse(item.0));
+  Ok(found.into_iter().map(|(_, path)| path).collect())
 }
 
 fn settings_files(dir: &Path) -> Result<Vec<(String, PathBuf)>, String> {
