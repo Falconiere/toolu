@@ -30,17 +30,16 @@ pub fn migrate_plugin_settings(plugin_root: &Path) -> Out<SettingsMigration> {
   let Some(current) = version_dir(plugin_root) else {
     return Ok(SettingsMigration::default());
   };
-  let marker = migrated_marker(plugin_root);
-  if is_file(&marker) {
+  if fresh(plugin_root)? {
     return Ok(SettingsMigration::default());
   }
   let older = older_versions(plugin_root, current)?;
   let Some(nearest) = older.first() else {
-    write_marker(&marker, "none")?;
+    write_marker(plugin_root, "none")?;
     return Ok(SettingsMigration::default());
   };
   let (from, kept) = carry_older(&older, plugin_root)?;
-  write_marker(&marker, &file_name(nearest))?;
+  write_marker(plugin_root, &file_name(nearest))?;
   Ok(SettingsMigration { from, kept })
 }
 
@@ -51,7 +50,7 @@ fn carry_older(older: &[PathBuf], root: &Path) -> Out<(Option<String>, Vec<Strin
   for previous in older {
     let names = carry_installed_settings(previous, root)?;
     // A started sibling is the user's settings. Do not restore what they removed.
-    let started = is_file(&migrated_marker(previous));
+    let started = fresh(previous)?;
     if !names.is_empty() {
       mixed |= from.is_some();
       from.get_or_insert_with(|| file_name(previous));
@@ -212,49 +211,54 @@ fn kept_mtime(source: SystemTime, landed: Option<SystemTime>) -> SystemTime {
   floor.map_or(source, |floor| source.max(floor))
 }
 
-fn write_marker(path: &Path, version: &str) -> Out<()> {
-  let text = format!("{version}\n");
-  io(path, replace_atomic(path, &text))
+fn write_marker(plugin: &Path, version: &str) -> Out<()> {
+  let text = format!("{version} {}\n", install_stamp(plugin)?);
+  let path = migrated_marker(plugin);
+  io(&path, replace_atomic(&path, &text))
 }
-
+fn fresh(plugin: &Path) -> Out<bool> {
+  let path = migrated_marker(plugin);
+  if !is_file(&path) {
+    return Ok(false);
+  }
+  let text = io(&path, fs::read_to_string(&path))?;
+  let id = install_stamp(plugin)?;
+  Ok(text.split_whitespace().nth(1) == Some(id.as_str()))
+}
+fn install_stamp(plugin: &Path) -> Out<String> {
+  let time = installed_at(plugin)?;
+  let nanos = io(plugin, time.duration_since(SystemTime::UNIX_EPOCH))?;
+  Ok(nanos.as_nanos().to_string())
+}
 fn read(path: &Path) -> Out<Vec<u8>> {
   io(path, fs::read(path))
 }
-
 fn mtime(path: &Path) -> Out<SystemTime> {
   io(path, fs::metadata(path).and_then(|meta| meta.modified()))
 }
-
 fn read_dir(dir: &Path) -> Out<Vec<fs::DirEntry>> {
   let opened = io(dir, fs::read_dir(dir))?;
   io(dir, opened.collect::<Result<Vec<_>, _>>())
 }
-
 fn io<T>(path: &Path, result: Result<T, impl std::fmt::Display>) -> Out<T> {
   result.map_err(|err| shown(path, &err.to_string()))
 }
-
 fn shown(path: &Path, err: &str) -> String {
   format!("{}: {err}", path.display())
 }
-
 fn migrated_marker(plugin: &Path) -> PathBuf {
   let name = file_str(plugin).unwrap_or("none");
   plugin.with_file_name(format!(".{name}.migrated-from"))
 }
-
 fn file_name(path: &Path) -> String {
   file_str(path).unwrap_or("none").to_owned()
 }
-
 fn file_str(path: &Path) -> Option<&str> {
   path.file_name().and_then(OsStr::to_str)
 }
-
 fn is_real_dir(path: &Path) -> bool {
   fs::symlink_metadata(path).is_ok_and(|meta| meta.is_dir())
 }
-
 fn is_real_file(path: &Path) -> bool {
   fs::symlink_metadata(path).is_ok_and(|meta| meta.is_file())
 }

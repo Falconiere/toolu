@@ -32,6 +32,14 @@ fn epoch() -> SystemTime {
   SystemTime::UNIX_EPOCH + Duration::from_secs(1_700_000_000)
 }
 
+fn record(version: &str, time: SystemTime) -> String {
+  let nanos = time
+    .duration_since(SystemTime::UNIX_EPOCH)
+    .unwrap()
+    .as_nanos();
+  format!("{version} {nanos}\n")
+}
+
 /// 9.0.0 and an edited 10.1.1 beside a shipped 10.2.0. `outside` is the symlink target.
 fn edited_cache(dir: &Path) -> (PathBuf, PathBuf) {
   let installed = epoch();
@@ -94,7 +102,7 @@ fn edited_settings_move_forward_and_unmodified_files_stay_on_the_new_release() {
   assert_eq!(read(&outside), b"nope\n");
   assert_eq!(
     std::fs::read_to_string(super::migrated_marker(&current)).unwrap(),
-    "10.1.1\n"
+    record("10.1.1", epoch())
   );
   assert!(!current.join("settings/.migrated-from").exists());
   std::fs::write(
@@ -171,7 +179,8 @@ fn a_started_version_does_not_restore_a_file_the_user_removed() {
   let old = version(&root, "10.1.1", "mine.txt", "added\n", edited);
   touch(&old.join(".claude-plugin/plugin.json"), installed);
   let middle = version(&root, "10.2.0", "bash-denylist.txt", "shipped\n", installed);
-  std::fs::write(super::migrated_marker(&middle), "10.1.1\n").unwrap();
+  let marked = record("10.1.1", installed);
+  std::fs::write(super::migrated_marker(&middle), marked).unwrap();
   let current = version(&root, "10.3.0", "bash-denylist.txt", "shipped\n", installed);
   let done = super::migrate_plugin_settings(&current).unwrap();
   assert_eq!(done.kept, Vec::<String>::new());
@@ -220,7 +229,7 @@ fn a_version_with_no_older_sibling_records_that_nothing_was_migrated() {
   );
   assert_eq!(
     std::fs::read_to_string(super::migrated_marker(&current)).unwrap(),
-    "none\n"
+    record("none", epoch())
   );
   assert!(!current.join("settings/.migrated-from").exists());
 }
@@ -241,4 +250,23 @@ fn a_plugin_root_outside_a_version_directory_is_left_alone() {
   );
   assert_eq!(read(&root.join("settings/bash-denylist.txt")), b"local\n");
   assert!(!root.join("settings/.migrated-from").exists());
+}
+
+#[test]
+fn a_reinstalled_version_ignores_a_leftover_record() {
+  let dir = tempfile::tempdir().unwrap();
+  let installed = epoch();
+  let edited = installed + Duration::from_secs(120);
+  let root = dir.path().join("cache/toolu");
+  let previous = version(&root, "10.1.1", "bash-denylist.txt", "user deny\n", edited);
+  touch(&previous.join(".claude-plugin/plugin.json"), installed);
+  let current = version(&root, "10.2.0", "bash-denylist.txt", "shipped\n", installed);
+  let stale = record("10.1.1", installed + Duration::from_secs(1));
+  std::fs::write(super::migrated_marker(&current), stale).unwrap();
+  let done = super::migrate_plugin_settings(&current).unwrap();
+  assert_eq!(done.kept, ["bash-denylist.txt"]);
+  assert_eq!(
+    read(&current.join("settings/bash-denylist.txt")),
+    b"user deny\n"
+  );
 }
