@@ -126,6 +126,13 @@ impl Store {
     let marker = json!({"tag": tag, "version": version_of(source)});
     std::fs::write(staged.join(MARKER), format!("{marker}\n"))
       .map_err(|err| io("cannot mark", err))?;
+    if target.join("settings").is_dir() {
+      toolu_runtime::config::settings::carry_installed_settings(&target, &staged).inspect_err(
+        |_| {
+          let _gone = std::fs::remove_dir_all(&staged);
+        },
+      )?;
+    }
     if target.exists() {
       std::fs::remove_dir_all(&target)
         .map_err(|err| format!("cannot replace {}: {err}", target.display()))?;

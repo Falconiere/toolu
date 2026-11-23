@@ -110,7 +110,7 @@ The binary and the plugins are upgraded separately (`brew upgrade`, the installe
 
 **Compatibility.** While `hookProtocol` is unchanged, `toolu hook <name>` and every documented verb keep working, so a newer binary serves older plugins (#442).
 
-**Config compatibility.** An older binary accepts and ignores unknown keys inside namespaced sections (for example `epic`, #463). Unknown top-level keys are still rejected.
+**Config compatibility.** An older binary accepts and ignores unknown keys inside namespaced sections (for example `epic`, #463). Unknown top-level keys are still rejected. Edited files in the previous `toolu/<version>/settings/` directory are copied into the new version's `settings/` the first time that version starts; a file left as the old release shipped it stays on the new release's copy.
 
 The binary reads the calling plugin's `version` and `hookProtocol` from `.claude-plugin/plugin.json` (or `.codex-plugin/plugin.json` when the first is absent) under the root the launcher passes. The advisory prints once, at SessionStart. Its upgrade command is `brew upgrade toolu` when the binary resolves into a Homebrew prefix or a `Cellar`, and the installer one-liner otherwise. For a plugin that is not retired, a missing or malformed manifest, a `version` that is not a string, or a `hookProtocol` that is not an integer of 1 or more, counts as a mismatch. The cases are tested through the real launcher in `crates/cli/tests/helpers/skew.rs`, and in unit tests beside `crates/core/runtime/src/{skew,version,manifest}.rs` and `crates/cli/src/hook.rs`; those cover the cases that need a protocol 2 binary or a malformed manifest.
 

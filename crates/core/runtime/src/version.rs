@@ -34,7 +34,7 @@ pub fn compare(binary: &str, plugin: &str) -> Comparison {
 }
 
 /// `MAJOR.MINOR.PATCH` of `text`, ignoring a `-…` or `+…` suffix.
-fn triple(text: &str) -> Option<(u64, u64, u64)> {
+pub(crate) fn triple(text: &str) -> Option<(u64, u64, u64)> {
   let core = text.split(['-', '+']).next()?;
   let mut parts = core.split('.').map(number);
   let triple = (parts.next()??, parts.next()??, parts.next()??);
