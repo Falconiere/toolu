@@ -127,11 +127,8 @@ impl Store {
     std::fs::write(staged.join(MARKER), format!("{marker}\n"))
       .map_err(|err| io("cannot mark", err))?;
     if target.join("settings").is_dir() {
-      toolu_runtime::config::settings::carry_installed_settings(&target, &staged).inspect_err(
-        |_| {
-          let _gone = std::fs::remove_dir_all(&staged);
-        },
-      )?;
+      toolu_runtime::config::settings::carry_installed_settings(&target, &staged)
+        .inspect_err(|_| drop(std::fs::remove_dir_all(&staged)))?;
     }
     if target.exists() {
       std::fs::remove_dir_all(&target)

@@ -1,8 +1,7 @@
 //! Plugin settings files (`settings-dir.ts`, `settings-files.ts`,
 //! `settings.ts`): where `plugins/toolu/settings/*` live and their typed
 //! loaders, the data the gate modules read. Matching (argv, globs, prefixes)
-//! stays with the gate ports. [`migrate_plugin_settings`] copies files the user
-//! edited in a previous `…/toolu/<version>/settings/` into the new one.
+//! stays with the gate ports. Edited files in a versioned `settings/` move forward.
 
 use std::path::{Path, PathBuf};
 
