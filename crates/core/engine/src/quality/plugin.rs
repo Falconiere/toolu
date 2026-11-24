@@ -235,10 +235,11 @@ impl QualityPlugin {
     let owner = format!("{}-hook", self.plugin);
     let mut state = StateCtx::new(roots);
     if let Some(entries) = entries {
-      for (key, entry) in entries {
-        if entry.source == owner {
-          clear_gate_file(&mut state, &gate, &key, &owner);
-        }
+      for (key, _) in entries
+        .into_iter()
+        .filter(|(_, entry)| entry.source == owner)
+      {
+        clear_gate_file(&mut state, &gate, &key, &owner);
       }
     } else if source == owner {
       clear_gate_file(&mut state, &gate, &file, &owner);

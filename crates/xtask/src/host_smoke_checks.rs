@@ -65,7 +65,9 @@ pub(crate) fn quality_state(state: &str) -> Result<(), String> {
   let state: Value =
     serde_json::from_str(state).map_err(|err| format!("the quality gate is not JSON: {err}"))?;
   must(
-    state["status"] == STATUS && state["source"] == SOURCE && state["reason"] == REASON,
+    [("status", STATUS), ("source", SOURCE), ("reason", REASON)]
+      .into_iter()
+      .all(|(key, expected)| state.get(key).and_then(Value::as_str) == Some(expected)),
     "the failing quality command was not recorded",
   )
 }
