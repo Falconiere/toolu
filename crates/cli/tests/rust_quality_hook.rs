@@ -181,6 +181,27 @@ fn forget_retires_the_registration_and_doctor_is_clean() {
 }
 
 #[test]
+fn forget_clears_only_the_retired_rules_gate_entries() {
+  let sb = sandbox(true).unwrap();
+  let gate = sb.project.join(".claude/tmp/quality-gate-status.json");
+  fs::create_dir_all(gate.parent().unwrap()).unwrap();
+  let entry = |source: &str| json!({"source":source,"reason":"failed","violations":"lint","updatedAt":"2026-01-01T00:00:00Z"});
+  let mut doc = entry("rust-quality-hook");
+  doc["status"] = json!("failing");
+  doc["file"] = json!("src/lib.rs");
+  doc["entries"] =
+    json!({"src/lib.rs":entry("rust-quality-hook"),"__global__":entry("gate-status-hook")});
+  fs::write(&gate, doc.to_string()).unwrap();
+  assert!(session_start(&sb, "forget", &[]).unwrap().status.success());
+  let updated: Value = serde_json::from_slice(&fs::read(gate).unwrap()).unwrap();
+  assert_eq!(updated["status"], "failing");
+  assert_eq!(
+    updated["entries"],
+    json!({"__global__":entry("gate-status-hook")})
+  );
+}
+
+#[test]
 fn an_uninstalled_plugin_stays_silent() {
   let sb = sandbox(false).unwrap();
   let retired = session_start(&sb, "forget", &[]).unwrap();

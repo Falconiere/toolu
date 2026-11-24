@@ -150,7 +150,16 @@ pub(super) fn quality_hook(request: &HookRequest, context: &Context<'_>) -> Opti
   let env = (context.env)();
   match request.name.as_str() {
     "register" => Some(plugin.register(&env, detect(&env, None).host)),
-    "forget" => Some(plugin.forget(&env, detect(&env, None).host)),
+    "forget" => {
+      let payload = (context.stdin)()
+        .ok()
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok());
+      let cwd = payload
+        .as_ref()
+        .and_then(|doc| doc.get("cwd"))
+        .and_then(serde_json::Value::as_str);
+      Some(plugin.forget(&env, detect(&env, None).host, cwd.map(Path::new)))
+    }
     "check-toolu" => Some(check_toolu(&env)),
     "post-tools" => Some(plugin_tool_hook(
       plugin.spec,

@@ -54,6 +54,68 @@ when you run them.
 Each plain-text file is one entry per line, `#` for comments. JSON files
 follow whatever schema the consuming script documents.
 
+### Shell allowlist and denylist
+
+Allow/deny semantics for the bash guard: rules apply to each simple command
+on the line. A command that matches a deny rule is still allowed if that same
+command also matches an allowlist rule (the allowlist is an explicit override,
+not a default gate); an allow rule matching a *different* command on the line
+does not override it, so `ls && node -e …` with `ls` allowed still matches the deny rule. The configured gate mode controls the verdict.
+Commands that match no deny rule are allowed by default.
+
+> Allowlist caveat: single-token allowlist entries match anywhere in a
+> command's text as **substrings** (only multi-token entries are argv-aware). A broad single-token entry such as `node` therefore
+> overrides far more than intended and quietly broadens the attack surface
+> (e.g. it would exempt `node -e '…'`). Prefer specific multi-token entries for
+> exemptions so the override stays argv-scoped to exactly the command you mean.
+
+Lookup order (see `toolu_settings_dir` in `hooks/lib/detect.sh`, sibling of
+this directory inside the plugin):
+`$TOOLU_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
+the plugin's own `settings/` directory, resolved relative to the hooks. There is
+no per-project `.claude/settings/` lookup — to override per project, point
+`TOOLU_SETTINGS_DIR` at a project-local directory.
+
+When that plugin directory is a version cache (`…/toolu/<version>/`), the first
+`toolu hook session-start` in the new version copies files you edited under the
+previous version's `settings/` into the new one. A file you left as that
+version shipped it stays on the new release's copy. A file you already
+changed in the new version is left as it is. The copy is the whole
+file, so a new shipped rule is not merged into a file you edited. A copy
+prints `toolu: kept settings from <version>: <files>` on stderr. Cursor,
+OpenCode and Qwen installs are not versioned; `toolu plugins update` keeps an
+edited `settings/` file the same way when it replaces the plugin directory.
+
+## Env vars
+
+| Variable                  | Effect                                  |
+|---------------------------|-----------------------------------------|
+| `TOOLU_SETTINGS_DIR`  | Directory the hooks read data files from |
+| `MY_CLAUDE_QUALITY`       | `off` to disable the `quality-gate` gate |
+| `MY_CLAUDE_COMEMORY_REPO` | Overrides the comemory `--repo` scope used by the comemory wrapper (the comemory plugin's `skills/agent-memory/scripts/comemory.sh`). Defaults to the git project name. Not read by any hook. |
+
+## Statusline
+
+The statusline moved to its own optional plugin, **`statusline`** — it shows
+`model | effort | ctx | <gate> | folder | branch`, with a loud red
+`✗ gate:failing` marker driven by the same `.claude/tmp/quality-gate-status.json`
+explicit quality commands update. Install it and wire `settings.json` per
+`plugins/statusline/README.md`:
+
+```
+/plugin install statusline@toolu
+```
+
+```json
+{ "statusLine": { "type": "command",
+                  "command": "toolu statusline render" } }
+```
+
+Toolu no longer ships or symlinks a statusline script. On upgrade, the
+statusline plugin's SessionStart removes the `~/.claude/statusline/statusline.sh`
+link older versions published (a file of your own stays) and rewrites a
+`settings.json` `statusLine` that ran it to `toolu statusline render`.
+
 ## Runtime config
 
 For per-skill, per-hook, or per-MCP opt-out without touching the data

@@ -17,6 +17,9 @@ use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::manifest::ModuleManifest;
 use toolu_runtime::registry::{ModuleKind, RegistryEvent, event_dir, file_name};
 use toolu_runtime::startup::dependencies::{NoticeStyle, codex_dependency_notice};
+use toolu_state::ctx::StateCtx;
+use toolu_state::gate_file::{GateRead, clear_gate_file, read_gate_file};
+use toolu_state::gate_schema::GateFile;
 
 /// The core plugin every quality plugin needs.
 const CORE_PLUGIN: &str = "toolu@toolu";
@@ -199,7 +202,7 @@ impl QualityPlugin {
   /// modules: sessions no longer register per-edit checks, and the checks run
   /// only when the plugin's `check` command or a review asks for them. Never
   /// fails the session: an error is a `systemMessage`.
-  pub fn forget(&self, env: &Env, host: Host) -> Outcome {
+  pub fn forget(&self, env: &Env, host: Host, cwd: Option<&Path>) -> Outcome {
     let roots = Roots::new(env.clone(), Some(host));
     let message = [RegistryEvent::ToolPost, RegistryEvent::ToolPre]
       .into_iter()
@@ -209,7 +212,37 @@ impl QualityPlugin {
           .err()
           .map(|error| format!("{} unregistration failed: {error}", self.plugin))
       });
+    if message.is_none() {
+      self.clear_retired_failures(roots, cwd);
+    }
     Outcome::notice(message)
+  }
+
+  fn clear_retired_failures(&self, roots: Roots, cwd: Option<&Path>) {
+    let Some(state_dir) = roots.project_state_root(cwd, None) else {
+      return;
+    };
+    let gate = state_dir.join("quality-gate-status.json");
+    let GateRead::Ok(GateFile::Failing {
+      entries,
+      source,
+      file,
+      ..
+    }) = read_gate_file(&gate)
+    else {
+      return;
+    };
+    let owner = format!("{}-hook", self.plugin);
+    let mut state = StateCtx::new(roots);
+    if let Some(entries) = entries {
+      for (key, entry) in entries {
+        if entry.source == owner {
+          clear_gate_file(&mut state, &gate, &key, &owner);
+        }
+      }
+    } else if source == owner {
+      clear_gate_file(&mut state, &gate, &file, &owner);
+    }
   }
 }
 
