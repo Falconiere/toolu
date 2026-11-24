@@ -15,7 +15,7 @@ pub(crate) const FAILING: &str = "Use the shell tool exactly once to run `sh too
 pub(crate) const CLAUDE_ALLOWED: &str =
   "Use Bash once to run exactly `cat .toolu-smoke-nonce`, then stop.";
 /// Claude Code's commit under a red quality gate, which must land.
-pub(crate) const CLAUDE_COMMIT: &str = "Use Bash once to run git commit --allow-empty -m \"chore: smoke commit\". Report the hook result. Do not retry or bypass hooks.";
+pub(crate) const CLAUDE_COMMIT: &str = "Use Bash once to run git commit --allow-empty -m \"chore(smoke): verify commit\" -m \"Intent: verify delivery gate cadence\". Use that exact command without attribution. Report the hook result. Do not retry or bypass hooks.";
 /// Claude Code's gated push.
 pub(crate) const CLAUDE_PUSH: &str = "Use Bash once to run git push origin HEAD:refs/heads/feat/smoke. Report the hook result. Do not retry or bypass hooks.";
 
@@ -23,6 +23,6 @@ pub(crate) const CLAUDE_PUSH: &str = "Use Bash once to run git push origin HEAD:
 pub(crate) const CODEX_ALLOWED: &str =
   "Use the shell tool once to run exactly `cat .toolu-smoke-nonce`, then stop.";
 /// The commit under a red quality gate for the shell-tool hosts.
-pub(crate) const CODEX_COMMIT: &str = "Use the shell tool once to run git commit --allow-empty -m \"chore: smoke commit\". Report the hook result. Do not retry or bypass hooks.";
+pub(crate) const CODEX_COMMIT: &str = "Use the shell tool once to run git commit --allow-empty -m \"chore(smoke): verify commit\" -m \"Intent: verify delivery gate cadence\". Use that exact command without attribution. Report the hook result. Do not retry or bypass hooks.";
 /// The push blocked by the quality gate and push review, shell-tool hosts.
 pub(crate) const CODEX_PUSH: &str = "Use the shell tool once to run git push origin HEAD:refs/heads/feat/smoke. Report the hook result. Do not retry or bypass hooks.";

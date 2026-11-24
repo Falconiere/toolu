@@ -35,3 +35,6 @@ pub const PRE_TOOL: &[&dyn Gate] = &[
 
 /// The `PostToolUse` built-ins, in table order: gate status before push waiver.
 pub const POST_TOOL: &[&dyn Gate] = &[&GATE_STATUS, &PUSH_WAIVER, &JOB_RESULTS];
+
+/// Claude reports failed shell calls separately. Only record quality failures.
+pub const POST_TOOL_FAILURE: &[&dyn Gate] = &[&GATE_STATUS];

@@ -167,6 +167,19 @@
         }
       }
     },
+    "toolu/post-tools-failure": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "PostToolUseFailure",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "cargo test"
+        },
+        "error": "Exit code 1",
+        "is_interrupt": false
+      }
+    },
     "toolu/pre-compact": {
       "stdin": {
         "session_id": "hook-bench",

@@ -181,6 +181,49 @@ fn forget_retires_the_registration_and_doctor_is_clean() {
 }
 
 #[test]
+fn claude_bash_failure_and_success_update_the_command_gate() -> Res<()> {
+  let sb = sandbox(true)?;
+  let gate = sb.project.join(".claude/tmp/quality-gate-status.json");
+  let args = [
+    "hook",
+    "post-tools-failure",
+    "--event",
+    "PostToolUseFailure",
+  ];
+  let mut failure = json!({
+    "hook_event_name":"PostToolUseFailure",
+    "session_id":"s","cwd":sb.project,"tool_use_id":"t",
+    "tool_name":"Bash","tool_input":{"command":"cargo test"},
+    "error":"Exit code 1","is_interrupt":true
+  });
+  assert!(run(&sb, &args, &[], &failure.to_string())?.status.success());
+  assert!(!gate.exists(), "an interrupt recorded a quality failure");
+  failure["is_interrupt"] = json!(false);
+  let result = run(&sb, &args, &[], &failure.to_string())?;
+  assert!(
+    result.status.success() && result.stdout.is_empty(),
+    "{result:?}"
+  );
+  let state: Value = serde_json::from_slice(&fs::read(&gate)?)?;
+  assert_eq!(
+    state["reason"],
+    "Quality command failed: cargo test (exit 1)"
+  );
+
+  let success = json!({
+    "hook_event_name":"PostToolUse",
+    "session_id":"s","cwd":sb.project,"tool_use_id":"t",
+    "tool_name":"Bash","tool_input":{"command":"cargo test"},
+    "tool_response":{"stdout":"","stderr":"","interrupted":false,"isImage":false,"noOutputExpected":false}
+  });
+  let args = ["hook", "post-tools", "--event", "PostToolUse"];
+  assert!(run(&sb, &args, &[], &success.to_string())?.status.success());
+  let state: Value = serde_json::from_slice(&fs::read(&gate)?)?;
+  assert_eq!(state["status"], "passing");
+  Ok(())
+}
+
+#[test]
 fn forget_clears_only_the_retired_rules_gate_entries() {
   let sb = sandbox(true).unwrap();
   let gate = sb.project.join(".claude/tmp/quality-gate-status.json");

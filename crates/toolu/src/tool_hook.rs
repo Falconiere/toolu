@@ -8,7 +8,7 @@ use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use toolu_engine::builtins::{POST_TOOL, PRE_TOOL};
+use toolu_engine::builtins::{POST_TOOL, POST_TOOL_FAILURE, PRE_TOOL};
 use toolu_engine::dispatch::{DEFAULT_MODULE_TIMEOUT, dispatch};
 use toolu_engine::quality::{QualityBinding, QualityPlugin};
 use toolu_engine::{DispatchOptions, Phase as EnginePhase};
@@ -109,7 +109,19 @@ pub fn tool_hook(
   payload: std::io::Result<String>,
   plugin_root: Option<&Path>,
 ) -> Outcome {
-  run(phase, payload, plugin_root, None)
+  run(phase, payload, plugin_root, Selection::All)
+}
+
+/// Record Claude's failing shell quality command without running post-success rules.
+pub fn tool_hook_failure(payload: std::io::Result<String>, plugin_root: Option<&Path>) -> Outcome {
+  run(Phase::Post, payload, plugin_root, Selection::Failure)
+}
+
+#[derive(Clone, Copy)]
+enum Selection<'a> {
+  All,
+  Plugin(&'a str),
+  Failure,
 }
 
 /// Run only `spec`'s registry modules, for a dispatcher that runs the core gates
@@ -123,7 +135,7 @@ pub fn plugin_tool_hook(
   payload: std::io::Result<String>,
   plugin_root: Option<&Path>,
 ) -> Outcome {
-  run(phase, payload, plugin_root, Some(spec))
+  run(phase, payload, plugin_root, Selection::Plugin(spec))
 }
 
 /// The payload's `cwd`, when it names an existing absolute directory.
@@ -138,29 +150,39 @@ fn run(
   phase: Phase,
   payload: std::io::Result<String>,
   plugin_root: Option<&Path>,
-  only: Option<&str>,
+  selection: Selection<'_>,
 ) -> Outcome {
   let env = Env::process();
   let host = detect(&env, None).host;
+  if matches!(selection, Selection::Failure) && host != Host::Claude {
+    return Outcome::notice(None);
+  }
   let lib = lib_dir(plugin_root, &Roots::new(env.clone(), Some(host)));
-  let cwd = only
-    .and_then(|_| caller_cwd(&payload))
+  let split_by_caller = matches!(selection, Selection::Plugin(_));
+  let cwd = split_by_caller
+    .then(|| caller_cwd(&payload))
+    .flatten()
     .map_or_else(current_dir, Ok);
-  let selected: Option<BTreeSet<String>> = only.map(|spec| BTreeSet::from([spec.to_owned()]));
+  let selected = match selection {
+    Selection::All => None,
+    Selection::Plugin(spec) => Some(BTreeSet::from([spec.to_owned()])),
+    Selection::Failure => Some(BTreeSet::new()),
+  };
   let options = cwd.as_ref().map_err(cwd_error).map(|cwd| DispatchOptions {
     env: &env,
     cwd,
     lib_dir: &lib,
-    builtins: match (only, phase) {
-      (Some(_), _) => &[],
-      (None, EnginePhase::Pre) => PRE_TOOL,
-      (None, EnginePhase::Post) => POST_TOOL,
+    builtins: match (selection, phase) {
+      (Selection::Plugin(_), _) => &[],
+      (Selection::Failure, _) => POST_TOOL_FAILURE,
+      (Selection::All, EnginePhase::Pre) => PRE_TOOL,
+      (Selection::All, EnginePhase::Post) => POST_TOOL,
     },
     rules: RULES,
     quality_rules: QUALITY_RULES,
     selected_specs: selected.as_ref(),
     continue_post_blocks: false,
-    split_by_caller: only.is_some(),
+    split_by_caller,
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   });
   hook_main(phase, payload, host, options.as_ref().map_err(Clone::clone))

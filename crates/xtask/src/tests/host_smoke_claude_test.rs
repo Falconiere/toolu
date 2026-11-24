@@ -15,7 +15,7 @@ fn the_command_line_loads_both_plugins_and_ends_with_the_prompt() {
   let line = words.join(" ");
   assert_eq!(words.first().map(String::as_str), Some("/bin/claude"));
   assert!(line.contains("--plugin-dir /repo/plugins/toolu --plugin-dir /repo/plugins/ts-quality"));
-  assert!(line.contains("--model haiku -p --permission-mode auto"));
+  assert!(line.contains("--model haiku -p --permission-mode auto --setting-sources project"));
   assert!(line.contains("--output-format stream-json --verbose --tools Read,Edit"));
   assert!(line.ends_with("--max-budget-usd 2 do it"));
 }

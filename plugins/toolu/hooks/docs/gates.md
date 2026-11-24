@@ -134,9 +134,11 @@ wrapper `tools/<name>/{check,test,format}.sh`. Wrappers (`timeout`, `sudo`,
 tool` and `bash -x script` are not. Text that only names one
 (`echo "run bun test later"`, a commit message) does nothing.
 
-Qwen Code 0.28.0 supplies its shell exit code as display text. The gate updates
-command status only from a structured exit code, so those calls leave the
-command status unchanged.
+Claude Code reports failed Bash calls through `PostToolUseFailure`. Toolu
+records a failure when Claude reports an exit code and the call was not
+interrupted. A successful Bash response clears the command slot when its exit
+can prove the check passed. Qwen Code 0.28.0 supplies its shell exit code as
+display text, so those calls leave command status unchanged.
 
 A zero exit must prove every quality command in the line passed: each one runs
 last, or is joined to what follows by `&&`, and none is piped into another

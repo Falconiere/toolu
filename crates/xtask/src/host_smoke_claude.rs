@@ -25,6 +25,8 @@ pub(crate) fn argv(exe: &Path, repo: &Path, step: &Step<'_>) -> Vec<String> {
     "-p".to_owned(),
     "--permission-mode".to_owned(),
     "auto".to_owned(),
+    "--setting-sources".to_owned(),
+    "project".to_owned(),
     "--output-format".to_owned(),
     "stream-json".to_owned(),
     "--verbose".to_owned(),
