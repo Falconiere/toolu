@@ -45,6 +45,7 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | `toolu:builtin-module:PreToolUse:quality-gate` | `crates/core/engine/src/gates/quality_gate.rs` | toolu | PreToolUse | port-native | required | #261/done | native | no | — |
 | `toolu:entrypoint:PreToolUse:agent-tier` | `crates/toolu/src/agent_tier.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
 | `toolu:hooks.json:PostToolUse:hook_post-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | port-native | required | #279/done | native | no | — |
+| `toolu:hooks.json:PostToolUseFailure:hook_post-tools-failure:Bash` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUseFailure | port-native | required | #927/done | native | no | Claude Bash |
 | `toolu:hooks.json:PreCompact:hook_pre-compact:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | port-native | required | #263/done | native | no | — |
 | `toolu:hooks.json:PreToolUse:hook_agent-tier:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
 | `toolu:hooks.json:PreToolUse:hook_pre-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #258/done | native | no | — |

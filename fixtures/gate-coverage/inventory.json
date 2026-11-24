@@ -700,6 +700,26 @@
     "bashRequired": false
   },
   {
+    "id": "toolu:hooks.json:PostToolUseFailure:hook_post-tools-failure:Bash",
+    "sourcePath": "plugins/toolu/hooks/hooks.json",
+    "plugin": "toolu",
+    "kind": "hooks.json",
+    "event": "PostToolUseFailure",
+    "matcher": "Bash",
+    "commandOrModule": "hook post-tools-failure",
+    "parentId": null,
+    "semantics": "Records a completed Claude Bash quality command failure.",
+    "classification": "port-native",
+    "hostMechanism": "native",
+    "support": "required",
+    "implementationIssue": 927,
+    "implementationStatus": "done",
+    "verificationBaseline": "none",
+    "verificationConformance": "cargo xtask host-smoke --host claude",
+    "limits": "Claude Bash",
+    "bashRequired": false
+  },
+  {
     "id": "toolu:hooks.json:PreCompact:hook_pre-compact:auto",
     "sourcePath": "plugins/toolu/hooks/hooks.json",
     "plugin": "toolu",
