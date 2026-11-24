@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-The rules are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into `toolu`. Nothing runs after an edit: the `SessionStart` hook publishes the plugin's `.json` manifest into toolu's registry, retires any earlier per-edit registration, and removes the `.js` module and `.sh` bridge of older releases.
+The rules are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into `toolu`. The `SessionStart` hook removes older per-edit registrations and clears their saved failures. Explicit quality commands record their own results.
 
 Enforcement happens at push time. A quality command the agent runs (`bun test`, `tsc`, `vitest`, …) records its result; a failing one turns the gate red, and a red gate denies `git push` while `gates.qualityGate` blocks. Commits are never stopped. Oversized files and functions advise and never block. `toolu ts-quality` prints the guide.
 

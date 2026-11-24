@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-The rules are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into `toolu`. Nothing runs after an edit: the `SessionStart` hook publishes the plugin's `.json` manifest into toolu's registry, retires any earlier per-edit registration, and removes the `.js` module and `.sh` bridge of earlier releases.
+The rules are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into `toolu`. The `SessionStart` hook removes older per-edit registrations and clears their saved failures. Explicit quality commands record their own results.
 
 Enforcement happens at push time. A quality command the agent runs (`cargo clippy`, `cargo test`, `cargo nextest`, …) records its result; a failing one turns the gate red, and a red gate denies `git push` while `gates.qualityGate` blocks. Commits are never stopped. Oversized files, functions and `impl` blocks advise and never block.
 

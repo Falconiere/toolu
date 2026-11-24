@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-The rules are the `toolu-python-quality` crate (`crates/python-quality`), compiled into `toolu`, and they are static-only: the gate never invokes `ruff`, `pylint`, or any other linter. Nothing runs after an edit: the `SessionStart` hook publishes the plugin's `.json` manifest into toolu's registry, retires any earlier per-edit registration, and removes the `.js` module and `.sh` bridge of earlier releases.
+The rules are the `toolu-python-quality` crate (`crates/python-quality`), compiled into `toolu`, and they are static-only: the gate never invokes `ruff`, `pylint`, or any other linter. The `SessionStart` hook removes older per-edit registrations and clears their saved failures. Explicit quality commands record their own results.
 
 Enforcement happens at push time, from the quality commands the gate-status module recognises (`cargo test`, `cargo clippy`, `bun test`, `tsc`, `vitest`, `jest`, a project's `check.sh`/`test.sh`): a failing one turns the gate red, and a red gate denies `git push` while `gates.qualityGate` blocks. Commits are never stopped. Oversized files and functions advise and never block. `pytest` is not on that list, so a Python project's red state comes from whichever recognised command wraps it.
 
