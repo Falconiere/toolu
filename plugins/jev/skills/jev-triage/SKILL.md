@@ -37,7 +37,7 @@ goes in the state once:
   },
   "any_fit": {
     "type": "noul",
-    "instructions": "Do the category descriptions in `category` fit `item.text` at all?",
+    "instructions": "Does `item.text` describe a failure or wrong result, a performance problem, or a question about how or whether something is supported?",
     "criteria": {"true": "One category describes the report.", "false": "The report matches none of them."}
   }
 }
