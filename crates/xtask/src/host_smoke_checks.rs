@@ -3,6 +3,13 @@
 
 use std::path::Path;
 
+use serde_json::Value;
+
+const GATE_FILE: &str = "quality-gate-status.json";
+const STATUS: &str = "failing";
+const SOURCE: &str = "gate-status-hook";
+const REASON: &str = "Quality command failed: sh tools/smoke/test.sh (exit 1)";
+
 /// `Ok` when `condition` holds, else the `message`.
 pub(crate) fn must(condition: bool, message: &str) -> Result<(), String> {
   if condition {
@@ -47,7 +54,7 @@ pub(crate) fn ran_in(nonce: &str, transcript: &str) -> Result<(), String> {
 
 /// The gate file records the failing quality command.
 pub(crate) fn quality(project: &Path, state_dir: &str) -> Result<(), String> {
-  let gate = project.join(state_dir).join("quality-gate-status.json");
+  let gate = gate(project, state_dir);
   let state = std::fs::read_to_string(&gate)
     .map_err(|err| format!("quality gate file missing: {}: {err}", gate.display()))?;
   quality_state(&state)
@@ -55,10 +62,17 @@ pub(crate) fn quality(project: &Path, state_dir: &str) -> Result<(), String> {
 
 /// The pure half of [`quality`]: the gate file records the failing wrapper command.
 pub(crate) fn quality_state(state: &str) -> Result<(), String> {
+  let state: Value =
+    serde_json::from_str(state).map_err(|err| format!("the quality gate is not JSON: {err}"))?;
   must(
-    state.contains("\"status\": \"failing\"") && state.contains("tools/smoke/test.sh"),
+    state["status"] == STATUS && state["source"] == SOURCE && state["reason"] == REASON,
     "the failing quality command was not recorded",
   )
+}
+
+/// The gate status file that the failing probe must create.
+pub(crate) fn gate(project: &Path, state_dir: &str) -> std::path::PathBuf {
+  project.join(state_dir).join(GATE_FILE)
 }
 
 /// The push was refused by a gate: toolu's push review or the red quality gate.

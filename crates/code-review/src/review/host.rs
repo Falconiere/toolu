@@ -165,7 +165,7 @@ fn flags(spec: &Argv<'_>) -> Result<Vec<String>, String> {
       "--json-schema".into(),
       spec.schema_json.into(),
       "--tools".into(),
-      String::new(),
+      "".into(),
       "--strict-mcp-config".into(),
     ],
     Host::Codex => vec![

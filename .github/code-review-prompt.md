@@ -24,3 +24,9 @@ pre-existing debt, or lint that CI already enforces.
 Treat generated CLI docs (`docs/cli/**`) and fixture bytes as check inputs, not
 surfaces to redesign. For each finding state a concrete failing scenario and the
 changed line.
+
+When a claim depends on a fixture, generated file, or caller missing from the
+review input, do not assume its contents or report the claim as a defect.
+Check the value that reaches an API or process before claiming a runtime error.
+Reserve request-changes and must-fix items for verified findings. Derive both
+from the same findings, including when the set is empty.

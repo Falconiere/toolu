@@ -2,8 +2,7 @@ use super::{deny, must, push_blocked, quality, quality_state, ran_in};
 use crate::host_smoke_project::NONCE_FILE;
 use crate::host_smoke_prompts::{CLAUDE_ALLOWED, CODEX_ALLOWED};
 
-const FAILING: &str =
-  "{\n  \"status\": \"failing\",\n  \"errors\": [\"tools/smoke/test.sh exited 1\"]\n}";
+const FAILING: &str = "{\n  \"status\": \"failing\",\n  \"source\": \"gate-status-hook\",\n  \"reason\": \"Quality command failed: sh tools/smoke/test.sh (exit 1)\"\n}";
 
 #[test]
 fn must_reports_its_message() {
@@ -80,17 +79,16 @@ fn both_allowed_prompts_cat_the_nonce_by_its_relative_path() {
 }
 
 #[test]
-fn quality_state_needs_the_failure_and_the_failing_command() {
+fn quality_state_needs_the_gate_status_hook_failure_for_the_exact_command() {
   assert!(quality_state(FAILING).is_ok());
-  let passing = "{\"status\": \"passing\"}";
-  assert_eq!(
-    quality_state(passing).unwrap_err(),
-    "the failing quality command was not recorded"
-  );
-  assert_eq!(
-    quality_state("{\"status\": \"failing\", \"errors\": [\"lint\"]}").unwrap_err(),
-    "the failing quality command was not recorded"
-  );
+  for state in [
+    "not json",
+    "{\"status\": \"passing\", \"source\": \"gate-status-hook\", \"reason\": \"Quality command failed: sh tools/smoke/test.sh (exit 1)\"}",
+    "{\"status\": \"failing\", \"source\": \"other-hook\", \"reason\": \"Quality command failed: sh tools/smoke/test.sh (exit 1)\"}",
+    "{\"status\": \"failing\", \"source\": \"gate-status-hook\", \"reason\": \"Quality command failed: npm test (exit 1)\"}",
+  ] {
+    assert!(quality_state(state).is_err(), "{state}");
+  }
 }
 
 #[test]

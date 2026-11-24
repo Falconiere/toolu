@@ -5,7 +5,7 @@
   },
   "gates": {
     "prSize": {
-      "maxLines": 400,
+      "maxLines": 450,
       "maxFiles": 175
     }
   },

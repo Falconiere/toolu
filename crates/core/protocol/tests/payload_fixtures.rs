@@ -122,20 +122,16 @@ fn check_gates(file: &str) -> Res<(usize, usize, usize)> {
 
 #[test]
 fn every_gate_case_parses_and_normalizes() {
-  let counts: Vec<(usize, usize, usize)> = GATES
-    .iter()
-    .map(|file| check_gates(file).unwrap())
-    .collect();
-  assert_eq!(
-    counts,
-    [
-      (0, 0, 178),
-      (0, 0, 220),
-      (0, 1, 358),
-      (0, 2, 87),
-      (1, 2, 26)
-    ]
-  );
+  let expected_counts = [
+    (0, 0, 178),
+    (0, 0, 220),
+    (0, 1, 358),
+    (0, 2, 87),
+    (1, 2, 26),
+  ];
+  for (file, expected) in GATES.into_iter().zip(expected_counts) {
+    assert_eq!(check_gates(file).unwrap(), expected, "{file}");
+  }
 }
 
 /// The normalized kind of every lifecycle stdin that is a JSON object, by case

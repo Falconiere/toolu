@@ -4,7 +4,17 @@ use std::path::{Path, PathBuf};
 
 use super::{Driver, Prompts, Run, Step, allowed, commit, deny, failing, push};
 use crate::host_smoke_env::ChildEnv;
-use crate::host_smoke_project::{create, create_push};
+use crate::host_smoke_project::{create, create_push, state_dir};
+
+const FAILING: &str = "{\"status\":\"failing\",\"source\":\"gate-status-hook\",\"reason\":\"Quality command failed: sh tools/smoke/test.sh (exit 1)\"}";
+
+fn red_gate(project: &Path) {
+  let gate = project
+    .join(state_dir("claude"))
+    .join("quality-gate-status.json");
+  std::fs::create_dir_all(gate.parent().unwrap()).unwrap();
+  std::fs::write(gate, FAILING).unwrap();
+}
 
 /// A driver whose "host CLI" is a shell script that plays back a fixed transcript.
 struct Script {
@@ -87,12 +97,17 @@ fn failing_needs_the_red_gate_recorded_in_the_host_directory() {
   let project = create(root.path(), "p", "claude", &env).unwrap();
   let red = host(
     root.path(),
-    "mkdir -p \"$2/.claude/tmp\" && echo '{\"status\": \"failing\", \"errors\": [\"tools/smoke/test.sh exited 1\"]}' > \"$2/.claude/tmp/quality-gate-status.json\"",
+    "mkdir -p \"$2/.claude/tmp\" && echo '{\"status\":\"failing\",\"source\":\"gate-status-hook\",\"reason\":\"Quality command failed: sh tools/smoke/test.sh (exit 1)\"}' > \"$2/.claude/tmp/quality-gate-status.json\"",
   );
   failing(&red, &run, &project).unwrap();
+  assert_eq!(
+    failing(&red, &run, &project).unwrap_err(),
+    "quality gate existed before failing probe"
+  );
+  let project = create(root.path(), "green", "claude", &env).unwrap();
   let green = host(
     root.path(),
-    "echo '{\"status\": \"passing\"}' > \"$2/.claude/tmp/quality-gate-status.json\"",
+    "mkdir -p \"$2/.claude/tmp\" && echo '{\"status\":\"passing\"}' > \"$2/.claude/tmp/quality-gate-status.json\"",
   );
   assert_eq!(
     failing(&green, &run, &project).unwrap_err(),
@@ -109,6 +124,7 @@ fn commit_lands_even_under_a_red_quality_gate() {
     env: &env,
   };
   let project = create(root.path(), "p", "claude", &env).unwrap();
+  red_gate(&project);
   let landed = host(root.path(), "cd \"$2\" && git commit -q --allow-empty -m x");
   commit(&landed, &run, &project).unwrap();
   let held = host(root.path(), "echo 'BLOCKED: quality gate failing'");

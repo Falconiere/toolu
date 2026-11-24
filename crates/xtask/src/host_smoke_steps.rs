@@ -95,12 +95,19 @@ pub(crate) fn failing(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Res
     tools: "Bash",
     prompt: FAILING,
   };
+  let state_dir = state_dir(driver.name());
+  checks::must(
+    !checks::gate(project, &state_dir).exists(),
+    "quality gate existed before failing probe",
+  )?;
   session(driver, run, project, &step)?;
-  checks::quality(project, &state_dir(driver.name()))
+  checks::quality(project, &state_dir)
 }
 
 /// The commit lands although the quality gate is red: enforcement is at push.
 pub(crate) fn commit(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Result<(), String> {
+  let state_dir = state_dir(driver.name());
+  checks::quality(project, &state_dir)?;
   let before = head(project, run.env)?;
   let step = Step {
     name: "commit",
@@ -111,7 +118,8 @@ pub(crate) fn commit(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Resu
   checks::must(
     head(project, run.env)? != before,
     "the red quality gate held the commit",
-  )
+  )?;
+  checks::quality(project, &state_dir)
 }
 
 /// The push is blocked while the gate is red and the remote gains nothing.
