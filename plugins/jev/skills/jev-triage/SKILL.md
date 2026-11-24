@@ -50,9 +50,10 @@ option — keep `other` only when it means something concrete.
 ## Route on probabilities, in code
 
 ```text
-probabilities[category] ≥ 0.7  → file it, act on severity band
-0.3–0.7 or any_fit low         → reorder the options and ask once more
-still split                    → queue for a human
+named category ≥ 0.7 and any_fit ≥ 0.7  → file it using the severity band
+any_fit ≤ 0.3                           → queue for a human
+all other results                      → reorder the options and ask once more
+still uncertain after the retry        → queue for a human
 ```
 
 - Riskier routes get higher thresholds: auto-labeling is cheap, auto-closing

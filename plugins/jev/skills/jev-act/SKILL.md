@@ -29,9 +29,9 @@ actions the highest threshold.
 
 One `ask` turns natural language into a typed call. A Choice picks the
 function from named ones; a Noul per closed-set argument checks whether it is
-present. Code reads the answers, defaults the missing arguments, and rejects
-the call if the function Noul shows nothing fits. Do not let Jev invent a
-function name — the option keys are the only ones code can call.
+present. Route `other` and uncertain picks to review. Validate every required
+argument and the caller's authorization before invoking an allowed function.
+The option keys define the available routes.
 
 ```json
 {
