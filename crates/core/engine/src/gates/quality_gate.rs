@@ -11,7 +11,7 @@ use toolu_state::gate_file::{GateRead, read_gate_file};
 use toolu_state::git::{has_git, linked_worktree};
 
 use super::{command_analysis, decided, gate_config, pre_mode};
-use crate::detect::{is_git_push, possible_push, push_target_root};
+use crate::detect::{is_git_push, possible_push};
 use crate::gate::Gate;
 
 /// The pre-tool quality-state gate.
@@ -71,13 +71,14 @@ impl Gate for QualityGate {
     let analysis = command_analysis(ctx);
     let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
     let cwd = ctx.cwd.unwrap_or(ctx.project_root);
-    let root = if is_git_push(&analysis) {
-      push_target_root(&analysis, &roots, cwd)
+    let dir = if is_git_push(&analysis) {
+      cwd.to_path_buf()
     } else if let Some(dir) = possible_push(&analysis, cwd, ctx.env) {
-      toplevel(ctx.env, &dir).unwrap_or(dir)
+      dir
     } else {
       return Ok(Decision::Allow);
     };
+    let root = toplevel(ctx.env, &dir).unwrap_or(dir);
     let mode = pre_mode(&gate_config(ctx), "qualityGate", ctx, true);
     if mode == GateMode::Off {
       return Ok(Decision::Allow);
