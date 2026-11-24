@@ -83,14 +83,12 @@ fn one(found: Option<String>) -> Vec<String> {
 }
 
 /// Every rule in the numeric order of the bash fragments they replace; the two
-/// structural rules read the scan.
+/// structural rules read the scan. File and function size advise, never block.
 fn errors(f: &TsFile<'_>, scan: &AstGrepScan) -> Vec<String> {
-  let before: [Check; 16] = [
+  let before: [Check; 14] = [
     |f| one(parent_import(f)),
     |f| one(type_assertion(f)),
     test_placement,
-    |f| one(file_too_long(f)),
-    |f| one(function_too_long(f)),
     |f| one(react_hooks(f)),
     |f| one(factories(f)),
     |f| one(manual_type_guard(f)),
@@ -163,10 +161,10 @@ impl QualityRule for TsQuality {
     } else {
       String::new()
     };
-    QualityFindings {
-      errors,
-      advisories: vec![duplicated, docs(&f), unhandled_await(&f)],
-    }
+    let mut advisories = one(file_too_long(&f));
+    advisories.extend(one(function_too_long(&f)));
+    advisories.extend([duplicated, docs(&f), unhandled_await(&f)]);
+    QualityFindings { errors, advisories }
   }
 }
 

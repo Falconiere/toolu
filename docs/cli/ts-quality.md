@@ -2,16 +2,16 @@
 
 # `toolu ts-quality`
 
-TypeScript quality rules that run after each edit.
+TypeScript quality rules for reviews and the push gate.
 
 Owner: `plugins/ts-quality`.
 
 ## `toolu ts-quality`
 
 ```text
-ts-quality has no verbs: its rules run after every edit of a .ts or .tsx file in a TypeScript project with a package manager. Violations (type assertions, console.log, suppression comments, oversized files and functions, swallowed errors, mocks in tests and more) fail the file's quality-gate entry until it is fixed; duplication, JSDoc and unhandled-await findings are advisories.
+ts-quality has no verbs and no longer runs after every edit; its SessionStart hook retires any earlier registration. The same findings reach the project through its own lint and tests: a failing quality command marks the gate, and a failing gate denies git push while gates.qualityGate blocks — commits are never stopped. Oversized files and functions advise and never block.
 
-Limits come from lang.ts in toolu.config.json (maxFileLines, maxFnLines, noMocks). Run toolu doctor to see whether the rule is registered and compiled in.
+Limits come from lang.ts in toolu.config.json (maxFileLines, maxFnLines, noMocks).
 
 Usage: toolu ts-quality [OPTIONS]
 

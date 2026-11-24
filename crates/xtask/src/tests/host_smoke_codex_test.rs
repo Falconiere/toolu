@@ -18,8 +18,6 @@ fn script(dir: &Path, name: &str, body: &str) -> PathBuf {
   file
 }
 
-const FAILING: &str = "{\"status\": \"failing\"}";
-
 #[test]
 fn the_command_line_is_a_never_asking_sandboxed_exec() {
   let words = argv(Path::new("/bin/codex"), Path::new("/p q"), "go");
@@ -72,60 +70,14 @@ fn prepare_adds_the_marketplace_and_both_plugins() {
 }
 
 #[test]
-fn an_edit_repaired_in_the_same_turn_keeps_its_observed_failure() {
-  let dir = tempfile::tempdir().unwrap();
-  let project = dir.path().join("project");
-  std::fs::create_dir_all(project.join(".codex/tmp")).unwrap();
-  std::fs::write(project.join("sample.ts"), "export const n = 1;\n").unwrap();
-  let body = format!(
-    "cd '{p}'\nprintf 'a\\nb\\n' > sample.ts\nprintf '%s' '{FAILING}' > .codex/tmp/quality-gate-status.json\n\
-     sleep 0.3\nprintf 'fixed\\n' > sample.ts\nprintf '{{}}' > .codex/tmp/quality-gate-status.json",
-    p = project.display()
-  );
-  let exe = script(dir.path(), "codex", &body);
-  let codex = Codex {
-    exe,
-    repo: PathBuf::new(),
-  };
-  let run = Run {
-    root: dir.path(),
-    env: &env(dir.path()),
-  };
-  codex.edit(&run, &project).unwrap();
-  assert_eq!(
-    std::fs::read_to_string(project.join("sample.ts")).unwrap(),
-    "a\nb\n"
-  );
-  let gate = std::fs::read_to_string(project.join(".codex/tmp/quality-gate-status.json")).unwrap();
-  assert_eq!(gate, FAILING);
-  assert!(dir.path().join("codex-edit.jsonl").is_file());
-}
-
-#[test]
-fn an_edit_that_never_fails_the_gate_is_an_error() {
-  let dir = tempfile::tempdir().unwrap();
-  let exe = script(dir.path(), "codex", "echo nothing happened");
-  let codex = Codex {
-    exe,
-    repo: PathBuf::new(),
-  };
-  let run = Run {
-    root: dir.path(),
-    env: &env(dir.path()),
-  };
-  let err = codex.edit(&run, dir.path()).unwrap_err();
-  assert!(err.contains("did not record a live failing edit") && err.contains("nothing happened"));
-}
-
-#[test]
-fn the_codex_driver_stages_before_its_commit_prompt() {
+fn the_codex_driver_names_itself_and_keeps_its_prompts() {
   let codex = Codex {
     exe: "codex".into(),
     repo: "/repo".into(),
   };
   let prompts = codex.prompts();
   assert_eq!(codex.name(), "codex");
-  assert!(prompts.stages_first && !prompts.commit.contains("git add"));
+  assert!(!prompts.commit.contains("git add"));
   let step = Step {
     name: "x",
     tools: "Bash",

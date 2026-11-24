@@ -34,11 +34,7 @@ pub(crate) struct Prepared {
   pub(crate) stdin: String,
 }
 
-const SHIPPED_A: [&str; 3] = [
-  "protected-files.txt",
-  "mcp-blocklist.txt",
-  "code-edit-rules.json",
-];
+const SHIPPED_A: [&str; 2] = ["protected-files.txt", "code-edit-rules.json"];
 const SHIPPED_B: [&str; 3] = [
   "bash-allowlist.txt",
   "bash-denylist.txt",

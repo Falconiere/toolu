@@ -45,42 +45,32 @@ pub(crate) fn ran_in(nonce: &str, transcript: &str) -> Result<(), String> {
   )
 }
 
-/// The gate file records the failing edit, and `sample.ts` holds it.
+/// The gate file records the failing quality command.
 pub(crate) fn quality(project: &Path, state_dir: &str) -> Result<(), String> {
   let gate = project.join(state_dir).join("quality-gate-status.json");
   let state = std::fs::read_to_string(&gate)
     .map_err(|err| format!("quality gate file missing: {}: {err}", gate.display()))?;
-  let source = std::fs::read_to_string(project.join("sample.ts"))
-    .map_err(|err| format!("cannot read sample.ts: {err}"))?;
-  quality_state(&state, &source)
+  quality_state(&state)
 }
 
-/// The pure half of [`quality`].
-pub(crate) fn quality_state(state: &str, source: &str) -> Result<(), String> {
+/// The pure half of [`quality`]: the gate file records the failing wrapper command.
+pub(crate) fn quality_state(state: &str) -> Result<(), String> {
   must(
-    state.contains("\"status\": \"failing\"") && state.contains("TS file exceeds 3-line limit"),
-    "quality failure not recorded",
-  )?;
-  must(
-    source.lines().filter(|line| !line.is_empty()).count() >= 8,
-    "source edit missing",
+    state.contains("\"status\": \"failing\"") && state.contains("tools/smoke/test.sh"),
+    "the failing quality command was not recorded",
   )
 }
 
-/// The commit was refused by the quality gate.
-pub(crate) fn commit_denied(transcript: &str) -> Result<(), String> {
-  must(
-    transcript.contains("quality gate failing"),
-    "the commit was not denied by the quality gate",
-  )
-}
-
-/// The push was refused by toolu's push review.
+/// The push was refused by a gate: toolu's push review or the red quality gate.
 pub(crate) fn push_blocked(transcript: &str) -> Result<(), String> {
   let blocked = PUSH_REVIEW_REASONS
     .iter()
-    .any(|reason| transcript.contains(reason));
-  must(blocked, "the push was not blocked by toolu's push review")
+    .any(|reason| transcript.contains(reason))
+    || transcript.contains("quality gate failing");
+  must(
+    blocked,
+    "the push was not blocked by toolu's push review or quality gate",
+  )
 }
 
 #[cfg(test)]

@@ -43,7 +43,7 @@ fn over_limit() -> String {
 const CAPPED: &str = r#"{"lang":{"rust":{"maxFileLines":300}}}"#;
 
 #[test]
-fn a_module_over_the_configured_limit_is_a_finding() {
+fn an_over_limit_module_advises_and_is_not_a_blocking_finding() {
   let (dir, env) = repo(&[
     ("crates/demo/src/over.rs", over_limit()),
     ("crates/demo/src/fits.rs", "//! Fits.\n".to_owned()),
@@ -56,21 +56,16 @@ fn a_module_over_the_configured_limit_is_a_finding() {
   ]);
   let report = check(&env, Host::Claude, dir.path(), &["crates".to_owned()]).unwrap();
   assert_eq!(report.files, 2, "ignored files are not listed");
-  assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
-  let (path, message) = &report.findings[0];
-  assert_eq!(path, "crates/demo/src/over.rs");
-  assert!(
-    message.starts_with("File exceeds 300-line limit: crates/demo/src/over.rs (320 code lines"),
-    "{message}"
-  );
+  assert!(report.findings.is_empty(), "{:?}", report.findings);
   let from_inside = check(&env, Host::Claude, &dir.path().join("crates/demo"), &[]).unwrap();
   assert_eq!(from_inside, report, "the default is the whole repository");
   let text = render(&report, false);
   assert_eq!(
     (text.exit, text.stderr.as_deref()),
-    (Exit::Failure, Some("rust-quality: 1 finding(s)"))
+    (Exit::Success, Some("rust-quality: 2 files, ok")),
+    "size is advisory: check exits clean"
   );
-  assert_eq!(text.stdout.as_deref(), Some(message.as_str()));
+  assert_eq!(text.stdout, None);
 }
 
 #[test]

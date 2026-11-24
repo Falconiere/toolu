@@ -13,6 +13,22 @@
       {
         "id": "jev",
         "path": "skills/jev/SKILL.md"
+      },
+      {
+        "id": "jev-eval",
+        "path": "skills/jev-eval/SKILL.md"
+      },
+      {
+        "id": "jev-triage",
+        "path": "skills/jev-triage/SKILL.md"
+      },
+      {
+        "id": "jev-documents",
+        "path": "skills/jev-documents/SKILL.md"
+      },
+      {
+        "id": "jev-act",
+        "path": "skills/jev-act/SKILL.md"
       }
     ],
     "commands": [],

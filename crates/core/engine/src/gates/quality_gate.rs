@@ -1,4 +1,4 @@
-//! Pre-tool quality gate: a recorded failure blocks commit and push.
+//! Pre-tool quality gate: a recorded failure blocks push.
 
 use toolu_protocol::decision::Decision;
 use toolu_protocol::normalized::NormalizedEvent;
@@ -7,22 +7,17 @@ use toolu_runtime::git::toplevel;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::{jq_text, ordered::Ordered};
 use toolu_runtime::registry::rule::RuleContext;
-use toolu_shell::analysis::ShellAnalysis;
 use toolu_state::gate_file::{GateRead, read_gate_file};
 use toolu_state::git::{has_git, linked_worktree};
 
 use super::{command_analysis, decided, gate_config, pre_mode};
-use crate::detect::{is_git_commit, is_git_push};
+use crate::detect::is_git_push;
 use crate::gate::Gate;
 
 /// The pre-tool quality-state gate.
 pub(crate) struct QualityGate;
 /// Its singleton in the ordered pre-tool table.
 pub(crate) static QUALITY_GATE: QualityGate = QualityGate;
-
-fn may_ship(analysis: &ShellAnalysis) -> bool {
-  analysis.unknown || is_git_commit(analysis) || is_git_push(analysis)
-}
 
 fn field(doc: &Ordered, key: &str, fallback: &str) -> String {
   let Some(value) = doc.get(key) else {
@@ -50,12 +45,10 @@ fn failing_doc(read: GateRead) -> Option<Ordered> {
 
 fn lead(mode: GateMode) -> &'static str {
   match mode {
-    GateMode::Block => {
-      "BLOCKED: quality gate failing — fix the violations before committing or pushing."
-    }
-    GateMode::Ask => "The quality gate is failing. Commit/push anyway?",
+    GateMode::Block => "BLOCKED: quality gate failing — fix the violations before pushing.",
+    GateMode::Ask => "The quality gate is failing. Push anyway?",
     GateMode::Advise => {
-      "Heads up: the quality gate is failing (commit and push are not blocked at this setting)."
+      "Heads up: the quality gate is failing (push is not blocked at this setting)."
     }
     GateMode::Off => "",
   }
@@ -72,7 +65,7 @@ impl Gate for QualityGate {
     {
       return Ok(Decision::Allow);
     }
-    if !may_ship(&command_analysis(ctx)) || !has_git(ctx.env) {
+    if !is_git_push(&command_analysis(ctx)) || !has_git(ctx.env) {
       return Ok(Decision::Allow);
     }
     let mode = pre_mode(&gate_config(ctx), "qualityGate", ctx, true);

@@ -496,12 +496,10 @@
     ],
     "size: project config lowers maxFileLines [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.ts\",\n  \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
         }
       }
@@ -518,91 +516,70 @@
     ],
     "size: eslint JSON max-lines is credited [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (eslint enforces this max-lines limit)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (eslint enforces this max-lines limit)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
-        "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.ts\",\n  \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (eslint enforces this max-lines limit)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (eslint enforces this max-lines limit)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
-        }
+        "state": {}
       }
     ],
     "size: oxlint max-lines object form is credited [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 12-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (oxc enforces this max-lines limit)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"TS file exceeds 12-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (oxc enforces this max-lines limit)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
-        "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.ts\",\n  \"violations\": \"TS file exceeds 12-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (oxc enforces this max-lines limit)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 12-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (oxc enforces this max-lines limit)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
-        }
+        "state": {}
       }
     ],
     "size: unparsed .eslintrc.cjs falls to the default with a hint [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
-        "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/huge.ts\",\n  \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/huge.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/huge.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
-        }
+        "state": {}
       }
     ],
     "size: eslint.config.js is not machine-readable either [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
-        "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/huge.ts\",\n  \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/huge.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/huge.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
-        }
+        "state": {}
       }
     ],
     "size: biome has no max-lines equivalent [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (biome has no max-lines equivalent — gate uses the 300-line default)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (biome has no max-lines equivalent — gate uses the 300-line default)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
-        "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/huge.ts\",\n  \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (biome has no max-lines equivalent — gate uses the 300-line default)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/huge.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (biome has no max-lines equivalent — gate uses the 300-line default)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/huge.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
-        }
+        "state": {}
       }
     ],
     "size: a toolu.config override beats the linter's limit [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.ts\",\n  \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
         }
       }
     ],
     "size: an unterminated block comment marks the count approximate [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 5-line limit: <ROOT>/project/src/open.ts (9 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into smaller modules\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"TS file exceeds 5-line limit: <ROOT>/project/src/open.ts (9 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into smaller modules\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/open.ts\",\n  \"violations\": \"TS file exceeds 5-line limit: <ROOT>/project/src/open.ts (9 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into smaller modules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/open.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 5-line limit: <ROOT>/project/src/open.ts (9 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into smaller modules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/open.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
         }
       }
     ],
     "size: long exported arrow const [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\nExported API missing a JSDoc in <ROOT>/project/src/a.ts — add a concise /** */ doc:\\n1: export const fn = () => {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
@@ -619,24 +596,20 @@
     ],
     "size: long function after one-line arrows [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\nExported API missing a JSDoc in <ROOT>/project/src/a.ts — add a concise /** */ doc:\\n1: export const noop = () => undefined;\\n2: export function foo(): number {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
     ],
     "size: long class method [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\nExported API missing a JSDoc in <ROOT>/project/src/svc.ts — add a concise /** */ doc:\\n1: export class Service {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/svc.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/svc.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/svc.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
@@ -653,60 +626,50 @@
     ],
     "size: arrow with a multi-line param list [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\nExported API missing a JSDoc in <ROOT>/project/src/a.ts — add a concise /** */ doc:\\n1: export const compute = (\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
     ],
     "size: column-0 } in a template literal [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/tmpl.ts (>5 lines) — simplify or split\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/tmpl.ts (>5 lines) — simplify or split\\nExported API missing a JSDoc in <ROOT>/project/src/tmpl.ts — add a concise /** */ doc:\\n1: export function render(): string {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/tmpl.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/tmpl.ts (>5 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/tmpl.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/tmpl.ts (>5 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/tmpl.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
         }
       }
     ],
     "size: long const function expression [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\nExported API missing a JSDoc in <ROOT>/project/src/a.ts — add a concise /** */ doc:\\n1: export const fn = function() {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
     ],
     "size: method with a defaulted generic [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\nExported API missing a JSDoc in <ROOT>/project/src/svc.ts — add a concise /** */ doc:\\n1: export class Service {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/svc.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/svc.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/svc.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
     ],
     "size: strings and control flow do not start or end a function [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/flow.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/flow.ts (>3 lines) — simplify or split\\nExported API missing a JSDoc in <ROOT>/project/src/flow.ts — add a concise /** */ doc:\\n1: export function run(x: number): string {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/flow.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/flow.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/flow.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/flow.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/flow.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }

@@ -391,5 +391,5 @@ The launcher verifies Qwen host support when resolving the native binary.
 Qwen Code 0.28.0 exposes shell exit codes as display text in hook payloads.
 toolu records a shell quality result only from a structured exit status.
 Approving a push-review prompt applies to that push only. When the gate asks
-for a review, run `/toolu-review:review` in Qwen Code. Pre-tool gates and
-post-edit checks run through the native extension hooks.
+for a review, run `/toolu-review:review` in Qwen Code. Pre-tool gates run through the
+native extension hooks.

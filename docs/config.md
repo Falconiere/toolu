@@ -255,7 +255,7 @@ How firmly a gate says no is configuration, not a constant. Full reference:
 `ask` requires a host that can prompt; on Codex it degrades to `advise`, so the
 gate still speaks rather than silently doing nothing.
 
-`gates.preset` sets all ten at once and **defaults to `balanced`**:
+`gates.preset` sets all nine at once and **defaults to `balanced`**:
 
 | Gate | `strict` | **`balanced`** | `relaxed` |
 |------|----------|----------------|-----------|
@@ -265,34 +265,29 @@ gate still speaks rather than silently doing nothing.
 | `planLedger` | block | **advise** | off |
 | `docsSync` | block | **advise** | off |
 | `agentTier` | block | **advise** | off |
-| `prSize` | block | **block** | advise |
-| `bashCommands` ⚠️ | block | **ask** | ask |
-| `protectedFiles` ⚠️ | block | **ask** | ask |
-| `mcpBlocker` ⚠️ | block | **ask** | ask |
+| `prSize` | block | **advise** | advise |
+| `bashCommands` ⚠️ | block | **advise** | advise |
+| `protectedFiles` ⚠️ | block | **advise** | advise |
 
-> ### ⚠️ The three guardrails ASK now — they used to deny outright
+> ### ⚠️ The two guardrails ADVISE by default — they can prompt or deny
 >
-> `protectedFiles`, `mcpBlocker` and `bashCommands` were unanswerable hard
-> denies. They now **prompt you** by default, and approving lets the call
-> through: an agent can write `.env`, edit a toolu hook, reach a blocked MCP
-> server, or run `node -e` **if you say yes**. You are the control now. Approve
-> without reading and nothing protects you.
->
-> This was [#176](https://github.com/Falconiere/toolu/issues/176): the old deny
+> `protectedFiles` and `bashCommands` ship as advisory: a
+> matching `node -e` or `.env` write tells the agent what fired and stops
+> nothing, so a coding agent is never held. The old hard deny
 > could not be answered even when the user explicitly wanted the edit, and its
 > own message claimed an override that did not exist — so the work moved to
-> `Bash`, which the check never inspected. An honest prompt beats a guardrail
-> people route around.
+> `Bash`, which the check never inspected ([#176]).
 >
-> **Put the hard denies back** with
-> `{"gates":{"protectedFiles":{"mode":"block"},"mcpBlocker":{"mode":"block"},"bashCommands":{"mode":"block"}}}`
-> or `{"gates":{"preset":"strict"}}`.
+> Choose your own firmness per gate: `"mode": "ask"` prompts you (and prompts
+> honestly: one approval covers one call), `"mode": "block"` restores the hard
+> deny, `"mode": "off"` goes silent.
+>
+> [#176]: https://github.com/Falconiere/toolu/issues/176
 
-All three are ordinary gates now: `block` / `ask` / `advise` / `off` all work.
-Two rules keep them honest — they **ask at every preset except `strict`**
-(`relaxed` relaxes judgement calls, not guardrails), and their `ask` degrades
-to **`block`** rather than `advise` on a host that cannot prompt, so they fail
-closed where no human can answer.
+Both are ordinary gates now: `block` / `ask` / `advise` / `off` all work.
+One rule keeps an explicit `ask` honest: on a host that cannot prompt, a
+guardrail `ask` degrades to **`block`** rather than `advise`, so it fails
+closed where no human can answer. The shipped default avoids `ask` entirely.
 
 `protectedFiles` also covers `Bash`/`Shell`: a command that would write a
 protected path via a redirect, `tee`, `sed -i`/`perl -i`, `cp`/`mv`/`install`,
@@ -308,9 +303,9 @@ Two consequences worth stating plainly:
 
 - **`gates.bashCommands: "off"` is a security decision, not a convenience
   one.** It disables the whole `settings/bash-denylist.txt` check, including
-  the `node -e` / `bun -e` arbitrary-code-execution rules. `ask` (the
-  default) prompts you; `advise` only tells the agent the rule fired;
-  `off` removes it.
+  the `node -e` / `bun -e` arbitrary-code-execution rules. `advise` (the
+  default) only tells the agent the rule fired; `ask` prompts you; `block`
+  denies; `off` removes it.
 - **`permissions.deny` in Claude Code settings overrides a hook's `ask`.** A
   command denied there is denied outright and toolu never gets to prompt.
   `permissions.allow` does *not* have that power — an allowlisted command still
@@ -319,9 +314,9 @@ Two consequences worth stating plainly:
   `node -e`: those are gate decisions now, and a deny rule would silently
   outrank the mode you configured.
 
-`qualityGate` in `block` mode stops `git commit` and `git push` and nothing
-else — reading, searching, editing, and running commands stay open while the
-gate is red. `MY_CLAUDE_QUALITY=off` remains a full kill switch.
+`qualityGate` in `block` mode stops `git push` and nothing else — commits,
+reads, searches, edits, and running commands stay open while the gate is red.
+`MY_CLAUDE_QUALITY=off` remains a full kill switch.
 
 #### Push waivers
 
@@ -478,7 +473,7 @@ arrives small enough to review. It reads `git diff --numstat <base>...HEAD`:
 
 | key | default | meaning |
 |---|---|---|
-| `gates.prSize.mode` | preset (`block` under balanced) | `block` denies an over-budget push; `ask` prompts; `advise` only tells the agent; `off` is silent |
+| `gates.prSize.mode` | preset (`advise` under balanced) | `block` denies an over-budget push; `ask` prompts; `advise` only tells the agent; `off` is silent |
 | `gates.prSize.maxLines` | `300` | the code-line budget, a positive integer |
 | `gates.prSize.maxFiles` | `100` | the changed-file budget, a positive integer |
 | `gates.prSize.exclude` | see below | globs whose lines are not code lines; an array **replaces** the built-in list, and `[]` counts every line |
@@ -686,7 +681,7 @@ Codex requires outbound network enabled; Muse must forward the exported key.
 | `skills` | `ast-grep` (the only skill key any hook reads)                                     |
 | `agents` | `research-agent` (the only agents key any hook reads)                             |
 | `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact` |
-| `mcp`    | any MCP server name — e.g. `canva`, `figma`                                        |
+| `mcp`    | any MCP server name — e.g. `canva`, `figma` (parsed; enforcement retired)          |
 | `models` | `enabled`, the six Claude class aliases, and `codex.<class>.{model,reasoningEffort}` |
 | `prBabysit` | `dispatch`, `hosts`, `prefer`, `routing`, `unattended`, `jev` (read by `pr-babysit`; invalid values stop the fixer route with `config_invalid`) |
 
@@ -707,30 +702,11 @@ Unknown names are silently ignored (forward compatible).
     the host's hook IPC does not stall.
 
 - `mcp.<name> = false`
-  - Any `mcp__<name>__*` tool invocation is blocked at `PreToolUse` with
-    `permissionDecision: "deny"`. The deny reason names the source
-    (`see plugins/toolu/settings/mcp-blocklist.txt` for file entries, or
-    `disabled via toolu config (mcp.<name>=false …)` for config
-    entries) so users know where to undo it.
-  - A `mcp-blocklist.txt` line may add an optional `-> <text>` redirect hint
-    after the server prefix; when that server is denied the text is appended to
-    the deny reason (e.g. to steer the user to a replacement skill). See
-    `plugins/toolu/settings/README.md`.
-  - A config file whose envelope toolu cannot read (an unknown top-level key,
-    `version` other than 1) makes every gate block, and its `mcp.<name>: false`
-    keys still block: they are read from the file directly.
-  - Matcher wiring lives in `plugins/toolu/hooks/hooks.json`, which routes
-    the `mcp__` prefix through the native launcher to `toolu hook mcp-tools`,
-    the mcp-blocker gate.
-
-  On Muse, the same standalone hook filters tool names inside the binary
-  because Muse has no hook matchers. Muse MCP names include the plugin and
-  server in one token: `mcp__plugin_<plugin>_<server>__<tool>`. Use that full
-  token before the final `__` as the blocklist prefix or `mcp` config key.
-  For example, `mcp__plugin_toolu_probe_540_probe_mcp__probe_echo` matches
-  `plugin_toolu_probe_540_probe_mcp`; `probe_mcp` alone does not identify it.
-  A blocked Muse call emits `{"decision":"block",…}` with exit 0; an
-  unmatched or non-MCP call stays silent.
+  - No longer enforced. The `mcp` config section still parses (existing configs
+    stay valid), but the MCP-blocker gate, its `toolu hook mcp-tools` entry and
+    the shipped `settings/mcp-blocklist.txt` were retired: MCP tools are no
+    longer blocked at `PreToolUse`. To keep a deprecated server out of reach,
+    remove it from the host's MCP configuration.
 
 Skills, hooks, Claude agents, and Claude commands are loaded from plugin
 manifests at session start, so config does not remove those files from host
@@ -785,8 +761,8 @@ usable context window. To reclaim it:
   (see *Effects* above — `SKILL.md` files stay on disk and their descriptions
   still load).
 - **MCP tools defer natively** — supported hosts load their schemas on demand,
-  so an idle connector costs little. Use `mcp.<server>: false` to
-  block a noisy one entirely.
+  so an idle connector costs little. `mcp.<server>: false` no longer blocks a
+  server; remove it from the host's MCP configuration instead.
 
 The harness caps its *own* injected footprint with
 `cargo xtask gate --only context-budget` (run in CI): word ceilings on the

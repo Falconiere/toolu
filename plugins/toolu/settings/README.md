@@ -47,7 +47,6 @@ when you run them.
 | `bash-denylist.txt`           | `bash-commands` gate (`toolu_engine::gates`)        | Tokens the bash guard rejects via argv-aware parsing.              |
 | `code-edit-rules.json`        | `code-edit-rules` gate (`toolu_engine::gates`)      | Pattern rules for Write/Edit gating on source files.               |
 | `commit-prefixes.txt`         | `commit-gate` gate (`toolu_engine::gates`)          | Allowed Conventional Commits prefixes for `git commit` messages.   |
-| `mcp-blocklist.txt`           | `mcp-blocker` gate (`toolu_engine::gates`)          | MCP server prefixes blocked unconditionally (plain text).          |
 | `toolu.config.example.json` | (reference — copy to `~/.claude/toolu.config.json`) | Example runtime opt-out config (skills/hooks/mcp). See `docs/config.md`. |
 | `protected-files.txt`         | `protected-files` gate (`toolu_engine::gates`)      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
 | `rust-unsafe-exemptions.txt`  | `crates/rust-quality/src/rule.rs`                 | Files/paths exempt from the `unsafe` Rust check.                   |
@@ -55,87 +54,10 @@ when you run them.
 Each plain-text file is one entry per line, `#` for comments. JSON files
 follow whatever schema the consuming script documents.
 
-### `mcp-blocklist.txt` redirect hints
-
-A blocklist line may carry an optional `-> <text>` suffix after the server
-prefix. When that server is denied, the text is appended to the deny reason so
-the user is pointed at the replacement. The prefix alone drives the match; the
-hint is ignored for matching.
-
-```text
-# <server-prefix> -> <redirect text shown in the deny reason>
-# Example (commented = inert; uncomment to actually block the Atlassian MCP and
-# steer Jira work to the host's native Jira tools when available):
-# claude_ai_Atlassian -> use the host's native Jira tools instead
-```
-
-The example is shown **commented**, so nothing is blocked out of the box.
-Uncomment the line (in your own settings dir) only if you want a hard block too.
-
-Allow/deny semantics for the bash guard: rules apply to each simple command
-on the line. A command that matches a deny rule is still allowed if that same
-command also matches an allowlist rule (the allowlist is an explicit override,
-not a default gate); an allow rule matching a *different* command on the line
-does not override it, so `ls && node -e …` with `ls` allowed is still denied.
-Commands that match no deny rule are allowed by default.
-
-> Allowlist caveat: single-token allowlist entries match anywhere in a
-> command's text as **substrings** (only multi-token entries are argv-aware). A broad single-token entry such as `node` therefore
-> overrides far more than intended and quietly broadens the attack surface
-> (e.g. it would exempt `node -e '…'`). Prefer specific multi-token entries for
-> exemptions so the override stays argv-scoped to exactly the command you mean.
-
-Lookup order (see `toolu_settings_dir` in `hooks/lib/detect.sh`, sibling of
-this directory inside the plugin):
-`$TOOLU_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
-the plugin's own `settings/` directory, resolved relative to the hooks. There is
-no per-project `.claude/settings/` lookup — to override per project, point
-`TOOLU_SETTINGS_DIR` at a project-local directory.
-
-When that plugin directory is a version cache (`…/toolu/<version>/`), the first
-`toolu hook session-start` in the new version copies files you edited under the
-previous version's `settings/` into the new one. A file you left as that
-version shipped it stays on the new release's copy. A file you already
-changed in the new version is left as it is. The copy is the whole
-file, so a new shipped rule is not merged into a file you edited. A copy
-prints `toolu: kept settings from <version>: <files>` on stderr. Cursor,
-OpenCode and Qwen installs are not versioned; `toolu plugins update` keeps an
-edited `settings/` file the same way when it replaces the plugin directory.
-
-## Env vars
-
-| Variable                  | Effect                                  |
-|---------------------------|-----------------------------------------|
-| `TOOLU_SETTINGS_DIR`  | Directory the hooks read data files from |
-| `MY_CLAUDE_QUALITY`       | `off` to disable the `quality-gate` gate |
-| `MY_CLAUDE_COMEMORY_REPO` | Overrides the comemory `--repo` scope used by the comemory wrapper (the comemory plugin's `skills/agent-memory/scripts/comemory.sh`). Defaults to the git project name. Not read by any hook. |
-
-## Statusline
-
-The statusline moved to its own optional plugin, **`statusline`** — it shows
-`model | effort | ctx | <gate> | folder | branch`, with a loud red
-`✗ gate:failing` marker driven by the same `.claude/tmp/quality-gate-status.json`
-the rust-quality / ts-quality / python-quality hooks write. Install it and wire `settings.json` per
-`plugins/statusline/README.md`:
-
-```
-/plugin install statusline@toolu
-```
-
-```json
-{ "statusLine": { "type": "command",
-                  "command": "toolu statusline render" } }
-```
-
-Toolu no longer ships or symlinks a statusline script. On upgrade, the
-statusline plugin's SessionStart removes the `~/.claude/statusline/statusline.sh`
-link older versions published (a file of your own stays) and rewrites a
-`settings.json` `statusLine` that ran it to `toolu statusline render`.
-
 ## Runtime config
 
 For per-skill, per-hook, or per-MCP opt-out without touching the data
 files above, see `docs/config.md`. The config file lives at
 `~/.claude/toolu.config.json` (or the project-local override) and is
-deep-merged at runtime. The `mcp-blocklist.txt` blocklist still works in
-parallel; either source can block a server.
+deep-merged at runtime. MCP gating was retired with the mcp-blocker gate:
+`mcp.<server>: false` still parses but enforces nothing.

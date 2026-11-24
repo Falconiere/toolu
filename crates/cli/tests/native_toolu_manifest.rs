@@ -34,7 +34,6 @@ fn expected() -> [(&'static str, Entries); 6] {
           "pre-tools",
           Some("apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep"),
         ),
-        ("mcp-tools", Some("mcp__")),
         ("agent-tier", Some("spawn_agent|Agent|Task")),
       ],
     ),

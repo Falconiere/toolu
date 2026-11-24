@@ -38,7 +38,7 @@ fn a_tool_runs_only_the_entries_its_matcher_selects() {
   );
   assert_eq!(
     names(Hook::ToolBefore, Some("mcp__context7__query")),
-    ["hook mcp-tools --event PreToolUse --plugin-root /p"]
+    Vec::<String>::new()
   );
   assert_eq!(names(Hook::ToolBefore, Some("Read")), Vec::<String>::new());
   assert_eq!(

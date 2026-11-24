@@ -1,5 +1,5 @@
-//! rust-quality's native `SessionStart` register and `check-toolu` in a real
-//! config dir, the real `toolu hook post-tools` on Rust and non-Rust edits, and
+//! rust-quality's native `SessionStart` retirement and `check-toolu` in a real
+//! config dir, the real `toolu hook post-tools` proving no edit runs a rule, and
 //! `toolu rust-quality check` on real repositories.
 
 #[path = "helpers/feed.rs"]
@@ -149,38 +149,33 @@ fn registry_check(sb: &Sandbox) -> Res<Value> {
 }
 
 #[test]
-fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
+fn forget_retires_the_registration_and_doctor_is_clean() {
   let sb = sandbox(true).unwrap();
   let post = sb.home.join(POST);
   fs::create_dir_all(&post).unwrap();
+  fs::write(post.join(MANIFEST), "{\"version\":1}\n").unwrap();
   fs::write(
     post.join("rust-quality@toolu__rust-quality.js"),
     "export default {};\n",
   )
   .unwrap();
-  let before = registry_check(&sb).unwrap();
-  assert!(
-    before.to_string().contains("is a JavaScript module"),
-    "{before}"
-  );
-  let first = session_start(&sb, "register", &[]).unwrap();
-  assert!(first.status.success(), "{first:?}");
-  let notice: Value = serde_json::from_slice(&first.stdout).unwrap();
-  assert_eq!(
-    notice["systemMessage"],
-    "rust-quality's JavaScript module was replaced by its native rule in toolu."
-  );
-  assert_eq!(listing(&post).unwrap(), [MANIFEST]);
-  let manifest = fs::read_to_string(post.join(MANIFEST)).unwrap();
-  let again = session_start(&sb, "register", &[]).unwrap();
+  let first = session_start(&sb, "forget", &[]).unwrap();
+  assert_eq!((first.status.code(), first.stdout.len()), (Some(0), 0));
+  assert_eq!(listing(&post).unwrap(), Vec::<String>::new());
+  let again = session_start(&sb, "forget", &[]).unwrap();
   assert_eq!((again.status.code(), again.stdout.len()), (Some(0), 0));
-  assert_eq!(fs::read_to_string(post.join(MANIFEST)).unwrap(), manifest);
 
   let bad = concat!("//! X.\n#[", "allow(dead_code)]\nfn a() {}\n");
   let fired = write(&sb, "src/lib.rs", bad, &[]).unwrap();
   assert!(fired.status.success(), "{fired:?}");
-  let stdout = String::from_utf8(fired.stdout).unwrap();
-  assert!(stdout.contains("Forbidden lint suppression"), "{stdout}");
+  assert_eq!(String::from_utf8(fired.stdout).unwrap(), "");
+  assert!(
+    !sb
+      .project
+      .join(".claude/tmp/quality-gate-status.json")
+      .exists(),
+    "an edit still recorded a gate state"
+  );
   let after = registry_check(&sb).unwrap();
   assert_eq!(after["status"], "ok", "{after}");
 }
@@ -188,8 +183,8 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
 #[test]
 fn an_uninstalled_plugin_stays_silent() {
   let sb = sandbox(false).unwrap();
-  let registered = session_start(&sb, "register", &[]).unwrap();
-  assert!(registered.status.success(), "{registered:?}");
+  let retired = session_start(&sb, "forget", &[]).unwrap();
+  assert!(retired.status.success(), "{retired:?}");
   let bad = concat!("#[", "allow(x)]\nfn a() {}\n");
   let output = write(&sb, "src/lib.rs", bad, &[]).unwrap();
   assert!(output.status.success(), "{output:?}");
@@ -197,10 +192,10 @@ fn an_uninstalled_plugin_stays_silent() {
 }
 
 #[test]
-fn non_rust_edits_spawn_no_tool() {
+fn no_edit_spawns_a_tool() {
   let sb = sandbox(true).unwrap();
-  let registered = session_start(&sb, "register", &[]).unwrap();
-  assert!(registered.status.success(), "{registered:?}");
+  let retired = session_start(&sb, "forget", &[]).unwrap();
+  assert!(retired.status.success(), "{retired:?}");
   let stubs = sb.home.join("stubs");
   fs::create_dir_all(&stubs).unwrap();
   let log = sb.home.join("spawned.log");
@@ -218,20 +213,13 @@ fn non_rust_edits_spawn_no_tool() {
   for (rel, body) in [
     ("src/a.ts", "export const a = 1;\n"),
     ("README.md", "# x\n"),
+    ("src/lib.rs", "//! A.\n"),
   ] {
     let output = write(&sb, rel, body, &env).unwrap();
     assert!(output.status.success(), "{rel}: {output:?}");
     assert_eq!(String::from_utf8(output.stdout).unwrap(), "", "{rel}");
   }
   assert!(!log.exists(), "{}", fs::read_to_string(&log).unwrap());
-  let output = write(&sb, "src/lib.rs", "//! A.\n", &env).unwrap();
-  assert!(output.status.success(), "{output:?}");
-  assert!(
-    fs::read_to_string(&log)
-      .unwrap()
-      .starts_with("ast-grep scan"),
-    "a .rs edit reaches ast-grep"
-  );
 }
 
 #[test]
@@ -287,21 +275,20 @@ fn check_runs_the_blocking_rules_over_a_repository() {
     String::from_utf8(fits.stderr).unwrap(),
     "rust-quality: 1 files, ok\n"
   );
-  fs::create_dir_all(sb.project.join(".claude")).unwrap();
-  let capped = json!({"lang": {"rust": {"maxFileLines": 300}}}).to_string();
-  fs::write(sb.project.join(".claude/toolu.config.json"), capped).unwrap();
-  let over_limit = run(&sb, &["rust-quality", "check", "crates"], &[], "").unwrap();
-  assert_eq!(over_limit.status.code(), Some(1), "{over_limit:?}");
-  let stdout = String::from_utf8(over_limit.stdout).unwrap();
-  assert!(
-    stdout.starts_with("File exceeds 300-line limit: crates/demo/src/over.rs (320 code lines"),
-    "{stdout}"
-  );
+  fs::write(
+    sb.project.join("crates/demo/src/bad.rs"),
+    concat!("//! B.\n#[", "allow(dead_code)]\nfn b() {}\n"),
+  )
+  .unwrap();
+  let blocked = run(&sb, &["rust-quality", "check", "crates"], &[], "").unwrap();
+  assert_eq!(blocked.status.code(), Some(1), "{blocked:?}");
+  let stdout = String::from_utf8(blocked.stdout).unwrap();
+  assert!(stdout.contains("Forbidden lint suppression"), "{stdout}");
   let json = run(&sb, &["--json", "rust-quality", "check"], &[], "").unwrap();
   let doc: Value = serde_json::from_slice(&json.stdout).unwrap();
   assert_eq!(
-    (doc["files"].as_u64(), doc["findings"][0]["path"].as_str()),
-    (Some(1), Some("crates/demo/src/over.rs"))
+    doc["findings"][0]["path"].as_str(),
+    Some("crates/demo/src/bad.rs")
   );
   let bare = run(
     &sb,

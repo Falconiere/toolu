@@ -108,7 +108,7 @@ impl CargoSite {
 }
 
 #[test]
-fn real_cargo_failure_blocks_muse_commit_until_a_passing_run() {
+fn real_cargo_failure_blocks_muse_push_until_a_passing_run() {
   let site = CargoSite::new().expect("sandbox");
   let source = site.project.join("src/lib.rs");
   fs::write(&source, "#[test] fn check() { assert_eq!(1, 2); }\n").expect("failing test");
@@ -120,8 +120,8 @@ fn real_cargo_failure_blocks_muse_commit_until_a_passing_run() {
   let gate =
     fs::read_to_string(site.gate_file().expect("state root")).expect("recorded quality failure");
   assert!(gate.contains("\"status\": \"failing\""), "{gate}");
-  let commit = site.payload("git commit -m 'feat: change'", None);
-  let blocked = dispatch_pre_tool(&commit, &site.options(false));
+  let push = site.payload("git push origin HEAD", None);
+  let blocked = dispatch_pre_tool(&push, &site.options(false));
   let decision: Value = serde_json::from_str(&blocked.result.stdout).expect("quality decision");
   assert_eq!(decision["decision"], "block", "{blocked:?}");
   assert!(
@@ -138,7 +138,7 @@ fn real_cargo_failure_blocks_muse_commit_until_a_passing_run() {
   let gate =
     fs::read_to_string(site.gate_file().expect("state root")).expect("cleared quality failure");
   assert!(!gate.contains("\"status\": \"failing\""), "{gate}");
-  let unblocked = dispatch_pre_tool(&commit, &site.options(false));
+  let unblocked = dispatch_pre_tool(&push, &site.options(false));
   let decision: Value =
     serde_json::from_str(&unblocked.result.stdout).expect("valid Muse advisory");
   assert_eq!(unblocked.result.exit_code, 0, "{unblocked:?}");

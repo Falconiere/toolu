@@ -6,8 +6,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_exec::run;
 
-/// Every gate in block mode and a three-line TypeScript limit.
-const LIMITS: &str = r#"{"gates":{"protectedFiles":{"mode":"block"},"commitGate":{"mode":"block"},"qualityGate":{"mode":"block"},"pushReview":{"mode":"block"}},"lang":{"ts":{"maxFileLines":3}}}"#;
+/// Every push-time gate in block mode.
+const LIMITS: &str = r#"{"gates":{"protectedFiles":{"mode":"block"},"commitGate":{"mode":"block"},"qualityGate":{"mode":"block"},"pushReview":{"mode":"block"}}}"#;
 /// The branch the push-review project is on, ahead of `main`.
 const PUSH_BRANCH: &str = "feat/push-smoke";
 
@@ -33,6 +33,10 @@ pub(crate) fn head(project: &Path, env: &ChildEnv) -> Result<String, String> {
 }
 
 fn write(path: &Path, text: &str) -> Result<(), String> {
+  if let Some(parent) = path.parent() {
+    std::fs::create_dir_all(parent)
+      .map_err(|err| format!("cannot create {}: {err}", parent.display()))?;
+  }
   std::fs::write(path, text).map_err(|err| format!("cannot write {}: {err}", path.display()))
 }
 
@@ -87,6 +91,9 @@ pub(crate) fn create(
     .map_err(|err| format!("cannot create {}: {err}", host_dir.display()))?;
   write(&path.join(".env"), "KEEP=1\n")?;
   write(&path.join("sample.ts"), "export const n = 1;\n")?;
+  // The quality-failing command the smoke sessions run: a recognized project
+  // wrapper that always exits 1, so gate-status records the gate red.
+  write(&path.join("tools/smoke/test.sh"), "#!/bin/sh\nexit 1\n")?;
   write(&path.join(NONCE_FILE), &format!("{}\n", fresh_nonce()?))?;
   write(&path.join("tsconfig.json"), "{}\n")?;
   write(

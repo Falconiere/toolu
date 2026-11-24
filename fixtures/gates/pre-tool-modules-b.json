@@ -335,10 +335,12 @@
       "config": {
         "version": 1
       },
-      "name": "bash-commands: the shipped default asks",
+      "name": "bash-commands: the shipped default advises",
       "command": "node -e \"console.log(1)\"",
-      "expect": "ask",
-      "has": ["SECURITY GUARDRAIL"]
+      "expect": "advisory",
+      "has": [
+        "Command matches deny rule \"node -e\""
+      ]
     },
     {
       "host": "claude",
@@ -654,8 +656,10 @@
       "name": "bash-commands: node -e without python3 on PATH (#283 item 4)",
       "noPython": true,
       "command": "node -e 1",
-      "expect": "ask",
-      "has": ["node -e"],
+      "expect": "advisory",
+      "has": [
+        "Command matches deny rule \"node -e\""
+      ],
       "deviation": "#283 item 4: bash matched a rule against the line's first word only; without python3 every multi-token rule was silently off"
     },
     {
@@ -1330,9 +1334,11 @@
       "env": {
         "MY_CLAUDE_QUALITY": "off"
       },
-      "command": "git commit -m \"wip\"",
-      "expect": "advisory",
-      "lacks": ["BLOCKED: quality gate failing"]
+      "command": "git push",
+      "expect": "silent",
+      "lacks": [
+        "BLOCKED: quality gate failing"
+      ]
     },
     {
       "host": "claude",
@@ -1368,10 +1374,15 @@
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: git commit is denied during a failing gate",
+      "name": "quality-gate: git commit is allowed during a failing gate",
       "command": "git commit -m \"wip\"",
-      "expect": "deny",
-      "has": ["BLOCKED: quality gate failing", "forced"]
+      "expect": "advisory",
+      "has": [
+        "BEFORE COMMITTING:"
+      ],
+      "lacks": [
+        "quality gate failing"
+      ]
     },
     {
       "host": "claude",
@@ -1464,16 +1475,18 @@
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: git -C <path> commit is denied",
+      "name": "quality-gate: git -C <path> push is denied",
       "expect": "deny",
-      "has": ["BLOCKED: quality gate failing"],
+      "has": [
+        "BLOCKED: quality gate failing"
+      ],
       "fixture": {
         "kind": "tool",
         "event": "PreToolUse",
         "toolName": "Bash",
         "toolInput": {
           "command": {
-            "$template": "git -C $PROJECT commit -m \"feat: x\""
+            "$template": "git -C $PROJECT push"
           }
         }
       }
@@ -1482,8 +1495,8 @@
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: a commit reached through && is denied",
-      "command": "git add -A && git commit -m \"wip\"",
+      "name": "quality-gate: a push reached through && is denied",
+      "command": "git add -A && git push",
       "expect": "deny"
     },
     {
@@ -1522,10 +1535,14 @@
           "preset": "relaxed"
         }
       },
-      "command": "git commit -m \"wip\"",
+      "command": "git push",
       "expect": "advisory",
-      "has": ["quality gate is failing"],
-      "lacks": ["BLOCKED"]
+      "has": [
+        "quality gate is failing"
+      ],
+      "lacks": [
+        "BLOCKED"
+      ]
     },
     {
       "host": "claude",
@@ -1540,16 +1557,20 @@
           }
         }
       },
-      "command": "git commit -m \"wip\"",
+      "command": "git push",
       "expect": "ask",
-      "has": ["anyway?"],
-      "lacks": ["BLOCKED"]
+      "has": [
+        "anyway?"
+      ],
+      "lacks": [
+        "BLOCKED"
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: a non-commit command never needs the config",
+      "name": "quality-gate: a non-push command never needs the config",
       "config": "not json",
       "command": "ls -la",
       "expect": "silent"
@@ -1567,47 +1588,58 @@
           }
         }
       },
-      "command": "git commit -m \"wip\"",
-      "expect": "advisory",
-      "lacks": ["quality gate"]
+      "command": "git push",
+      "expect": "silent",
+      "lacks": [
+        "quality gate"
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"oxlint: 2 errors\",\"violations\":\"src/a.ts:1 no-explicit-any\"}\n",
       "name": "quality-gate: the failure reason and violations reach the user",
-      "command": "git commit -m \"wip\"",
+      "command": "git push",
       "expect": "deny",
-      "has": ["oxlint: 2 errors", "no-explicit-any"]
+      "has": [
+        "oxlint: 2 errors",
+        "no-explicit-any"
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: a commit behind sudo (#283 item 8)",
-      "command": "sudo -u me git commit -m \"feat: x\"",
+      "name": "quality-gate: a push behind sudo (#283 item 8)",
+      "command": "sudo -u me git push",
       "expect": "deny",
-      "has": ["BLOCKED: quality gate failing"],
+      "has": [
+        "BLOCKED: quality gate failing"
+      ],
       "deviation": "#283 item 8: bash did not see this commit or push"
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: /usr/bin/git commit (#283 item 8)",
-      "command": "/usr/bin/git commit -m \"feat: x\"",
+      "name": "quality-gate: /usr/bin/git push (#283 item 8)",
+      "command": "/usr/bin/git push",
       "expect": "deny",
-      "has": ["BLOCKED: quality gate failing"],
+      "has": [
+        "BLOCKED: quality gate failing"
+      ],
       "deviation": "#283 item 8: bash did not see this commit or push"
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: a commit inside bash -c (#283 item 8)",
-      "command": "bash -c 'git commit -m \"feat: x\"'",
+      "name": "quality-gate: a push inside bash -c (#283 item 8)",
+      "command": "bash -c 'git push'",
       "expect": "deny",
-      "has": ["BLOCKED: quality gate failing"],
+      "has": [
+        "BLOCKED: quality gate failing"
+      ],
       "deviation": "#283 item 8: bash did not see this commit or push"
     },
     {
@@ -1635,17 +1667,22 @@
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":{\"tool\":\"oxlint\",\"errors\":2},\"violations\":[\"a.ts\",\"b.ts\"]}\n",
       "name": "quality-gate: non-string reason and violations print as jq -r does",
-      "command": "git commit -m \"wip\"",
+      "command": "git push",
       "expect": "deny",
-      "has": ["\"tool\": \"oxlint\"", "[\n  \"a.ts\","]
+      "has": [
+        "\"tool\": \"oxlint\"",
+        "[\n  \"a.ts\","
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "name": "quality-gate: outside a git repository the working directory is the root",
-      "command": "git commit -m \"wip\"",
+      "command": "git push",
       "expect": "deny",
-      "has": ["BLOCKED: quality gate failing"],
+      "has": [
+        "BLOCKED: quality gate failing"
+      ],
       "setup": [
         {
           "op": "write",
@@ -1680,10 +1717,12 @@
       "host": "codex",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: codex blocks a commit",
-      "command": "git commit -m \"wip\"",
+      "name": "quality-gate: codex blocks a push",
+      "command": "git push",
       "expect": "deny",
-      "has": ["BLOCKED: quality gate failing"]
+      "has": [
+        "BLOCKED: quality gate failing"
+      ]
     },
     {
       "host": "codex",
@@ -1698,60 +1737,76 @@
           }
         }
       },
-      "command": "git commit -m \"wip\"",
+      "command": "git push",
       "expect": "advisory",
-      "has": ["Heads up: the quality gate is failing"],
-      "lacks": ["BLOCKED", "anyway?"]
+      "has": [
+        "Heads up: the quality gate is failing"
+      ],
+      "lacks": [
+        "BLOCKED",
+        "anyway?"
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{not json",
       "name": "quality-gate: a malformed gate file is not failing",
-      "command": "git commit -m \"wip\"",
-      "expect": "advisory",
-      "lacks": ["quality gate"]
+      "command": "git push",
+      "expect": "silent",
+      "lacks": [
+        "quality gate"
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "\"failing\"\n",
       "name": "quality-gate: a gate file that is not an object is not failing",
-      "command": "git commit -m \"wip\"",
-      "expect": "advisory",
-      "lacks": ["quality gate"]
+      "command": "git push",
+      "expect": "silent",
+      "lacks": [
+        "quality gate"
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"r2\",\"source\":\"ts\",\"file\":\"/p/b.ts\",\"violations\":\"v1\\nv2\\n\",\"entries\":{},\"updatedAt\":\"2026-09-29T00:00:00Z\"}\n",
       "name": "quality-gate: a multi-slot gate file blocks with its joined violations",
-      "command": "git commit -m \"wip\"",
+      "command": "git push",
       "expect": "deny",
-      "has": ["r2", "v1\nv2"]
+      "has": [
+        "r2",
+        "v1\nv2"
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":null}\n",
       "name": "quality-gate: a null reason falls back to the default",
-      "command": "git commit -m \"wip\"",
+      "command": "git push",
       "expect": "deny",
-      "has": ["Quality gate failing"]
+      "has": [
+        "Quality gate failing"
+      ]
     },
     {
       "host": "claude",
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
-      "name": "quality-gate: the Shell tool's commit is denied",
+      "name": "quality-gate: the Shell tool's push is denied",
       "expect": "deny",
-      "has": ["BLOCKED: quality gate failing"],
+      "has": [
+        "BLOCKED: quality gate failing"
+      ],
       "fixture": {
         "kind": "tool",
         "event": "PreToolUse",
         "toolName": "Shell",
         "toolInput": {
-          "command": "git commit -m \"wip\""
+          "command": "git push"
         }
       }
     },
@@ -1768,9 +1823,12 @@
       "settings": {},
       "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
       "name": "quality-gate: a linked worktree is skipped",
-      "command": "git commit -m \"wip\"",
-      "expect": "advisory",
-      "lacks": ["quality gate"],
+      "command": "git push",
+      "config": {"version": 1, "gates": {"pushReview": {"mode": "off"}}},
+      "expect": "silent",
+      "lacks": [
+        "quality gate"
+      ],
       "setup": [
         {
           "op": "git",

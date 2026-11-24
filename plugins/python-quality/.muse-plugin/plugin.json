@@ -3,7 +3,7 @@
   "name": "python-quality",
   "displayName": "python-quality",
   "version": "10.3.0",
-  "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
+  "description": "Python quality rules for checks and the push gate.",
   "compat": {
     "source": "native",
     "manifestDir": ".muse-plugin"
@@ -13,11 +13,11 @@
     "commands": [],
     "hooks": [
       {
-        "id": "register",
+        "id": "forget",
         "event": "SessionStart",
         "command": [
           "/bin/sh",
-          "hooks/muse/register"
+          "hooks/muse/forget"
         ],
         "timeoutMs": 60000
       },

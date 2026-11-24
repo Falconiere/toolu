@@ -70,8 +70,9 @@ its `server.js`, and about any file in the OpenCode config that still names
 `OPENCODE` and `OPENCODE_SESSION_ID`.
 
 `cargo xtask host-smoke --host opencode` checks a denied `.env` write, a
-recorded quality failure, a denied commit and a denied push in real OpenCode
-sessions ([testing](testing.md#benchmarks-and-live-checks)).
+failing quality command recorded as a red gate, a commit that lands anyway and
+a blocked push in real OpenCode sessions
+([testing](testing.md#benchmarks-and-live-checks)).
 
 ## Migrating from `@toolu/opencode`
 

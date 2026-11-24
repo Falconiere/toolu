@@ -25,9 +25,9 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | `pr-babysit:hooks.json:SessionStart:hook_check-binary:^(startup|resume|clear|compact|new|load)` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #443/done | native | no | — |
 | `pr-babysit:hooks.json:SessionStart:hook_check-toolu:^(startup|resume|clear|compact|new|load)` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #433/done | native | no | — |
 | `python-quality:hooks.json:SessionStart:hook_check-toolu:^(startup|resume|clear|compact|new|load)` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #427/done | native | no | — |
-| `python-quality:hooks.json:SessionStart:hook_register:^(startup|resume|clear|compact|new|load)` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #427/done | native | no | — |
+| `python-quality:hooks.json:SessionStart:hook_forget:^(startup|resume|clear|compact|new|load)` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #427/done | native | no | — |
 | `rust-quality:hooks.json:SessionStart:hook_check-toolu:^(startup|resume|clear|compact|new|load)` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | port-native | required | #428/done | native | no | — |
-| `rust-quality:hooks.json:SessionStart:hook_register:^(startup|resume|clear|compact|new|load)` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | port-native | required | #428/done | native | no | — |
+| `rust-quality:hooks.json:SessionStart:hook_forget:^(startup|resume|clear|compact|new|load)` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | port-native | required | #428/done | native | no | — |
 | `statusline:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/statusline/hooks/hooks.json` | statusline | SessionStart | port-native | required | #431/done | native | no | — |
 | `toolu-review:hooks.json:SessionStart:hook_check-binary:^(startup|resume|clear|compact|new|load)` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #443/done | native | no | — |
 | `toolu-review:hooks.json:SessionStart:hook_session-start:^(startup|resume|clear|compact|new|load)` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #269/done | native | no | — |
@@ -38,7 +38,6 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | `toolu:builtin-module:PreToolUse:code-edit-rules` | `crates/core/engine/src/gates/code_edit_rules.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:commit-gate` | `crates/core/engine/src/gates/commit_gate.rs` | toolu | PreToolUse | port-native | required | #261/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:docs-sync` | `crates/core/engine/src/gates/docs_sync.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
-| `toolu:builtin-module:PreToolUse:mcp-blocker` | `crates/core/engine/src/gates/mcp_blocker.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:plan-ledger` | `crates/core/engine/src/gates/plan_ledger.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:pr-size` | `crates/core/engine/src/gates/pr_size.rs` | toolu | PreToolUse | port-native | optional | —/done | native | no | — |
 | `toolu:builtin-module:PreToolUse:protected-files` | `crates/core/engine/src/gates/protected_files.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |
@@ -48,14 +47,13 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | `toolu:hooks.json:PostToolUse:hook_post-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | port-native | required | #279/done | native | no | — |
 | `toolu:hooks.json:PreCompact:hook_pre-compact:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | port-native | required | #263/done | native | no | — |
 | `toolu:hooks.json:PreToolUse:hook_agent-tier:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
-| `toolu:hooks.json:PreToolUse:hook_mcp-tools:mcp__` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #260/done | native | no | — |
 | `toolu:hooks.json:PreToolUse:hook_pre-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #258/done | native | no | — |
 | `toolu:hooks.json:SessionStart:hook_check-binary:^(startup|resume|clear|compact|new|load)` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #443/done | native | no | — |
 | `toolu:hooks.json:SessionStart:hook_session-start:^(startup|resume|clear|compact|new|load)` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #263/done | native | no | — |
 | `toolu:hooks.json:Stop:hook_stop` | `plugins/toolu/hooks/hooks.json` | toolu | Stop | port-native | required | #880/done | native | no | — |
 | `toolu:hooks.json:UserPromptSubmit:hook_user-prompt-submit` | `plugins/toolu/hooks/hooks.json` | toolu | UserPromptSubmit | port-native | required | #263/done | native | no | — |
 | `ts-quality:hooks.json:SessionStart:hook_check-toolu:^(startup|resume|clear|compact|new|load)` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
-| `ts-quality:hooks.json:SessionStart:hook_register:^(startup|resume|clear|compact|new|load)` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
+| `ts-quality:hooks.json:SessionStart:hook_forget:^(startup|resume|clear|compact|new|load)` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
 
 ## Notes
 

@@ -2,7 +2,7 @@
 
 **Type:** Quality Gate | **Depends on:** `toolu`
 
-TypeScript `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Supported TypeScript edits are checked on the spot.
+TypeScript quality rules compiled into `toolu`, applied in review and at the push gate. Nothing runs after an edit.
 
 ## Install
 
@@ -12,11 +12,11 @@ TypeScript `PostToolUse` quality checks compiled into `toolu` and enabled by a r
 
 ## What It Provides
 
-### Post-Edit Quality Checks
+### Push-Gate Quality Rules
 
-Supported TypeScript edits contribute to toolu's quality gate. The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into the native [`toolu` binary](../install.md) (#426). The `SessionStart` register hook publishes the rule's manifest (`ts-quality@toolu__ts-quality.json`) into toolu's registry, and the core dispatcher runs the rule while this plugin is installed. The register hook registers only that `.json` manifest. It removes the `.js` module and `.sh` bridge of earlier releases once, with a notice. The `toolu ts-quality` namespace has no verbs; its help lists the checks.
+The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into the native [`toolu` binary](../install.md) (#426). The `SessionStart` hook no longer registers a rule: it retires any earlier registration and removes the `.js` module and `.sh` bridge of earlier releases. The `toolu ts-quality` namespace has no verbs; its help lists the checks.
 
-Shell changes are checked after an edit quality settlement or the first non-quiet shell event establishes a baseline. Each shell event checks at most 20 changed source files and advises about the rest; see [shell quality checks](../registry.md#language-quality-rules).
+Enforcement happens at push time: a failing quality command the agent runs turns the gate red, and a red gate denies `git push` while `gates.qualityGate` blocks. Commits are never stopped, and size findings advise rather than block.
 
 ## Checks Enforced
 

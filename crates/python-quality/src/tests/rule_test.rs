@@ -108,12 +108,14 @@ fn violations_come_in_fragment_order_with_the_docs_advisory() {
   .unwrap();
   let (enabled, errors, advisories, _) = checked(root, &env, "bad.py");
   assert!(enabled);
-  assert_eq!(errors.len(), 2, "{errors:?}");
+  assert_eq!(errors.len(), 1, "{errors:?}");
   assert!(errors[0].starts_with("Forbidden suppression in bad.py"));
-  assert!(errors[1].starts_with("Function too long in bad.py (>1 lines)"));
   assert_eq!(
     advisories,
-    ["Public def/class missing a docstring in bad.py — add a concise one:\n1: a"]
+    [
+      "Function too long in bad.py (>1 lines) — extract helpers.\na:1 (3 lines)",
+      "Public def/class missing a docstring in bad.py — add a concise one:\n1: a"
+    ]
   );
 }
 

@@ -185,5 +185,5 @@ fn every_config_case_resolves_as_typescript_does() {
     }
   }
   assert!(failures.is_empty(), "{failures:#?}");
-  assert_eq!(calls, 35 * 81);
+  assert_eq!(calls, 35 * 79);
 }

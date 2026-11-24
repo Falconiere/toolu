@@ -129,10 +129,10 @@ fn every_gate_case_parses_and_normalizes() {
   assert_eq!(
     counts,
     [
-      (0, 2, 214),
+      (0, 0, 178),
       (0, 0, 220),
       (0, 1, 358),
-      (0, 2, 93),
+      (0, 2, 87),
       (1, 2, 26)
     ]
   );

@@ -2,16 +2,16 @@
 
 # `toolu rust-quality`
 
-Rust quality rules that run after each edit.
+Rust quality rules for reviews and the push gate.
 
 Owner: `plugins/rust-quality`.
 
 ## `toolu rust-quality`
 
 ```text
-rust-quality's rules run after every edit of a .rs file in a Cargo project with cargo on PATH. Violations (oversized files, functions and impl blocks, inline test modules, misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, mocks) fail the file's quality-gate entry until it is fixed; missing or verbose docs are advisories.
+rust-quality no longer runs after every edit; its SessionStart hook retires any earlier registration. toolu rust-quality check runs the blocking rules over a whole repository (or the paths you name). Blocking findings (inline test modules, misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, mocks) fail the file's quality-gate entry; a failing gate denies git push while gates.qualityGate blocks — commits are never stopped. Oversized files, functions and impl blocks and missing or verbose docs advise and never block.
 
-Limits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, maxImplLines, noMocks); crates allowed to use unsafe are listed in settings/rust-unsafe-exemptions.txt. toolu rust-quality check runs the same blocking rules over a whole repository. Run toolu doctor to see whether the rule is registered and compiled in.
+Limits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, maxImplLines, noMocks); crates allowed to use unsafe are listed in settings/rust-unsafe-exemptions.txt.
 
 Usage: toolu rust-quality [OPTIONS] [COMMAND]
 

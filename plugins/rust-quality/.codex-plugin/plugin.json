@@ -2,6 +2,6 @@
   "name": "rust-quality",
   "version": "10.3.0",
   "hookProtocol": 4,
-  "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",
+  "description": "Rust quality rules for checks and the push gate.",
   "hooks": "./hooks/hooks.json"
 }

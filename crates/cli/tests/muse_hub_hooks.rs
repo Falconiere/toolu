@@ -124,31 +124,9 @@ fn silent(out: &Output) {
 }
 
 #[test]
-fn muse_mcp_call_blocks_and_unmatched_or_internal_calls_are_silent() {
+fn muse_internal_calls_are_silent_and_record_no_telemetry() {
   let fixture = Fixture::new().expect("fixture");
-  fs::write(
-    fixture.settings.join("mcp-blocklist.txt"),
-    "plugin_toolu_probe_540_probe_mcp -> use CLI\n",
-  )
-  .expect("blocklist");
-  let mcp = captured("mcp__plugin_toolu_probe_540_probe_mcp__probe_echo").expect("MCP payload");
-  let out = fixture.hook("mcp-tools", &mcp).expect("hook");
-  assert_eq!(out.status.code(), Some(0), "{out:?}");
-  assert!(out.stderr.is_empty(), "{out:?}");
-  let decision: Value = serde_json::from_slice(&out.stdout).expect("Muse decision");
-  assert_eq!(decision["decision"], "block");
-  assert!(
-    decision["reason"]
-      .as_str()
-      .expect("reason")
-      .contains("use CLI")
-  );
-  assert!(decision.get("hookSpecificOutput").is_none());
-  fs::write(fixture.settings.join("mcp-blocklist.txt"), "other_server\n")
-    .expect("unmatched blocklist");
-  silent(&fixture.hook("mcp-tools", &mcp).expect("hook"));
   let internal = captured("submit_reminder_decision").expect("internal payload");
-  silent(&fixture.hook("mcp-tools", &internal).expect("hook"));
   silent(&fixture.hook("agent-tier", &internal).expect("hook"));
   assert!(!fixture.telemetry().exists());
 }

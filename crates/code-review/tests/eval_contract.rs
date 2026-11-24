@@ -165,23 +165,23 @@ fn the_probe_defects_are_caught_and_the_known_false_positive_is_flagged() {
 }
 
 #[test]
-fn the_cross_file_defect_is_caught_where_the_zero_is_introduced() {
+fn catching_the_zero_divisor_leaves_the_partial_page_defect_open() {
   let fixtures = golden().expect("fixture");
   let cross = case(&fixtures, "cross-file-defect").expect("fixture");
   let shaped = diff_of(&fixtures, cross).expect("fixture");
   let paths: Vec<&str> = shaped.files.iter().map(|file| file.path.as_str()).collect();
   assert_eq!(paths, ["src/limits.rs", "src/pages.rs"]);
-  let found = cite(
+  let zero = cite(
     &shaped,
     "src/limits.rs",
     "    0",
     "page_size now returns zero, so page_count divides by zero and panics",
   )
   .expect("fixture");
-  let out = grounded(&shaped, &Memory::default(), &[found]);
+  let out = grounded(&shaped, &Memory::default(), &[zero]);
   assert_eq!(
     statuses(cross, &out.findings),
-    [Status::Caught, Status::Clear]
+    [Status::Caught, Status::Missed]
   );
 }
 

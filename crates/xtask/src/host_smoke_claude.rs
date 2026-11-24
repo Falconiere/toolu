@@ -2,9 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::host_smoke_checks::must;
-use crate::host_smoke_prompts::{CLAUDE_ALLOWED, CLAUDE_COMMIT, CLAUDE_EDIT, CLAUDE_PUSH};
-use crate::host_smoke_steps::{Driver, Prompts, Run, Step, session};
+use crate::host_smoke_prompts::{CLAUDE_ALLOWED, CLAUDE_COMMIT, CLAUDE_PUSH};
+use crate::host_smoke_steps::{Driver, Prompts, Run, Step};
 
 /// A Claude Code installation and the checkout whose plugins it loads.
 pub(crate) struct Claude {
@@ -52,25 +51,11 @@ impl Driver for Claude {
       allowed: CLAUDE_ALLOWED,
       commit: CLAUDE_COMMIT,
       push: CLAUDE_PUSH,
-      stages_first: false,
     }
   }
 
   fn prepare(&self, _run: &Run<'_>, _project: &Path) -> Result<(), String> {
     Ok(())
-  }
-
-  fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String> {
-    let step = Step {
-      name: "edit",
-      tools: "Read,Edit",
-      prompt: CLAUDE_EDIT,
-    };
-    let transcript = session(self, run, project, &step)?;
-    must(
-      transcript.contains("\"name\":\"Edit\""),
-      "Claude did not use Edit",
-    )
   }
 }
 

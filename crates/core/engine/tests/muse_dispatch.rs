@@ -30,7 +30,7 @@ impl MuseSite {
     }
     fs::write(
       config.join("toolu.config.json"),
-      json!({"version":1,"gates":{"bashCommands":{"mode":"block"},"protectedFiles":{"mode":"block"},"mcpBlocker":{"mode":"block"}}}).to_string(),
+      json!({"version":1,"gates":{"bashCommands":{"mode":"block"},"protectedFiles":{"mode":"block"}}}).to_string(),
     )
     ?;
     let env = Env::from_pairs([
@@ -162,22 +162,6 @@ fn raw_muse_source_edit_reaches_code_edit_advice() {
       .is_some_and(|message| message.contains("File: src/main.rs"))
   );
   assert_eq!(got.trace.len(), PRE_TOOL.len());
-}
-
-#[test]
-fn raw_muse_mcp_name_reaches_the_dispatch_blocker() {
-  let site = MuseSite::new().expect("sandbox");
-  fs::write(
-    site.settings.join("mcp-blocklist.txt"),
-    "plugin_toolu_probe_540_probe_mcp\n",
-  )
-  .expect("mcp blocklist");
-  let got = site.pre(
-    "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
-    &json!({"text":"hello"}),
-  );
-  assert!(block_reason(&got).expect("block").contains("MCP server"));
-  assert!(got.trace.iter().any(|step| step.module == "mcp-blocker"));
 }
 
 #[test]

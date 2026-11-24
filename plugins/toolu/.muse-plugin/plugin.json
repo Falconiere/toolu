@@ -132,15 +132,6 @@
         "timeoutMs": 60000
       },
       {
-        "id": "mcp-tools",
-        "event": "PreToolUse",
-        "command": [
-          "/bin/sh",
-          "hooks/muse/mcp-tools"
-        ],
-        "timeoutMs": 60000
-      },
-      {
         "id": "agent-tier",
         "event": "PreToolUse",
         "command": [

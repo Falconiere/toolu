@@ -12,10 +12,10 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 4 | [**delivery-flow**](../../plugins/delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery |
 | 5 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
 | 6 | [**epic-orchestrator**](../epic-orchestrator/README.md) | Workflow | `toolu`, `delivery-flow`, `pr-babysit` | Drive a GitHub, Jira, or Linear epic to merged PRs via local Herdr or tmux workers across supported coding-agent hosts and a merge gate |
-| 7 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
-| 8 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
+| 7 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python quality rules for reviews and the push gate (size, suppression, test layout, no-mocks) |
+| 8 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust quality rules for reviews and the push gate (size, unsafe, unwrap bans) |
 | 9 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
-| 10 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
+| 10 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript quality rules for reviews and the push gate (size, imports, type guards) |
 | 11 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev over text and images — probability, choice, and score answers code can branch on |
 | 12 | [**brainstorm**](../../plugins/brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
 | 13 | [**code-review**](../../plugins/code-review/README.md) | Workflow | — | Native review of branch and local changes through host CLIs and direct TypeSafe Jev, anchored findings and push-review state |
@@ -28,9 +28,9 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 
 ```
 toolu core (hook dispatcher + registry)
-  ├── rust-quality    ──→ PostToolUse checks on Rust files
-  ├── ts-quality      ──→ PostToolUse checks on TS files
-  ├── python-quality  ──→ PostToolUse checks on Python files
+  ├── rust-quality    ──→ Rust quality rules for reviews and the push gate
+  ├── ts-quality      ──→ TypeScript quality rules for reviews and the push gate
+  ├── python-quality  ──→ Python quality rules for reviews and the push gate
   ├── ast-grep        ──→ PreToolUse Grep→ast-grep nudge + PostToolUse byte-savings
   ├── documentation-gate → Committed-diff documentation review gate
   └── git-better      ──→ Semantic commit/branch checks + commit notes

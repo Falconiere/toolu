@@ -227,27 +227,7 @@
         "code-edit-rules: extra keys and missing docs do not disable other rules",
         "code-edit-rules: malformed JSON is a no-op",
         "code-edit-rules: non-string docs are joined as JSON text",
-        "code-edit-rules: Bash is not an edit",
-        "mcp-blocker: asks on a listed server, pointing at the blocklist file",
-        "mcp-blocker: allows an unlisted server",
-        "mcp-blocker: a prefix entry blocks a longer server name",
-        "mcp-blocker: a prefix entry does not block a different prefix",
-        "mcp-blocker: an exact server name blocks",
-        "mcp-blocker: on Codex a listed server is blocked",
-        "mcp-blocker: config mcp.<server>=false blocks without the file",
-        "mcp-blocker: a non-object config mcp neither blocks nor crashes",
-        "mcp-blocker: a redirect hint is appended to the reason",
-        "mcp-blocker: a commented entry does not block",
-        "mcp-blocker: empty stdin",
-        "mcp-blocker: non-JSON stdin",
-        "mcp-blocker: a tool name without a server segment",
-        "mcp-blocker: mode block denies",
-        "mcp-blocker: mode advise warns without stopping",
-        "mcp-blocker: mode off is silent",
-        "mcp-blocker: an invalid config envelope still blocks a listed server",
-        "mcp-blocker: a whitespace-padded entry still matches",
-        "mcp-blocker: config mcp value 'false' as a string does not block",
-        "mcp-blocker: no blocklist and no config is silent"
+        "code-edit-rules: Bash is not an edit"
       ]
     },
     {
@@ -589,9 +569,7 @@
         "registry module exit 2 blocks",
         "hooks.pre-tools false disables the dispatcher",
         "empty stdin",
-        "non-JSON stdin",
-        "mcp-blocker: blocklisted server with redirect, block mode",
-        "mcp-blocker: also runs inside the dispatcher"
+        "non-JSON stdin"
       ]
     },
     {
@@ -1403,8 +1381,6 @@
         "get_goal PostToolUse",
         "image_generation PreToolUse",
         "image_generation PostToolUse",
-        "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo PreToolUse",
-        "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo PostToolUse",
         "monitor PreToolUse",
         "monitor PostToolUse",
         "read_file PreToolUse",
@@ -1473,7 +1449,6 @@
       "fixture": "fixtures/config/expected.json",
       "source": "packages/toolu-core/src/config/__tests__/config-fixture.test.ts",
       "names": [
-        "docs-block-mcp.json as the project file",
         "docs-disable-hook.json as the project file",
         "docs-hard-denies.json as the project file",
         "docs-project-reenable.json as the project file",

@@ -15,8 +15,8 @@ mode you configure.
 
 `ask` needs a host that can prompt. Codex cannot, so `ask` degrades there — to
 `advise` for a judgement gate, and to **`block`** for a security guardrail
-(see the warning below). The three guardrails ship on `ask`; every other gate
-reaches it only via `gates.<name>.mode`.
+(see the warning below). Guardrails ship on `advise`; every gate reaches
+`ask` only via `gates.<name>.mode`.
 
 ## Presets
 
@@ -30,26 +30,26 @@ reaches it only via `gates.<name>.mode`.
 | `planLedger` | block | **advise** | off |
 | `docsSync` | block | **advise** | off |
 | `agentTier` | block | **advise** | off |
-| `prSize` | block | **block** | advise |
-| `bashCommands` ⚠️ | block | **ask** | ask |
-| `protectedFiles` ⚠️ | block | **ask** | ask |
-| `mcpBlocker` ⚠️ | block | **ask** | ask |
+| `prSize` | block | **advise** | advise |
+| `bashCommands` ⚠️ | block | **advise** | advise |
+| `protectedFiles` ⚠️ | block | **advise** | advise |
 
 ⚠️ = security guardrail. See the warning below.
 
 ## Security guardrails
 
-`protectedFiles`, `mcpBlocker`, and `bashCommands` ask under balanced and
-relaxed presets; approval applies to one call. On Codex, where prompting is
-unavailable, guardrail `ask` fails closed as `block`. Judgment gates instead
-degrade to `advise`. Set individual modes to `block` for hard denies.
+`protectedFiles` and `bashCommands` advise under the balanced
+and relaxed presets: the agent is told what fired and nothing is held. Set an
+individual mode to `ask` for a per-call prompt or `block` for a hard deny. An
+explicit `ask` fails closed: where the host cannot prompt it degrades to
+`block`, not silence. The mcp-blocker guardrail was retired: MCP tools are no
+longer gated.
 
-### Restoring the hard denies
+### Choosing the hard denies or prompts
 
 ```json
 { "gates": { "protectedFiles": { "mode": "block" },
-             "mcpBlocker":     { "mode": "block" },
-             "bashCommands":   { "mode": "block" } } }
+             "bashCommands":   { "mode": "ask" } } }
 ```
 
 Or `{"gates": {"preset": "strict"}}`, which blocks everything.
@@ -69,8 +69,9 @@ When `documentation-gate` is selected, its SessionStart registration makes the n
 `prSize` holds the branch a `git push` sends to `gates.prSize.maxLines` code
 lines (default 300) and `gates.prSize.maxFiles` changed files (default 100).
 Tests, fixtures, docs and generated files add no code lines:
-`gates.prSize.alsoExclude` adds globs and `gates.prSize.exclude` replaces the list. It blocks under the default
-preset. `toolu ledger verdict status` shows the count as its `size` row. It
+`gates.prSize.alsoExclude` adds globs and `gates.prSize.exclude` replaces the list. It
+advises under the default preset; `block` denies the over-budget push. `toolu
+ledger verdict status` shows the count as its `size` row. It
 has no waiver: split the branch, or have a person change the budget with
 `toolu config set gates.prSize.maxLines <n>`. See `docs/config.md`.
 
@@ -113,10 +114,11 @@ it. Declining is not recorded as an answer — the gate will ask again.
 
 ## What the quality gate stops
 
-`qualityGate` in `block` mode denies `git commit` and `git push` in the main
-checkout while the gate is red. It allows linked worktrees; the pre-push hook
-and CI provide separate checks. Reading, searching, editing, and running checks
-remain open.
+`qualityGate` in `block` mode denies `git push` in the main checkout while the
+gate is red, plus command lines the analyzer cannot read — so a red gate stops
+shipping without stopping commits. It allows linked worktrees; the pre-push
+hook and CI provide separate checks. Reading, searching, editing, and running
+checks remain open.
 `MY_CLAUDE_QUALITY=off` still disables it outright.
 
 ## What turns the quality gate red or green
@@ -134,7 +136,7 @@ tool` and `bash -x script` are not. Text that only names one
 
 Qwen Code 0.28.0 supplies its shell exit code as display text. The gate updates
 command status only from a structured exit code, so those calls leave the
-command status unchanged. Post-edit file checks still update their own entries.
+command status unchanged.
 
 A zero exit must prove every quality command in the line passed: each one runs
 last, or is joined to what follows by `&&`, and none is piped into another
@@ -151,9 +153,11 @@ turns the gate red):
 | `bun test 2>&1 \| tail; bun run lint` | nothing: the tests are unproven | records `lint`'s failure |
 
 So pipe test output through `tail` if you like, but run the command bare (or
-last, joined by `&&`) when you want it to count. A file-level failure recorded
-by `ts-quality`, `python-quality` or `rust-quality` is a separate entry, and a
-passing command never clears it.
+last, joined by `&&`) when you want it to count. Per-edit file checks are no
+longer registered: a quality plugin's `SessionStart` hook retires any
+registration left by an older session, and the same rules run on demand
+(`toolu rust-quality check`). File-level failures from such a run stay as
+separate entries, and a passing command never clears them.
 
 ## Interaction with host permissions
 

@@ -1,9 +1,9 @@
 //! Push-review waivers (`packages/toolu-core/src/ledger/push-waiver.ts`): "yes,
 //! push anyway", remembered for exactly one diff. The push-review gate records
-//! a pending marker naming the diff sha ([`Waivers::pend`]); a successful push
-//! of that sha promotes it to a waiver ([`Waivers::promote`]); the next push of
-//! that diff finds it ([`Waivers::matches`]). A new commit changes the sha, so
-//! the waiver stops matching. Files are atomic, 0600, and `jq -c` lines.
+//! a [pending marker](crate::waiver::Waivers::pend) for the diff SHA. A successful
+//! push [promotes it](crate::waiver::Waivers::promote) to a waiver for that SHA.
+//! A new commit changes the SHA and invalidates the waiver. Files are atomic,
+//! mode 0600, and contain compact JSON.
 
 use std::path::Path;
 use std::time::SystemTime;

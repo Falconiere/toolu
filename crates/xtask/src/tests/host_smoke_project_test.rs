@@ -19,7 +19,11 @@ fn a_project_is_committed_with_the_gate_config_and_protected_env() {
     "KEEP=1\n"
   );
   let config = std::fs::read_to_string(path.join(".claude/toolu.config.json")).unwrap();
-  assert!(config.contains("\"pushReview\"") && config.contains("\"maxFileLines\":3"));
+  assert!(config.contains("\"pushReview\"") && config.contains("\"qualityGate\""));
+  assert_eq!(
+    std::fs::read_to_string(path.join("tools/smoke/test.sh")).unwrap(),
+    "#!/bin/sh\nexit 1\n"
+  );
   assert_eq!(git(&path, &env, &["status", "--porcelain"]).unwrap(), "");
   assert_eq!(
     git(&path, &env, &["branch", "--show-current"])

@@ -258,18 +258,6 @@ fn agent_tier_fails_open_when_payload_is_unreadable() {
 }
 
 #[test]
-fn mcp_tools_routes_a_non_mcp_payload_to_silent_success() {
-  let outcome = execute(
-    &request("mcp-tools", Some("PreToolUse"), None),
-    || Ok(r#"{"tool_name":"Bash"}"#.to_owned()),
-    || None,
-  );
-  assert_eq!(outcome.exit.code(), 0);
-  assert_eq!(outcome.stdout, None);
-  assert_eq!(outcome.stderr, None);
-}
-
-#[test]
 fn an_unknown_jev_hook_is_still_reported() {
   let mut jev = request("not-a-hook", Some("SessionStart"), None);
   jev.plugin = "jev".to_owned();

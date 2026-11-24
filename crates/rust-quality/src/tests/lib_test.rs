@@ -14,12 +14,13 @@ fn the_rust_quality_crate_is_its_plugin_and_prints_its_guide() {
   let bare = command().try_get_matches_from(["rust-quality"]).unwrap();
   let guide = run(&bare, &Ctx::default()).stdout.unwrap_or_default();
   assert!(
-    guide.starts_with("rust-quality's rules run after every edit of a .rs file"),
+    guide.starts_with("rust-quality no longer runs after every edit"),
     "{guide}"
   );
   assert!(
     guide.contains("lang.rust in toolu.config.json") && guide.contains("toolu rust-quality check")
   );
+  assert!(guide.contains("advise and never block"), "{guide}");
   let json = Ctx {
     json: true,
     ..Ctx::default()

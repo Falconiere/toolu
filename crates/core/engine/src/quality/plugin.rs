@@ -145,6 +145,34 @@ impl QualityPlugin {
     Ok(migrated)
   }
 
+  /// Remove this plugin's manifest, `.js`/`.sh` modules and aged tmp residue
+  /// from `dir`; whether anything was removed.
+  fn sweep(&self, dir: &Path) -> Result<bool, String> {
+    let Ok(list) = fs::read_dir(dir) else {
+      return Ok(false);
+    };
+    let manifest =
+      file_name(self.spec, self.name, ModuleKind::Manifest).map_err(|error| error.0)?;
+    let prefix = format!("{}__", self.spec);
+    let mut removed = false;
+    for entry in list.flatten() {
+      let name = entry.file_name().to_string_lossy().into_owned();
+      let path = entry.path();
+      if !name.starts_with(&prefix) {
+        continue;
+      }
+      let stale = name == manifest
+        || (is_residue(&name) && old_enough(&path))
+        || (has_extension(&name, &["js", "sh"])
+          && fs::metadata(&path).is_ok_and(|meta| meta.is_file()));
+      if stale {
+        fs::remove_file(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+        removed = true;
+      }
+    }
+    Ok(removed)
+  }
+
   fn sync(&self, env: &Env, roots: &Roots) -> Result<bool, String> {
     let manifest = publish(env, roots, &self.manifest())?;
     let post = event_dir(roots, RegistryEvent::ToolPost);
@@ -164,6 +192,23 @@ impl QualityPlugin {
       Ok(false) => None,
       Err(error) => Some(format!("{} registration failed: {error}", self.plugin)),
     };
+    Outcome::notice(message)
+  }
+
+  /// Remove this plugin's post-edit rule manifest and its old `.js`/`.sh`
+  /// modules: sessions no longer register per-edit checks, and the checks run
+  /// only when the plugin's `check` command or a review asks for them. Never
+  /// fails the session: an error is a `systemMessage`.
+  pub fn forget(&self, env: &Env, host: Host) -> Outcome {
+    let roots = Roots::new(env.clone(), Some(host));
+    let message = [RegistryEvent::ToolPost, RegistryEvent::ToolPre]
+      .into_iter()
+      .find_map(|event| {
+        self
+          .sweep(&event_dir(&roots, event))
+          .err()
+          .map(|error| format!("{} unregistration failed: {error}", self.plugin))
+      });
     Outcome::notice(message)
   }
 }

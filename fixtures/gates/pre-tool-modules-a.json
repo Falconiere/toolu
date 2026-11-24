@@ -26,7 +26,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -47,7 +48,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -70,7 +72,8 @@
             }
           ]
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -111,7 +114,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -133,7 +137,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -176,7 +181,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -288,7 +294,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -332,7 +339,8 @@
         "toolInput": {
           "command": "echo hi > .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -349,7 +357,8 @@
         "toolInput": {
           "command": "sed -i 's/a/b/' .env.example"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -366,7 +375,8 @@
         "toolInput": {
           "command": "python3 -c \"open('.env', 'w').write(x)\""
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -383,7 +393,8 @@
         "toolInput": {
           "command": "echo hi | tee .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -400,7 +411,8 @@
         "toolInput": {
           "command": "cat <<EOF\n$(echo hi > .env)\nEOF\n"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -419,7 +431,8 @@
         "toolInput": {
           "command": "python3 -c \"open('ok.txt','w'); open('.env','w')\""
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -470,7 +483,8 @@
         "toolInput": {
           "command": "echo hi > .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -490,7 +504,8 @@
           },
           "content": "x"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -509,7 +524,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -528,7 +544,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -547,7 +564,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -567,7 +585,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -618,7 +637,8 @@
         "toolInput": {
           "command": "echo x > $HOME/.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -652,7 +672,8 @@
         "toolInput": {
           "command": "cp a b && echo x >> .env.local"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -689,7 +710,8 @@
         "toolInput": {
           "command": "echo SECRET=1 >.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -709,7 +731,8 @@
         "toolInput": {
           "command": "echo SECRET=1 >.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -729,7 +752,8 @@
         "toolInput": {
           "command": "echo SECRET=1>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -749,7 +773,8 @@
         "toolInput": {
           "command": "echo SECRET=1>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -769,7 +794,8 @@
         "toolInput": {
           "command": "printf k=v 1>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -789,7 +815,8 @@
         "toolInput": {
           "command": "printf k=v 1>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -809,7 +836,8 @@
         "toolInput": {
           "command": "echo x &>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -829,7 +857,8 @@
         "toolInput": {
           "command": "echo x &>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -849,7 +878,8 @@
         "toolInput": {
           "command": "echo x >| .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -869,7 +899,8 @@
         "toolInput": {
           "command": "echo x >| .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -889,7 +920,8 @@
         "toolInput": {
           "command": "{ echo x; } >.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -909,7 +941,8 @@
         "toolInput": {
           "command": "{ echo x; } >.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -929,7 +962,8 @@
         "toolInput": {
           "command": "exec 3>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -949,7 +983,8 @@
         "toolInput": {
           "command": "exec 3>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -969,7 +1004,8 @@
         "toolInput": {
           "command": "echo x 2>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -989,7 +1025,8 @@
         "toolInput": {
           "command": "echo x 2>.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1009,7 +1046,8 @@
         "toolInput": {
           "command": "cp src/.env apps/api/.env 2>&1"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1029,7 +1067,8 @@
         "toolInput": {
           "command": "cp src/.env apps/api/.env 2>&1"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1049,7 +1088,8 @@
         "toolInput": {
           "command": "cp -t apps/api src/.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1069,7 +1109,8 @@
         "toolInput": {
           "command": "cp -t apps/api src/.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1089,7 +1130,8 @@
         "toolInput": {
           "command": "mv .env.new .env 2>/dev/null"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1109,7 +1151,8 @@
         "toolInput": {
           "command": "mv .env.new .env 2>/dev/null"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1129,7 +1172,8 @@
         "toolInput": {
           "command": "bash -c 'echo x > .env'"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1149,7 +1193,8 @@
         "toolInput": {
           "command": "bash -c 'echo x > .env'"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1169,7 +1214,8 @@
         "toolInput": {
           "command": "sh -c \"cp a .env\""
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1189,7 +1235,8 @@
         "toolInput": {
           "command": "sh -c \"cp a .env\""
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1209,7 +1256,8 @@
         "toolInput": {
           "command": "eval 'echo x > .env'"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1229,7 +1277,8 @@
         "toolInput": {
           "command": "eval 'echo x > .env'"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1248,7 +1297,8 @@
         "toolInput": {
           "command": "echo x | tee -a .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1267,7 +1317,8 @@
         "toolInput": {
           "command": "echo x | tee -a .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1286,7 +1337,8 @@
         "toolInput": {
           "command": "sed -i 's/a/b/' .env.local"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1305,7 +1357,8 @@
         "toolInput": {
           "command": "sed -i 's/a/b/' .env.local"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1324,7 +1377,8 @@
         "toolInput": {
           "command": "perl -i -pe 's/a/b/' .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1343,7 +1397,8 @@
         "toolInput": {
           "command": "perl -i -pe 's/a/b/' .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1362,7 +1417,8 @@
         "toolInput": {
           "command": "mv x .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1381,7 +1437,8 @@
         "toolInput": {
           "command": "mv x .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1400,7 +1457,8 @@
         "toolInput": {
           "command": "install -m 644 x .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1419,7 +1477,8 @@
         "toolInput": {
           "command": "install -m 644 x .env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1438,7 +1497,8 @@
         "toolInput": {
           "command": "dd if=/dev/zero of=.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1457,7 +1517,8 @@
         "toolInput": {
           "command": "dd if=/dev/zero of=.env"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1476,7 +1537,8 @@
         "toolInput": {
           "command": "python3 -c \"open('.env','w')\""
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1495,7 +1557,8 @@
         "toolInput": {
           "command": "python3 -c \"open('.env','w')\""
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1515,7 +1578,8 @@
         "toolInput": {
           "command": "echo x > .en[v]"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "codex",
@@ -1535,7 +1599,8 @@
         "toolInput": {
           "command": "echo x > .en[v]"
         }
-      }
+      },
+      "config": {"scope": "project", "body": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}}
     },
     {
       "host": "claude",
@@ -1770,428 +1835,6 @@
         "toolName": "Bash",
         "toolInput": {
           "command": "touch a.rs"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: asks on a listed server, pointing at the blocklist file",
-      "expect": "ask",
-      "has": ["mcp-blocklist.txt"],
-      "lacks": ["toolu config"],
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: allows an unlisted server",
-      "expect": "silent",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__other__do_thing",
-        "toolInput": {},
-        "mcp": {
-          "server": "other",
-          "tool": "do_thing"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "claude_ai_\n"
-      },
-      "name": "mcp-blocker: a prefix entry blocks a longer server name",
-      "expect": "ask",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__claude_ai_Canva__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "claude_ai_Canva",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "claude_ai_\n"
-      },
-      "name": "mcp-blocker: a prefix entry does not block a different prefix",
-      "expect": "silent",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__friend_ai_Canva__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "friend_ai_Canva",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: an exact server name blocks",
-      "expect": "ask",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__save",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "save"
-        }
-      }
-    },
-    {
-      "host": "codex",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: on Codex a listed server is blocked",
-      "expect": "deny",
-      "has": ["exampleblocked"],
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {},
-      "name": "mcp-blocker: config mcp.<server>=false blocks without the file",
-      "config": {
-        "scope": "user",
-        "body": {
-          "version": 1,
-          "mcp": {
-            "someserver": false
-          }
-        }
-      },
-      "expect": "ask",
-      "has": ["someserver", "toolu config"],
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__someserver__do",
-        "toolInput": {},
-        "mcp": {
-          "server": "someserver",
-          "tool": "do"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {},
-      "name": "mcp-blocker: a non-object config mcp neither blocks nor crashes",
-      "config": {
-        "scope": "user",
-        "body": {
-          "version": 1,
-          "mcp": "broken-not-an-object"
-        }
-      },
-      "expect": "silent",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__someserver__do",
-        "toolInput": {},
-        "mcp": {
-          "server": "someserver",
-          "tool": "do"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "someserver -> use the host's native Jira tools instead\n"
-      },
-      "name": "mcp-blocker: a redirect hint is appended to the reason",
-      "expect": "ask",
-      "has": ["use the host's native Jira tools instead"],
-      "deviation": "#405 native Jira redirect replaces the historical skill hint",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__someserver__do",
-        "toolInput": {},
-        "mcp": {
-          "server": "someserver",
-          "tool": "do"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "# claude_ai_Atlassian -> use the host's native Jira tools instead\n"
-      },
-      "name": "mcp-blocker: a commented entry does not block",
-      "expect": "silent",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__claude_ai_Atlassian__createIssue",
-        "toolInput": {},
-        "mcp": {
-          "server": "claude_ai_Atlassian",
-          "tool": "createIssue"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: empty stdin",
-      "stdin": "",
-      "expect": "silent"
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: non-JSON stdin",
-      "stdin": "not json\n",
-      "expect": "silent"
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: a tool name without a server segment",
-      "expect": "silent",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked",
-        "toolInput": {}
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: mode block denies",
-      "config": {
-        "scope": "project",
-        "body": {
-          "version": 1,
-          "gates": {
-            "mcpBlocker": {
-              "mode": "block"
-            }
-          }
-        }
-      },
-      "expect": "deny",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: mode advise warns without stopping",
-      "config": {
-        "scope": "project",
-        "body": {
-          "version": 1,
-          "gates": {
-            "mcpBlocker": {
-              "mode": "advise"
-            }
-          }
-        }
-      },
-      "expect": "advisory",
-      "has": ["NOT stopped"],
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: mode off is silent",
-      "config": {
-        "scope": "project",
-        "body": {
-          "version": 1,
-          "gates": {
-            "mcpBlocker": {
-              "mode": "off"
-            }
-          }
-        }
-      },
-      "expect": "silent",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked\n"
-      },
-      "name": "mcp-blocker: an invalid config envelope still blocks a listed server",
-      "config": {
-        "scope": "project",
-        "body": {
-          "version": 2
-        }
-      },
-      "expect": "deny",
-      "deviation": "#253 fail-closed config envelope",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {
-        "mcp-blocklist.txt": "  exampleblocked  \n"
-      },
-      "name": "mcp-blocker: a whitespace-padded entry still matches",
-      "expect": "ask",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {},
-      "name": "mcp-blocker: config mcp value 'false' as a string does not block",
-      "config": {
-        "scope": "user",
-        "body": {
-          "version": 1,
-          "mcp": {
-            "someserver": "false"
-          }
-        }
-      },
-      "expect": "silent",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__someserver__do",
-        "toolInput": {},
-        "mcp": {
-          "server": "someserver",
-          "tool": "do"
-        }
-      }
-    },
-    {
-      "host": "claude",
-      "entry": "mcp-tools",
-      "settings": {},
-      "name": "mcp-blocker: no blocklist and no config is silent",
-      "expect": "silent",
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
         }
       }
     }

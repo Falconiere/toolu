@@ -1,8 +1,0 @@
-# MCP server name prefixes to block (one per line; '#' starts a comment).
-# Match is against the leading mcp__<server>__ segment of the tool name.
-#
-# Entries are matched as PREFIXES of the server segment. So `claude_ai_`
-# blocks `mcp__claude_ai_Canva__*` and `mcp__claude_ai_Figma__*`. An exact
-# server name is the special case of a prefix with no extra characters.
-#
-# Empty by default — add one server-name prefix per line to block it.

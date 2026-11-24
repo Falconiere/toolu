@@ -1,4 +1,4 @@
-//! Muse quality registration and post-edit enforcement through the real CLI.
+//! Muse quality registration retirement and push-time enforcement through the real CLI.
 
 #[path = "helpers/feed.rs"]
 mod feed;
@@ -44,6 +44,10 @@ impl Fixture {
       "old",
     )?;
     fs::write(
+      config.join("toolu/post-tools.d/rust-quality@toolu__rust-quality.json"),
+      "{\"version\":1}",
+    )?;
+    fs::write(
       config.join("toolu/pre-tools.d/rust-quality@toolu__old.sh"),
       "old",
     )?;
@@ -72,35 +76,35 @@ impl Fixture {
     child.wait_with_output()
   }
 
-  fn register_rule(&self, plugin: &str) -> io::Result<()> {
+  fn retire_rule(&self, plugin: &str) -> io::Result<()> {
     let root = plugin_root(plugin).display().to_string();
     let args = [
       plugin,
       "hook",
-      "register",
+      "forget",
       "--event",
       "SessionStart",
       "--plugin-root",
       &root,
     ];
-    let registered = self.run(&args, "{}")?;
+    let retired = self.run(&args, "{}")?;
     ensure(
-      registered.status.code() == Some(0),
-      format!("{plugin}: {registered:?}"),
+      retired.status.code() == Some(0),
+      format!("{plugin}: {retired:?}"),
     )?;
-    let manifest = self
-      .config
-      .join(format!("toolu/post-tools.d/{plugin}@toolu__{plugin}.json"));
-    ensure(manifest.is_file(), format!("missing manifest for {plugin}"))?;
-    let bytes = fs::read(&manifest)?;
-    let modified = fs::metadata(&manifest)?.modified()?;
+    for dir in ["post-tools.d", "pre-tools.d"] {
+      let entries: Vec<_> = fs::read_dir(self.config.join("toolu").join(dir))?
+        .flatten()
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with(&format!("{plugin}@toolu__")))
+        .collect();
+      ensure(
+        entries.is_empty(),
+        format!("{plugin} left {entries:?} in {dir}"),
+      )?;
+    }
     let again = self.run(&args, "{}")?;
     ensure(again.status.code() == Some(0), format!("{again:?}"))?;
-    ensure(fs::read(&manifest)? == bytes, "manifest bytes changed")?;
-    ensure(
-      fs::metadata(&manifest)?.modified()? == modified,
-      "manifest timestamp changed",
-    )?;
     let check = [
       plugin,
       "hook",
@@ -126,54 +130,57 @@ impl Fixture {
       "old JavaScript module remains",
     )?;
     ensure(
+      !post.join("rust-quality@toolu__rust-quality.json").exists(),
+      "earlier rule manifest remains",
+    )?;
+    ensure(
       !pre.join("rust-quality@toolu__old.sh").exists(),
       "old shell bridge remains",
     )?;
     let lines = fs::read_to_string(&self.report)?;
-    ensure(lines.lines().count() == 6, "startup report count differs")?;
     ensure(
-      lines.contains(&post.display().to_string()),
-      "startup report has no Muse manifest path",
+      lines.is_empty(),
+      format!("forget published something: {lines}"),
     )?;
     Ok(())
   }
 
-  fn assert_rust_edit_blocks_commit(&self) -> io::Result<()> {
-    let bad = ["//! demo\n#[", "allow(dead_code)]\nfn bad() {}\n"].concat();
-    let file = self.project.join("src/lib.rs");
-    fs::write(&file, &bad)?;
-    let payload = json!({"session_id":"s","cwd":self.project,"tool_name":"write_file",
-      "tool_input":{"file_path":file,"content":bad},"tool_response":{}});
-    let edited = self.run(
-      &["hook", "post-tools", "--event", "PostToolUse"],
-      &payload.to_string(),
+  fn assert_red_gate_blocks_push_not_commit(&self) -> io::Result<()> {
+    let state = self
+      .project
+      .join(".toolu/tmp/muse/quality-gate-status.json");
+    fs::create_dir_all(
+      state
+        .parent()
+        .ok_or_else(|| io::Error::other("no state dir"))?,
     )?;
-    ensure(edited.status.code() == Some(0), format!("{edited:?}"))?;
-    let output: Value = serde_json::from_slice(&edited.stdout).map_err(io::Error::other)?;
+    fs::write(
+      &state,
+      "{\"status\": \"failing\", \"errors\": [\"cargo test\"]}",
+    )?;
+    let push = json!({"session_id":"s","cwd":self.project,"tool_name":"bash",
+      "tool_input":{"command":"git push origin main"}});
+    let denied = self.run(
+      &["hook", "pre-tools", "--event", "PreToolUse"],
+      &push.to_string(),
+    )?;
+    ensure(denied.status.code() == Some(0), format!("{denied:?}"))?;
+    let decision: Value = serde_json::from_slice(&denied.stdout).map_err(io::Error::other)?;
     ensure(
-      output
-        .get("systemMessage")
-        .and_then(Value::as_str)
-        .is_some_and(|message| message.contains("Forbidden lint suppression")),
-      format!("missing quality notice: {output}"),
+      decision.get("decision").and_then(Value::as_str) == Some("block"),
+      format!("push was not blocked: {decision}"),
     )?;
-    let gate = fs::read_to_string(
-      self
-        .project
-        .join(".toolu/tmp/muse/quality-gate-status.json"),
-    )?;
-    ensure(gate.contains("\"status\": \"failing\""), gate)?;
     let commit = json!({"session_id":"s","cwd":self.project,"tool_name":"bash",
       "tool_input":{"command":"git commit -m test"}});
-    let before = self.run(
+    let allowed = self.run(
       &["hook", "pre-tools", "--event", "PreToolUse"],
       &commit.to_string(),
     )?;
-    ensure(before.status.code() == Some(0), format!("{before:?}"))?;
-    let decision: Value = serde_json::from_slice(&before.stdout).map_err(io::Error::other)?;
+    ensure(allowed.status.code() == Some(0), format!("{allowed:?}"))?;
+    let decision: Value = serde_json::from_slice(&allowed.stdout).map_err(io::Error::other)?;
     ensure(
-      decision.get("decision").and_then(Value::as_str) == Some("block"),
-      format!("commit was not blocked: {decision}"),
+      decision.get("decision").is_none(),
+      format!("commit was blocked: {decision}"),
     )?;
     Ok(())
   }
@@ -194,11 +201,11 @@ fn ensure(condition: bool, detail: impl Into<String>) -> io::Result<()> {
 }
 
 #[test]
-fn muse_registers_three_rules_and_enforces_a_rust_edit() {
+fn muse_retires_quality_registration_and_blocks_a_red_push() {
   let fixture = Fixture::new().unwrap();
   for plugin in ["ts-quality", "python-quality", "rust-quality"] {
-    fixture.register_rule(plugin).unwrap();
+    fixture.retire_rule(plugin).unwrap();
   }
   fixture.assert_cleanup_and_report().unwrap();
-  fixture.assert_rust_edit_blocks_commit().unwrap();
+  fixture.assert_red_gate_blocks_push_not_commit().unwrap();
 }

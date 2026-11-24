@@ -2,16 +2,16 @@
 
 # `toolu python-quality`
 
-Python quality rules that run after each edit.
+Python quality rules for reviews and the push gate.
 
 Owner: `plugins/python-quality`.
 
 ## `toolu python-quality`
 
 ```text
-python-quality has no verbs: its rules run after every edit of a .py file in a Python project (pyproject.toml, setup.py, setup.cfg or requirements.txt) with python3 on PATH. Violations (oversized files and functions, misplaced or misnamed tests, bare except, blanket # noqa or # type: ignore, mocks in tests) fail the file's quality-gate entry until it is fixed; a public def or class without a docstring is an advisory.
+python-quality has no verbs and no longer runs after every edit; its SessionStart hook retires any earlier registration. The same findings reach the project through its own linter and tests: a failing quality command marks the gate, and a failing gate denies git push while gates.qualityGate blocks — commits are never stopped. Oversized files and functions advise and never block.
 
-Limits come from lang.python in toolu.config.json (maxFileLines, maxFnLines, noMocks). Run toolu doctor to see whether the rule is registered and compiled in.
+Limits come from lang.python in toolu.config.json (maxFileLines, maxFnLines, noMocks).
 
 Usage: toolu python-quality [OPTIONS]
 

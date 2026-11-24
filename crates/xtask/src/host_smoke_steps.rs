@@ -6,8 +6,8 @@ use std::path::Path;
 use crate::host_smoke_checks as checks;
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_exec::run as run_child;
-use crate::host_smoke_project::{PushProject, git, head, nonce, remote_has, state_dir};
-use crate::host_smoke_prompts::{CODEX_ALLOWED, CODEX_COMMIT, CODEX_PUSH, DENY, PUSH_REF};
+use crate::host_smoke_project::{PushProject, head, nonce, remote_has, state_dir};
+use crate::host_smoke_prompts::{CODEX_ALLOWED, CODEX_COMMIT, CODEX_PUSH, DENY, FAILING, PUSH_REF};
 
 /// Where a host's transcripts go and how its children are started.
 pub(crate) struct Run<'a> {
@@ -20,8 +20,6 @@ pub(crate) struct Prompts {
   pub(crate) allowed: &'static str,
   pub(crate) commit: &'static str,
   pub(crate) push: &'static str,
-  /// The harness stages `sample.ts` itself before the commit prompt.
-  pub(crate) stages_first: bool,
 }
 
 /// One session: a transcript name, the tools it may use, and its prompt.
@@ -43,34 +41,15 @@ pub(crate) trait Driver {
   fn prepare(&self, _run: &Run<'_>, _project: &Path) -> Result<(), String> {
     Ok(())
   }
-  /// The quality-failing edit, left recorded in the gate file.
-  fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String>;
 }
 
-/// Codex's control, commit and push prompts, with `sample.ts` staged by the harness:
-/// what a host gets whose shell tool is not called Bash.
+/// The control, commit and push prompts for a host whose shell tool is not Bash.
 pub(crate) fn staged_prompts() -> Prompts {
   Prompts {
     allowed: CODEX_ALLOWED,
     commit: CODEX_COMMIT,
     push: CODEX_PUSH,
-    stages_first: true,
   }
-}
-
-/// The quality-failing edit as one session with `prompt`.
-pub(crate) fn edit_session(
-  driver: &dyn Driver,
-  run: &Run<'_>,
-  project: &Path,
-  prompt: &str,
-) -> Result<(), String> {
-  let step = Step {
-    name: "edit",
-    tools: "",
-    prompt,
-  };
-  session(driver, run, project, &step).map(drop)
 }
 
 /// Run `step` in `project`, keeping the transcript as `<host>-<step>.jsonl`.
@@ -108,29 +87,34 @@ pub(crate) fn allowed(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Res
   checks::ran_in(&expected, &session(driver, run, project, &step)?)
 }
 
-/// The edit leaves a failing quality state.
-pub(crate) fn edit(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Result<(), String> {
-  driver.edit(run, project)?;
+/// The failing quality command leaves a red gate recorded through the
+/// gate-status command channel.
+pub(crate) fn failing(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Result<(), String> {
+  let step = Step {
+    name: "failing",
+    tools: "Bash",
+    prompt: FAILING,
+  };
+  session(driver, run, project, &step)?;
   checks::quality(project, &state_dir(driver.name()))
 }
 
-/// The commit is denied by the quality gate and `HEAD` stays.
+/// The commit lands although the quality gate is red: enforcement is at push.
 pub(crate) fn commit(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Result<(), String> {
-  let prompts = driver.prompts();
-  if prompts.stages_first {
-    git(project, run.env, &["add", "sample.ts"])?;
-  }
   let before = head(project, run.env)?;
   let step = Step {
     name: "commit",
     tools: "Bash",
-    prompt: prompts.commit,
+    prompt: driver.prompts().commit,
   };
-  checks::commit_denied(&session(driver, run, project, &step)?)?;
-  checks::must(head(project, run.env)? == before, "the commit changed HEAD")
+  session(driver, run, project, &step)?;
+  checks::must(
+    head(project, run.env)? != before,
+    "the red quality gate held the commit",
+  )
 }
 
-/// The push is blocked by push review and the remote gains nothing.
+/// The push is blocked while the gate is red and the remote gains nothing.
 pub(crate) fn push(driver: &dyn Driver, run: &Run<'_>, pushed: &PushProject) -> Result<(), String> {
   let step = Step {
     name: "push",

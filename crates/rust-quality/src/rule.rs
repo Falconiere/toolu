@@ -95,25 +95,25 @@ pub(crate) struct Scans {
 }
 
 /// Every rule over `f` in the numeric order of the bash fragments it replaces;
-/// the docs advisories count only when nothing blocks.
+/// the size rules and the docs advisories never block and count only when
+/// nothing else does.
 pub(crate) fn findings(f: &RsFile<'_>, is_test: bool, scans: &Scans) -> QualityFindings {
-  let errors = [
+  let errors = [test_layout(f, is_test), suppression(f), unsafe_code(f)]
+    .into_iter()
+    .flatten()
+    .chain(error_handling(f, scans.errors.as_ref()))
+    .chain(no_mocks(f, scans.mocks.as_ref()))
+    .collect();
+  let mut advisories = [
     file_too_long(f),
-    test_layout(f, is_test),
-    suppression(f),
-    unsafe_code(f),
     function_too_long(f, is_test),
     impl_too_long(f, is_test),
   ]
   .into_iter()
   .flatten()
-  .chain(error_handling(f, scans.errors.as_ref()))
-  .chain(no_mocks(f, scans.mocks.as_ref()))
-  .collect();
-  QualityFindings {
-    errors,
-    advisories: docs(f, is_test),
-  }
+  .collect::<Vec<_>>();
+  advisories.extend(docs(f, is_test));
+  QualityFindings { errors, advisories }
 }
 
 impl QualityRule for RustQuality {

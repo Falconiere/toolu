@@ -58,15 +58,26 @@ fn context<'a>(
   }
 }
 
-#[test]
-fn env_edit_asks_on_claude_and_denies_on_codex() {
+fn settings(mode: &str) -> (tempfile::TempDir, Env) {
   let dir = tempfile::tempdir().expect("tempdir");
   fs::write(dir.path().join("protected-files.txt"), ".env\n").expect("settings");
+  fs::write(
+    dir.path().join("toolu.config.json"),
+    json!({"version":1,"gates":{"protectedFiles":{"mode":mode}}}).to_string(),
+  )
+  .expect("config");
   let settings = dir.path().to_string_lossy().into_owned();
   let env = Env::from_pairs([
     ("TOOLU_SETTINGS_DIR", settings.as_str()),
+    ("TOOLU_USER_CONFIG_DIR", settings.as_str()),
     ("HOME", settings.as_str()),
   ]);
+  (dir, env)
+}
+
+#[test]
+fn env_edit_asks_on_claude_and_denies_on_codex_when_ask_is_pinned() {
+  let (dir, env) = settings("ask");
   let (event, raw) = event("Edit", None, Some(".env"));
   for (host, ask) in [(Host::Claude, true), (Host::Codex, false)] {
     let ctx = context(host, &env, &raw, dir.path());
@@ -76,6 +87,25 @@ fn env_edit_asks_on_claude_and_denies_on_codex() {
       (Decision::Deny { reason }, false) => assert!(reason.as_str().contains(".env")),
       _ => panic!("wrong host decision"),
     }
+  }
+}
+
+#[test]
+fn the_shipped_default_only_advises_on_a_protected_edit() {
+  let dir = tempfile::tempdir().expect("tempdir");
+  fs::write(dir.path().join("protected-files.txt"), ".env\n").expect("settings");
+  let settings = dir.path().to_string_lossy().into_owned();
+  let env = Env::from_pairs([
+    ("TOOLU_SETTINGS_DIR", settings.as_str()),
+    ("HOME", settings.as_str()),
+  ]);
+  let (event, raw) = event("Edit", None, Some(".env"));
+  for host in [Host::Claude, Host::Codex] {
+    let ctx = context(host, &env, &raw, dir.path());
+    let Decision::Advisory { message } = ProtectedFiles.run(&event, &ctx).expect("decision") else {
+      panic!("{host:?}: balanced default should advise");
+    };
+    assert!(message.as_str().contains(".env"), "{message:?}");
   }
 }
 
@@ -102,7 +132,7 @@ fn real_shell_redirect_to_env_is_guarded_but_read_is_allowed() {
     };
     let decision = ProtectedFiles.run(&event, &ctx).expect("decision");
     assert_eq!(
-      matches!(decision, Decision::Ask { .. }),
+      matches!(decision, Decision::Advisory { .. }),
       guarded,
       "{command}"
     );
@@ -110,20 +140,20 @@ fn real_shell_redirect_to_env_is_guarded_but_read_is_allowed() {
 }
 
 #[test]
+fn a_pinned_ask_prompts_the_claude_shell_write() {
+  let (dir, env) = settings("ask");
+  let (event, raw) = event("Bash", Some("echo SECRET=1 >.env"), None);
+  let ctx = context(Host::Claude, &env, &raw, dir.path());
+  assert!(matches!(
+    ProtectedFiles.run(&event, &ctx).expect("decision"),
+    Decision::Ask { .. }
+  ));
+}
+
+#[test]
 fn muse_edit_path_is_protected_in_block_mode() {
-  let dir = tempfile::tempdir().expect("tempdir");
-  fs::write(dir.path().join("protected-files.txt"), ".env\n").expect("settings");
-  fs::write(
-    dir.path().join("toolu.config.json"),
-    r#"{"version":1,"gates":{"protectedFiles":{"mode":"block"}}}"#,
-  )
-  .expect("config");
+  let (dir, env) = settings("block");
   let home = dir.path().to_string_lossy().into_owned();
-  let env = Env::from_pairs([
-    ("TOOLU_SETTINGS_DIR", home.as_str()),
-    ("TOOLU_USER_CONFIG_DIR", home.as_str()),
-    ("HOME", home.as_str()),
-  ]);
   let input = json!({"path":".env","find":"old","replace":"new"});
   let event: NormalizedEvent = serde_json::from_value(json!({
     "type":"tool/pre", "sessionId":"s", "cwd":home, "projectRoot":home,

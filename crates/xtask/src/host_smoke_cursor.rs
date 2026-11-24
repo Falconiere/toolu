@@ -5,8 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::host_smoke_prompts::CURSOR_EDIT;
-use crate::host_smoke_steps::{Driver, Prompts, Run, Step, edit_session, staged_prompts};
+use crate::host_smoke_steps::{Driver, Prompts, Step, staged_prompts};
 
 /// A Cursor Agent installation and the checkout whose plugins it loads.
 pub(crate) struct Cursor {
@@ -44,10 +43,6 @@ impl Driver for Cursor {
 
   fn prompts(&self) -> Prompts {
     staged_prompts()
-  }
-
-  fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String> {
-    edit_session(self, run, project, CURSOR_EDIT)
   }
 }
 

@@ -21,13 +21,12 @@ fn a_session_runs_headless_with_both_plugins_from_the_checkout() {
 }
 
 #[test]
-fn the_driver_stages_first_and_names_itself_cursor() {
+fn the_driver_names_itself_cursor() {
   let driver = Cursor {
     exe: "/bin/cursor-agent".into(),
     repo: "/repo".into(),
   };
   assert_eq!(driver.name(), "cursor");
-  assert!(driver.prompts().stages_first);
   let step = Step {
     name: "deny",
     tools: "",

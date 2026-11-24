@@ -13,8 +13,7 @@ use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _, symlink};
 use std::path::{Path, PathBuf};
 
 use crate::host_smoke_exec::run as run_child;
-use crate::host_smoke_observe::observed_edit;
-use crate::host_smoke_prompts::{CODEX_ALLOWED, CODEX_COMMIT, CODEX_PUSH, MUSE_EDIT};
+use crate::host_smoke_prompts::{CODEX_ALLOWED, CODEX_COMMIT, CODEX_PUSH};
 use crate::host_smoke_steps::{Driver, Prompts, Run, Step};
 
 /// A Muse installation and the checkout whose plugins it installs.
@@ -126,7 +125,6 @@ impl Driver for Muse {
       allowed: CODEX_ALLOWED,
       commit: CODEX_COMMIT,
       push: CODEX_PUSH,
-      stages_first: true,
     }
   }
 
@@ -141,10 +139,6 @@ impl Driver for Muse {
       run_child(&approve, project, run.env, None)?;
     }
     Ok(())
-  }
-
-  fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String> {
-    observed_edit(run, project, &argv(&self.exe, MUSE_EDIT), "muse")
   }
 }
 

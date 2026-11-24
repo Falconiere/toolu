@@ -6,6 +6,12 @@
   "comemory": {
     "setup_done": true
   },
+  "gates": {
+    "prSize": {
+      "maxLines": 400,
+      "maxFiles": 175
+    }
+  },
   "lang": {
     "rust": {
       "maxFileLines": 300,
