@@ -1,6 +1,6 @@
 {
   "name": "ts-quality",
-  "version": "10.3.0",
+  "version": "10.4.0",
   "hookProtocol": 4,
   "description": "TypeScript quality rules for checks and the push gate.",
   "hooks": "./hooks/hooks.json"

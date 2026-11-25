@@ -6,6 +6,13 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [10.4.0](https://github.com/Falconiere/toolu/compare/v10.3.0...v10.4.0) (2026-11-25)
+
+
+### Features
+
+* **workflows:** defer quality gates to delivery ([#927](https://github.com/Falconiere/toolu/issues/927)) ([f47e079](https://github.com/Falconiere/toolu/commit/f47e079622679b614478570c94cde8dcead2067f))
+
 ## [10.3.0](https://github.com/Falconiere/toolu/compare/v10.2.0...v10.3.0) (2026-11-23)
 
 

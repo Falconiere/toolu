@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "rust-quality",
   "displayName": "rust-quality",
-  "version": "10.3.0",
+  "version": "10.4.0",
   "description": "Rust quality rules for checks and the push gate.",
   "compat": {
     "source": "native",
