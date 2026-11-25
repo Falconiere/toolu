@@ -15,7 +15,7 @@ use serde_json::Value;
 use toolu_hub::lifecycle::pre_compact::{PreCompactInput, pre_compact};
 use toolu_hub::lifecycle::prompt_submit::{PromptInput, prompt_submit};
 use toolu_hub::lifecycle::session::{SessionInput, session_start};
-use toolu_hub::tool_hook::{Phase, tool_hook};
+use toolu_hub::tool_hook::{Phase, tool_hook, tool_hook_failure};
 use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::event::is_enforcing;
 use toolu_protocol::exit::Exit;
@@ -169,6 +169,12 @@ fn toolu_hook(call: &HookCall<'_>) -> Option<Outcome> {
   }
   if name == "stop" {
     return Some(stop::run(call));
+  }
+  if name == "post-tools-failure" {
+    return Some(tool_hook_failure(
+      (call.stdin)(),
+      call.request.plugin_root.as_deref().map(Path::new),
+    ));
   }
   if !matches!(name, "session-start" | "user-prompt-submit" | "pre-compact") {
     return None;

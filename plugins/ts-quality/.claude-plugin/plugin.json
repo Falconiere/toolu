@@ -2,7 +2,7 @@
   "name": "ts-quality",
   "version": "10.3.0",
   "hookProtocol": 4,
-  "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
+  "description": "TypeScript quality rules for checks and the push gate.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"

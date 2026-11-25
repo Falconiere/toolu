@@ -151,11 +151,11 @@
     ],
     "assembled: two violations in fragment order [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/bad.py (10 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (10 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (10 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
           ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
         }
@@ -163,22 +163,22 @@
     ],
     "assembled: fixing one of two keeps the gate failing [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
           ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
         }
       },
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nPublic def/class missing a docstring in <ROOT>/project/bad.py — add a concise one:\\n1: big\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"python-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
         }
       }
@@ -275,24 +275,20 @@
     ],
     "flow: malformed thresholds fall back to the defaults [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/big.py\",\n  \"violations\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/big.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/big.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": \"abc\",\n      \"maxFnLines\": 0\n    }\n  }\n}\n"
         }
       }
     ],
     "flow: a numeric-string threshold is honoured [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 10-line limit: <ROOT>/project/big.py (11 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 10-line limit: <ROOT>/project/big.py (11 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/big.py\",\n  \"violations\": \"File exceeds 10-line limit: <ROOT>/project/big.py (11 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/big.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 10-line limit: <ROOT>/project/big.py (11 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/big.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": \"10\"\n    }\n  }\n}\n"
         }
       }
@@ -360,23 +356,18 @@
     ],
     "size: file one line over the default limit [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
-        "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/big.py\",\n  \"violations\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/big.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/big.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
-        }
+        "state": {}
       }
     ],
     "size: project config lowers maxFileLines [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 10-line limit: <ROOT>/project/big.py (15 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 10-line limit: <ROOT>/project/big.py (15 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/big.py\",\n  \"violations\": \"File exceeds 10-line limit: <ROOT>/project/big.py (15 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/big.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 10-line limit: <ROOT>/project/big.py (15 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/big.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
         }
       }
@@ -401,12 +392,10 @@
     ],
     "size: project config lowers maxFnLines [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\nPublic def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: big\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
@@ -423,24 +412,20 @@
     ],
     "size: a method is measured to its own close [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nlong_method:5 (5 lines)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nlong_method:5 (5 lines)\\nPublic def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: Foo\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nlong_method:5 (5 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nlong_method:5 (5 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
     ],
     "size: async def is measured [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\nPublic def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: big\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
@@ -864,12 +849,10 @@
     ],
     "edges: every long function is listed [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>2 lines) — extract helpers.\\ng1:1 (4 lines)\\ng2:7 (4 lines)\\ng3:13 (4 lines)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/m.py (>2 lines) — extract helpers.\\ng1:1 (4 lines)\\ng2:7 (4 lines)\\ng3:13 (4 lines)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>2 lines) — extract helpers.\\ng1:1 (4 lines)\\ng2:7 (4 lines)\\ng3:13 (4 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>2 lines) — extract helpers.\\ng1:1 (4 lines)\\ng2:7 (4 lines)\\ng3:13 (4 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 2\n    }\n  }\n}\n"
         }
       }
@@ -1001,12 +984,10 @@
     ],
     "edges: a nested def counts toward its outer [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>4 lines) — extract helpers.\\nouter:1 (5 lines)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/m.py (>4 lines) — extract helpers.\\nouter:1 (5 lines)\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>4 lines) — extract helpers.\\nouter:1 (5 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>4 lines) — extract helpers.\\nouter:1 (5 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 4\n    }\n  }\n}\n"
         }
       }

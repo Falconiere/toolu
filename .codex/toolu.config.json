@@ -3,6 +3,12 @@
     "effort": "auto",
     "enabled": true
   },
+  "gates": {
+    "prSize": {
+      "maxLines": 550,
+      "maxFiles": 175
+    }
+  },
   "lang": {
     "rust": {
       "maxFileLines": 300,

@@ -81,7 +81,7 @@ fn an_unknown_static_commit_prefix_is_blocked() {
 }
 
 #[test]
-fn failing_legacy_quality_state_blocks_a_commit() {
+fn failing_legacy_quality_state_blocks_known_and_possible_pushes() {
   let hook = with_settings().expect("sandbox");
   block_modes(&hook).expect("config");
   write(
@@ -89,7 +89,23 @@ fn failing_legacy_quality_state_blocks_a_commit() {
     "{\"status\":\"failing\",\"reason\":\"lint failed\",\"violations\":\"a.ts:1\"}\n",
   )
   .expect("gate file");
-  let got = hook.run(Phase::Pre, &bash("git commit -m 'feat: x'"), PRE_TOOL, &[]);
-  assert!(got.result.stdout.contains("BLOCKED: quality gate failing"));
-  assert!(got.result.stdout.contains("a.ts:1"));
+  for command in [
+    "sudo git commit -m 'feat: x'",
+    "echo git commit later",
+    "echo '",
+  ] {
+    let output = hook.run(Phase::Pre, &bash(command), PRE_TOOL, &[]);
+    assert!(
+      !output.result.stdout.contains("quality gate failing"),
+      "{command}"
+    );
+  }
+  for command in ["timeout 120 git push origin HEAD", "git push origin '"] {
+    let got = hook.run(Phase::Pre, &bash(command), PRE_TOOL, &[]);
+    assert!(
+      got.result.stdout.contains("BLOCKED: quality gate failing"),
+      "{command}"
+    );
+    assert!(got.result.stdout.contains("a.ts:1"));
+  }
 }

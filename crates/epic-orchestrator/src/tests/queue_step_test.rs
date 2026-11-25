@@ -274,15 +274,19 @@ fn sized(fixture: &Fixture, dir: &std::path::Path, lines: usize) -> StepJob {
   crate::support::git(&tree, &["commit", "-qm", "grow"]);
   // The rig serves the pull request at head `abc123`: make that the commit.
   crate::support::git(&tree, &["branch", "abc123"]);
-  let home = dir.display().to_string();
+  std::fs::write(
+    dir.join("toolu.config.json"),
+    r#"{"version":1,"gates":{"prSize":{"mode":"block"}}}"#,
+  )
+  .expect("size gate config");
   let mut job = input(fixture, HEAD);
   job.worktree = Some(tree);
-  job.env = job.env.with("HOME", &home).with("TOOLU_CONFIG_DIR", &home);
+  job.env = job.env.with("TOOLU_CONFIG_DIR", &dir.to_string_lossy());
   job
 }
 
 #[test]
-fn an_over_budget_branch_is_refused_and_disarmed_without_a_merge_call() {
+fn an_explicit_size_block_disarms_an_over_budget_branch_without_merging() {
   let over = "pr size over budget: 301 of 300 code lines, 1 of 100 files against main";
   for state in [
     PrState::default(),
@@ -301,10 +305,7 @@ fn an_over_budget_branch_is_refused_and_disarmed_without_a_merge_call() {
     let (mutations, merges) = sent(&fixture);
     assert_eq!(merges, Vec::<Value>::new());
     // Only the disarm of an armed head: nothing arms auto-merge.
-    let disarms = mutations
-      .iter()
-      .filter(|m| m.to_string().contains("disable"));
-    assert_eq!(disarms.count(), usize::from(state.armed));
+    assert!(mutations.iter().all(|m| m.to_string().contains("disable")));
     assert_eq!(mutations.len(), usize::from(state.armed));
   }
   let dir = tempfile::tempdir().expect("dir");

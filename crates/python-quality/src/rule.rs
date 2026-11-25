@@ -64,18 +64,18 @@ fn read(file: &EditedFile) -> Result<String, String> {
     })
 }
 
-/// Every rule in the numeric order of the bash fragments they replace.
+/// Every rule in the numeric order of the bash fragments they replace. Size
+/// findings advise; they never block.
 fn errors(f: &PyFile<'_>, scan: &AstGrepScan) -> Vec<String> {
   let is_test = is_python_test_name(base_name(&f.file.path));
-  let mut errors: Vec<String> = file_too_long(f).into_iter().collect();
+  let mut errors: Vec<String> = Vec::new();
   errors.extend(test_layout(f));
   errors.extend(suppression(f));
-  errors.extend(function_too_long(f));
   errors.extend(no_mocks(f, scan, is_test));
   errors
 }
 
-/// The blocking errors, then the docs advisory, shown only when nothing blocks.
+/// The blocking errors, then the advisories, shown only when nothing blocks.
 fn findings(
   file: &EditedFile,
   text: &str,
@@ -83,12 +83,14 @@ fn findings(
   scan: &AstGrepScan,
 ) -> QualityFindings {
   let f = PyFile::new(file, text, limits(ctx));
+  let advisories = [file_too_long(&f), function_too_long(&f)]
+    .into_iter()
+    .flatten()
+    .chain(Some(docs(&f)).filter(|text| !text.is_empty()))
+    .collect();
   QualityFindings {
     errors: errors(&f, scan),
-    advisories: Some(docs(&f))
-      .filter(|text| !text.is_empty())
-      .into_iter()
-      .collect(),
+    advisories,
   }
 }
 

@@ -32,7 +32,7 @@
             "value": "advise"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "advise"
@@ -44,10 +44,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -59,7 +56,7 @@
             "value": "advise"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "advise"
@@ -71,10 +68,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -336,7 +330,7 @@
             "value": "advise"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "advise"
@@ -348,10 +342,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -363,7 +354,7 @@
             "value": "advise"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "advise"
@@ -375,10 +366,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -625,9 +613,6 @@
             "protectedFiles": {
               "mode": "block"
             },
-            "mcpBlocker": {
-              "mode": "block"
-            },
             "bashCommands": {
               "mode": "block"
             }
@@ -661,9 +646,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "advise"
           },
@@ -686,9 +668,6 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -951,7 +930,7 @@
             "value": "advise"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "advise"
@@ -963,10 +942,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -978,7 +954,7 @@
             "value": "advise"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "advise"
@@ -990,10 +966,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -1268,9 +1241,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -1293,9 +1263,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -1558,7 +1525,7 @@
             "value": "advise"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "advise"
@@ -1570,10 +1537,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -1585,7 +1549,7 @@
             "value": "advise"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "advise"
@@ -1597,10 +1561,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -1868,9 +1829,6 @@
             },
             "protectedFiles": {
               "mode": "ask"
-            },
-            "mcpBlocker": {
-              "mode": "ask"
             }
           }
         },
@@ -1902,9 +1860,6 @@
           "gateMode protectedFiles claude": {
             "value": "ask"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
-          },
           "gateMode pushReview codex": {
             "value": "advise"
           },
@@ -1927,9 +1882,6 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -2201,7 +2153,7 @@
             "value": "off"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "off"
@@ -2216,10 +2168,7 @@
             ]
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -2231,7 +2180,7 @@
             "value": "off"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "off"
@@ -2246,10 +2195,7 @@
             ]
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -2510,7 +2456,7 @@
             "value": "off"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "off"
@@ -2522,10 +2468,7 @@
             "value": "off"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -2537,7 +2480,7 @@
             "value": "off"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "off"
@@ -2549,10 +2492,7 @@
             "value": "off"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -2819,7 +2759,7 @@
             "value": "advise"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "advise"
@@ -2831,10 +2771,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -2846,7 +2783,7 @@
             "value": "advise"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "advise"
@@ -2858,10 +2795,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -3210,7 +3144,7 @@
             "value": "off"
           },
           "gateMode bashCommands claude": {
-            "value": "ask",
+            "value": "advise",
             "warnings": [
               "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
             ]
@@ -3228,13 +3162,7 @@
             "value": "off"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask",
-            "warnings": [
-              "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
-            ]
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask",
+            "value": "advise",
             "warnings": [
               "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
             ]
@@ -3256,7 +3184,7 @@
             "value": "off"
           },
           "gateMode bashCommands codex": {
-            "value": "block",
+            "value": "advise",
             "warnings": [
               "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
             ]
@@ -3274,13 +3202,7 @@
             "value": "off"
           },
           "gateMode protectedFiles codex": {
-            "value": "block",
-            "warnings": [
-              "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
-            ]
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block",
+            "value": "advise",
             "warnings": [
               "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
             ]
@@ -3569,9 +3491,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -3594,9 +3513,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -3870,9 +3786,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -3895,9 +3808,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -4171,9 +4081,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -4196,9 +4103,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -4482,7 +4386,7 @@
             "value": "advise"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "advise"
@@ -4494,10 +4398,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "block"
@@ -4509,7 +4410,7 @@
             "value": "advise"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "advise"
@@ -4521,10 +4422,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -4777,7 +4675,7 @@
             "value": "advise"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "advise"
@@ -4789,10 +4687,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -4804,7 +4699,7 @@
             "value": "advise"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "advise"
@@ -4816,10 +4711,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -5094,9 +4986,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -5119,9 +5008,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -5397,9 +5283,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -5422,9 +5305,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -5700,9 +5580,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -5725,9 +5602,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -6080,7 +5954,7 @@
             "value": "off"
           },
           "gateMode bashCommands claude": {
-            "value": "ask",
+            "value": "advise",
             "warnings": [
               "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
             ]
@@ -6098,13 +5972,7 @@
             "value": "off"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask",
-            "warnings": [
-              "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
-            ]
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask",
+            "value": "advise",
             "warnings": [
               "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
             ]
@@ -6122,7 +5990,7 @@
             "value": "off"
           },
           "gateMode bashCommands codex": {
-            "value": "block",
+            "value": "advise",
             "warnings": [
               "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
             ]
@@ -6140,13 +6008,7 @@
             "value": "off"
           },
           "gateMode protectedFiles codex": {
-            "value": "block",
-            "warnings": [
-              "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
-            ]
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block",
+            "value": "advise",
             "warnings": [
               "gates.preset: 'chaotic' is not an allowed value (strict balanced relaxed); using balanced"
             ]
@@ -6417,7 +6279,7 @@
             "value": "advise"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "advise"
@@ -6429,10 +6291,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -6444,7 +6303,7 @@
             "value": "advise"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "advise"
@@ -6456,10 +6315,7 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -6734,9 +6590,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -6759,9 +6612,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -7030,9 +6880,6 @@
             },
             "protectedFiles": {
               "mode": "ask"
-            },
-            "mcpBlocker": {
-              "mode": "ask"
             }
           }
         },
@@ -7064,9 +6911,6 @@
           "gateMode protectedFiles claude": {
             "value": "ask"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
-          },
           "gateMode pushReview codex": {
             "value": "advise"
           },
@@ -7089,9 +6933,6 @@
             "value": "advise"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -7371,9 +7212,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -7396,9 +7234,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -7678,9 +7513,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -7703,9 +7535,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -7985,9 +7814,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -8010,9 +7836,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -8292,9 +8115,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -8317,9 +8137,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -8595,9 +8412,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -8620,9 +8434,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -8898,9 +8709,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -8923,9 +8731,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -9190,7 +8995,7 @@
             "value": "off"
           },
           "gateMode bashCommands claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode planLedger claude": {
             "value": "off"
@@ -9202,10 +9007,7 @@
             "value": "off"
           },
           "gateMode protectedFiles claude": {
-            "value": "ask"
-          },
-          "gateMode mcpBlocker claude": {
-            "value": "ask"
+            "value": "advise"
           },
           "gateMode pushReview codex": {
             "value": "advise"
@@ -9217,7 +9019,7 @@
             "value": "off"
           },
           "gateMode bashCommands codex": {
-            "value": "block"
+            "value": "advise"
           },
           "gateMode planLedger codex": {
             "value": "off"
@@ -9229,10 +9031,7 @@
             "value": "off"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
-            "value": "block"
+            "value": "advise"
           },
           "model mechanical": {
             "value": "haiku"
@@ -9507,9 +9306,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -9532,9 +9328,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -9810,9 +9603,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -9835,9 +9625,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -10113,9 +9900,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -10138,9 +9922,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -10425,9 +10206,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -10450,9 +10228,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {
@@ -10728,9 +10503,6 @@
           "gateMode protectedFiles claude": {
             "value": "block"
           },
-          "gateMode mcpBlocker claude": {
-            "value": "block"
-          },
           "gateMode pushReview codex": {
             "value": "block"
           },
@@ -10753,9 +10525,6 @@
             "value": "block"
           },
           "gateMode protectedFiles codex": {
-            "value": "block"
-          },
-          "gateMode mcpBlocker codex": {
             "value": "block"
           },
           "model mechanical": {

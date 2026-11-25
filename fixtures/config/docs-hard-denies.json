@@ -1,1 +1,10 @@
-{"gates":{"protectedFiles":{"mode":"block"},"mcpBlocker":{"mode":"block"},"bashCommands":{"mode":"block"}}}
+{
+  "gates": {
+    "protectedFiles": {
+      "mode": "block"
+    },
+    "bashCommands": {
+      "mode": "block"
+    }
+  }
+}

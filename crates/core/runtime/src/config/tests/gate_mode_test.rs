@@ -24,26 +24,26 @@ fn modes(c: &LoadedConfig) -> Vec<&'static str> {
 }
 
 #[test]
-fn balanced_blocks_quality_and_size_asks_on_guardrails_and_advises_the_rest() {
+fn balanced_blocks_only_quality_gate_and_advises_everything_else() {
   let c = config(json!({}), Host::Claude);
   assert_eq!(gate_preset(&c), "balanced");
   assert_eq!(
     modes(&c),
     [
-      "advise", "block", "advise", "ask", "advise", "advise", "advise", "ask", "ask", "block"
+      "advise", "block", "advise", "advise", "advise", "advise", "advise", "advise", "advise"
     ]
   );
 }
 
 #[test]
-fn strict_blocks_everything_and_relaxed_keeps_guardrails_asking() {
+fn strict_blocks_everything_and_relaxed_switches_off_the_judgement_gates() {
   let strict = config(json!({ "gates": { "preset": "strict" } }), Host::Claude);
   assert!(modes(&strict).iter().all(|mode| *mode == "block"));
   let relaxed = config(json!({ "gates": { "preset": "relaxed" } }), Host::Claude);
   assert_eq!(
     modes(&relaxed),
     [
-      "advise", "advise", "off", "ask", "off", "off", "off", "ask", "ask", "advise"
+      "advise", "advise", "off", "advise", "off", "off", "off", "advise", "advise"
     ]
   );
 }

@@ -46,13 +46,7 @@ line; discard vague feedback.
 - Fix existing errors or warnings in touched files.
 - If the same approach fails twice, stop and change the hypothesis.
 
-## 4. Run full gates
-
-Run the project's full check, lint, typecheck, and test commands as defined by
-repository instructions and toolchain configuration. If none exist, say so.
-Fix failures and rerun all required gates until green.
-
-## 5. Commit intentionally
+## 4. Commit intentionally
 
 Stage only files belonging to each logical commit. Use scoped Conventional
 Commit messages (`type(scope): description`) and split unrelated changes. When
@@ -60,8 +54,9 @@ git-better is installed, end each message with an `Intent:` trailer saying why
 the change is needed. Never use `--no-verify`; fix hook failures instead.
 
 After the final commit, run `code-review:review` (with the same automatic
-fallback) on the final committed diff. Fix findings, rerun gates and commit
+fallback) on the final committed diff. Fix findings, run relevant checks and commit
 before re-reviewing until complete and clean.
 
-Report reviewed scope, fixes, final gate results, and produced commit hashes.
-Completion requires green gates and a clean working tree.
+Report reviewed scope, fixes, check results, and produced commit hashes.
+Run the full project quality suite at delivery before opening the PR or pushing
+review fixes.

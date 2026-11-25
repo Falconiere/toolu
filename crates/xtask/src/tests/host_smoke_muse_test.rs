@@ -180,53 +180,14 @@ fn a_failed_install_stops_prepare() {
 }
 
 #[test]
-fn the_muse_edit_keeps_the_failure_it_recorded_under_toolu() {
-  let dir = tempfile::tempdir().unwrap();
-  let project = dir.path().join("project");
-  std::fs::create_dir_all(project.join(".toolu/tmp/muse")).unwrap();
-  let failing = "{\"status\": \"failing\"}";
-  let body = format!(
-    "cd '{p}'\nprintf 'a\\nb\\n' > sample.ts\nprintf '%s' '{failing}' > .toolu/tmp/muse/quality-gate-status.json\n\
-     sleep 0.3\nprintf 'fixed\\n' > sample.ts\nprintf '{{}}' > .toolu/tmp/muse/quality-gate-status.json",
-    p = project.display()
-  );
-  let muse = Muse {
-    exe: script(dir.path(), "muse", &body),
-    repo: PathBuf::new(),
-  };
-  let env = env(dir.path());
-  let run = Run {
-    root: dir.path(),
-    env: &env,
-  };
-  muse.edit(&run, &project).unwrap();
-  assert_eq!(
-    std::fs::read_to_string(project.join("sample.ts")).unwrap(),
-    "a\nb\n"
-  );
-  assert!(dir.path().join("muse-edit.jsonl").is_file());
-  let quiet = Muse {
-    exe: script(dir.path(), "muse", "echo nothing happened"),
-    repo: PathBuf::new(),
-  };
-  let fresh = dir.path().join("fresh");
-  std::fs::create_dir_all(&fresh).unwrap();
-  let err = quiet.edit(&run, &fresh).unwrap_err();
-  assert!(
-    err.starts_with("muse did not record a live failing edit"),
-    "{err}"
-  );
-}
-
-#[test]
-fn the_muse_driver_stages_before_its_commit_prompt() {
+fn the_muse_driver_names_itself_and_keeps_its_prompts() {
   let muse = Muse {
     exe: "muse".into(),
     repo: "/repo".into(),
   };
   assert_eq!(muse.name(), "muse");
   let prompts = muse.prompts();
-  assert!(prompts.stages_first && !prompts.commit.contains("git add"));
+  assert!(!prompts.commit.contains("git add"));
   let step = Step {
     name: "x",
     tools: "Bash",

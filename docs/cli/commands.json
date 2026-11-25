@@ -683,7 +683,7 @@
       "placeholder": false
     },
     {
-      "about": "TypeScript quality rules that run after each edit",
+      "about": "TypeScript quality rules for reviews and the push gate",
       "aliases": [],
       "args": [],
       "commands": [
@@ -736,7 +736,7 @@
       ],
       "flags": [],
       "hidden": false,
-      "longAbout": "ts-quality has no verbs: its rules run after every edit of a .ts or .tsx file in a TypeScript project with a package manager. Violations (type assertions, console.log, suppression comments, oversized files and functions, swallowed errors, mocks in tests and more) fail the file's quality-gate entry until it is fixed; duplication, JSDoc and unhandled-await findings are advisories.\n\nLimits come from lang.ts in toolu.config.json (maxFileLines, maxFnLines, noMocks). Run toolu doctor to see whether the rule is registered and compiled in.",
+      "longAbout": "ts-quality has no verbs and no longer runs after every edit; its SessionStart hook retires any earlier registration. The same findings reach the project through its own lint and tests: a failing quality command marks the gate, and a failing gate denies git push while gates.qualityGate blocks — commits are never stopped. Oversized files and functions advise and never block.\n\nLimits come from lang.ts in toolu.config.json (maxFileLines, maxFnLines, noMocks).",
       "name": "ts-quality",
       "owner": "ts-quality",
       "path": [
@@ -745,7 +745,7 @@
       "placeholder": false
     },
     {
-      "about": "Python quality rules that run after each edit",
+      "about": "Python quality rules for reviews and the push gate",
       "aliases": [],
       "args": [],
       "commands": [
@@ -798,7 +798,7 @@
       ],
       "flags": [],
       "hidden": false,
-      "longAbout": "python-quality has no verbs: its rules run after every edit of a .py file in a Python project (pyproject.toml, setup.py, setup.cfg or requirements.txt) with python3 on PATH. Violations (oversized files and functions, misplaced or misnamed tests, bare except, blanket # noqa or # type: ignore, mocks in tests) fail the file's quality-gate entry until it is fixed; a public def or class without a docstring is an advisory.\n\nLimits come from lang.python in toolu.config.json (maxFileLines, maxFnLines, noMocks). Run toolu doctor to see whether the rule is registered and compiled in.",
+      "longAbout": "python-quality has no verbs and no longer runs after every edit; its SessionStart hook retires any earlier registration. The same findings reach the project through its own linter and tests: a failing quality command marks the gate, and a failing gate denies git push while gates.qualityGate blocks — commits are never stopped. Oversized files and functions advise and never block.\n\nLimits come from lang.python in toolu.config.json (maxFileLines, maxFnLines, noMocks).",
       "name": "python-quality",
       "owner": "python-quality",
       "path": [
@@ -807,7 +807,7 @@
       "placeholder": false
     },
     {
-      "about": "Rust quality rules that run after each edit",
+      "about": "Rust quality rules for reviews and the push gate",
       "aliases": [],
       "args": [],
       "commands": [
@@ -883,7 +883,7 @@
       ],
       "flags": [],
       "hidden": false,
-      "longAbout": "rust-quality's rules run after every edit of a .rs file in a Cargo project with cargo on PATH. Violations (oversized files, functions and impl blocks, inline test modules, misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, mocks) fail the file's quality-gate entry until it is fixed; missing or verbose docs are advisories.\n\nLimits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, maxImplLines, noMocks); crates allowed to use unsafe are listed in settings/rust-unsafe-exemptions.txt. toolu rust-quality check runs the same blocking rules over a whole repository. Run toolu doctor to see whether the rule is registered and compiled in.",
+      "longAbout": "rust-quality no longer runs after every edit; its SessionStart hook retires any earlier registration. toolu rust-quality check runs the blocking rules over a whole repository (or the paths you name). Blocking findings (inline test modules, misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, mocks) fail the file's quality-gate entry; a failing gate denies git push while gates.qualityGate blocks — commits are never stopped. Oversized files, functions and impl blocks and missing or verbose docs advise and never block.\n\nLimits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, maxImplLines, noMocks); crates allowed to use unsafe are listed in settings/rust-unsafe-exemptions.txt.",
       "name": "rust-quality",
       "owner": "rust-quality",
       "path": [

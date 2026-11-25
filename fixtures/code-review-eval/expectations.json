@@ -36,7 +36,7 @@
       "memory": null,
       "expectations": [
         {"id": "defect-zero-page", "path": "src/limits.rs", "claim": "zero", "kind": "defect"},
-        {"id": "fp-div-ceil", "path": "src/pages.rs", "claim": "use div_ceil", "kind": "false_positive"}
+        {"id": "defect-partial-page", "path": "src/pages.rs", "claim": "partial page", "kind": "defect"}
       ],
       "gate": {
         "blocking_severities_drive_count": true,

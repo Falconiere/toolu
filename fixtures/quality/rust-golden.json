@@ -372,11 +372,11 @@
     ],
     "assembled: two violations in rule order [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \".unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \".unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
           ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
         }
@@ -384,22 +384,22 @@
     ],
     "assembled: fixing one of two keeps the gate failing [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \".unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \".unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
           ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
         }
       },
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/src/bad.rs (12 code lines, blanks/comments excluded) — split into submodules\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (12 code lines, blanks/comments excluded) — split into submodules\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (12 code lines, blanks/comments excluded) — split into submodules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (12 code lines, blanks/comments excluded) — split into submodules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"rust-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
         }
       }
@@ -425,11 +425,11 @@
     ],
     "assembled: every rule family in order [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/src/all.rs (15 code lines, blanks/comments excluded) — split into submodules\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\nFunction too long in <ROOT>/project/src/all.rs (>3 lines) — extract helpers.\\nImpl block too large in <ROOT>/project/src/all.rs (>4 lines) — split into trait impls or modules.\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/all.rs\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/all.rs (15 code lines, blanks/comments excluded) — split into submodules\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\nFunction too long in <ROOT>/project/src/all.rs (>3 lines) — extract helpers.\\nImpl block too large in <ROOT>/project/src/all.rs (>4 lines) — split into trait impls or modules.\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/all.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/all.rs (15 code lines, blanks/comments excluded) — split into submodules\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\nFunction too long in <ROOT>/project/src/all.rs (>3 lines) — extract helpers.\\nImpl block too large in <ROOT>/project/src/all.rs (>4 lines) — split into trait impls or modules.\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/all.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/all.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
           ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/all.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 5,\n      \"maxFnLines\": 3,\n      \"maxImplLines\": 4\n    }\n  }\n}\n"
         }
@@ -437,12 +437,10 @@
     ],
     "size: a clippy config names clippy in the hint [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 3-line limit: <ROOT>/project/src/big.rs (4 code lines, blanks/comments excluded) — split into submodules (clippy enforces complexity here)\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 3-line limit: <ROOT>/project/src/big.rs (4 code lines, blanks/comments excluded) — split into submodules (clippy enforces complexity here)\\nPublic items missing a /// doc comment in <ROOT>/project/src/big.rs — add a concise one-line doc:\\n1: pub const A: u8 = 1;\\n2: pub const B: u8 = 2;\\n3: pub const C: u8 = 3;\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.rs\",\n  \"violations\": \"File exceeds 3-line limit: <ROOT>/project/src/big.rs (4 code lines, blanks/comments excluded) — split into submodules (clippy enforces complexity here)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 3-line limit: <ROOT>/project/src/big.rs (4 code lines, blanks/comments excluded) — split into submodules (clippy enforces complexity here)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 3\n    }\n  }\n}\n"
         }
       }
@@ -762,48 +760,40 @@
     ],
     "size: project config lowers maxFileLines, flags a file the default would not [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 10-line limit: <ROOT>/project/src/big.rs (15 code lines, blanks/comments excluded) — split into submodules\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 10-line limit: <ROOT>/project/src/big.rs (15 code lines, blanks/comments excluded) — split into submodules\\nPublic items missing a /// doc comment in <ROOT>/project/src/big.rs — add a concise one-line doc:\\n1: pub const V1: u32 = 1;\\n2: pub const V2: u32 = 2;\\n3: pub const V3: u32 = 3;\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.rs\",\n  \"violations\": \"File exceeds 10-line limit: <ROOT>/project/src/big.rs (15 code lines, blanks/comments excluded) — split into submodules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 10-line limit: <ROOT>/project/src/big.rs (15 code lines, blanks/comments excluded) — split into submodules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
         }
       }
     ],
     "size: over-limit message flags approximate size on unterminated /* [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 2-line limit: <ROOT>/project/src/m.rs (4 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into submodules\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"File exceeds 2-line limit: <ROOT>/project/src/m.rs (4 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into submodules\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"File exceeds 2-line limit: <ROOT>/project/src/m.rs (4 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into submodules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 2-line limit: <ROOT>/project/src/m.rs (4 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into submodules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 2\n    }\n  }\n}\n"
         }
       }
     ],
     "size: pub(crate) const fn is subject to the fn-length limit [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\nPublic items missing a /// doc comment in <ROOT>/project/src/m.rs — add a concise one-line doc:\\n1: pub(crate) const fn big() -> u8 {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
     ],
     "size: long fn with inner if/else is measured to its real close (regression) [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/long.rs (>5 lines) — extract helpers.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/long.rs (>5 lines) — extract helpers.\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/long.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/long.rs (>5 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/long.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/long.rs (>5 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/long.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
         }
       }
@@ -820,48 +810,40 @@
     ],
     "size: long method inside an impl IS flagged [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\nPublic items missing a /// doc comment in <ROOT>/project/src/m.rs — add a concise one-line doc:\\n1: pub struct Foo;\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
         }
       }
     ],
     "size: long fn with unbalanced brace in a string is still measured [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
         }
       }
     ],
     "size: pub(in path) fn is subject to the fn-length limit [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\nPublic items missing a /// doc comment in <ROOT>/project/src/m.rs — add a concise one-line doc:\\n1: pub(in crate::foo) fn big() -> u8 {\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
         }
       }
     ],
     "size: oversized impl block is flagged (brace-depth) [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nImpl block too large in <ROOT>/project/src/m.rs (>6 lines) — split into trait impls or modules.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Impl block too large in <ROOT>/project/src/m.rs (>6 lines) — split into trait impls or modules.\\nPublic items missing a /// doc comment in <ROOT>/project/src/m.rs — add a concise one-line doc:\\n1: pub struct Foo;\\n3:     pub const V1: u8 = 1;\\n4:     pub const V2: u8 = 2;\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Impl block too large in <ROOT>/project/src/m.rs (>6 lines) — split into trait impls or modules.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Impl block too large in <ROOT>/project/src/m.rs (>6 lines) — split into trait impls or modules.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxImplLines\": 6\n    }\n  }\n}\n"
         }
       }
@@ -916,24 +898,20 @@
     ],
     "size: async unsafe extern fn heads are measured [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/x.rs (>2 lines) — extract helpers.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Function too long in <ROOT>/project/src/x.rs (>2 lines) — extract helpers.\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/x.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/x.rs (>2 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/x.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/x.rs (>2 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/x.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 2\n    }\n  }\n}\n"
         }
       }
     ],
     "size: an unsafe impl block is measured [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nImpl block too large in <ROOT>/project/src/x.rs (>2 lines) — split into trait impls or modules.\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Impl block too large in <ROOT>/project/src/x.rs (>2 lines) — split into trait impls or modules.\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/x.rs\",\n  \"violations\": \"Impl block too large in <ROOT>/project/src/x.rs (>2 lines) — split into trait impls or modules.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/x.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Impl block too large in <ROOT>/project/src/x.rs (>2 lines) — split into trait impls or modules.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
-          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/x.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
           ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxImplLines\": 2\n    }\n  }\n}\n"
         }
       }

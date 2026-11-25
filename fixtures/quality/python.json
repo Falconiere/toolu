@@ -176,7 +176,7 @@
         }
       ],
       "expect": "advisory",
-      "contains": ["exceeds 5-line limit", "bare except"],
+      "contains": ["bare except"],
       "config": {
         "lang": {
           "python": {

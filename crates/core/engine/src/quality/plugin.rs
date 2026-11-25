@@ -17,6 +17,9 @@ use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::manifest::ModuleManifest;
 use toolu_runtime::registry::{ModuleKind, RegistryEvent, event_dir, file_name};
 use toolu_runtime::startup::dependencies::{NoticeStyle, codex_dependency_notice};
+use toolu_state::ctx::StateCtx;
+use toolu_state::gate_file::{GateRead, clear_gate_file, read_gate_file};
+use toolu_state::gate_schema::GateFile;
 
 /// The core plugin every quality plugin needs.
 const CORE_PLUGIN: &str = "toolu@toolu";
@@ -145,6 +148,34 @@ impl QualityPlugin {
     Ok(migrated)
   }
 
+  /// Remove this plugin's manifest, `.js`/`.sh` modules and aged tmp residue
+  /// from `dir`; whether anything was removed.
+  fn sweep(&self, dir: &Path) -> Result<bool, String> {
+    let Ok(list) = fs::read_dir(dir) else {
+      return Ok(false);
+    };
+    let manifest =
+      file_name(self.spec, self.name, ModuleKind::Manifest).map_err(|error| error.0)?;
+    let prefix = format!("{}__", self.spec);
+    let mut removed = false;
+    for entry in list.flatten() {
+      let name = entry.file_name().to_string_lossy().into_owned();
+      let path = entry.path();
+      if !name.starts_with(&prefix) {
+        continue;
+      }
+      let stale = name == manifest
+        || (is_residue(&name) && old_enough(&path))
+        || (has_extension(&name, &["js", "sh"])
+          && fs::metadata(&path).is_ok_and(|meta| meta.is_file()));
+      if stale {
+        fs::remove_file(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+        removed = true;
+      }
+    }
+    Ok(removed)
+  }
+
   fn sync(&self, env: &Env, roots: &Roots) -> Result<bool, String> {
     let manifest = publish(env, roots, &self.manifest())?;
     let post = event_dir(roots, RegistryEvent::ToolPost);
@@ -165,6 +196,54 @@ impl QualityPlugin {
       Err(error) => Some(format!("{} registration failed: {error}", self.plugin)),
     };
     Outcome::notice(message)
+  }
+
+  /// Remove this plugin's post-edit rule manifest and its old `.js`/`.sh`
+  /// modules: sessions no longer register per-edit checks, and the checks run
+  /// only when the plugin's `check` command or a review asks for them. Never
+  /// fails the session: an error is a `systemMessage`.
+  pub fn forget(&self, env: &Env, host: Host, cwd: Option<&Path>) -> Outcome {
+    let roots = Roots::new(env.clone(), Some(host));
+    let message = [RegistryEvent::ToolPost, RegistryEvent::ToolPre]
+      .into_iter()
+      .find_map(|event| {
+        self
+          .sweep(&event_dir(&roots, event))
+          .err()
+          .map(|error| format!("{} unregistration failed: {error}", self.plugin))
+      });
+    if message.is_none() {
+      self.clear_retired_failures(roots, cwd);
+    }
+    Outcome::notice(message)
+  }
+
+  fn clear_retired_failures(&self, roots: Roots, cwd: Option<&Path>) {
+    let Some(state_dir) = roots.project_state_root(cwd, None) else {
+      return;
+    };
+    let gate = state_dir.join("quality-gate-status.json");
+    let GateRead::Ok(GateFile::Failing {
+      entries,
+      source,
+      file,
+      ..
+    }) = read_gate_file(&gate)
+    else {
+      return;
+    };
+    let owner = format!("{}-hook", self.plugin);
+    let mut state = StateCtx::new(roots);
+    if let Some(entries) = entries {
+      for (key, _) in entries
+        .into_iter()
+        .filter(|(_, entry)| entry.source == owner)
+      {
+        clear_gate_file(&mut state, &gate, &key, &owner);
+      }
+    } else if source == owner {
+      clear_gate_file(&mut state, &gate, &file, &owner);
+    }
   }
 }
 

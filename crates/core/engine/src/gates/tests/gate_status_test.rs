@@ -96,6 +96,35 @@ fn a_failure_records_and_advises_and_run_matches_run_warning() {
 }
 
 #[test]
+fn captured_claude_bash_outcomes_update_only_on_a_completed_call() {
+  let dir = tempfile::tempdir().unwrap();
+  let gate = dir.path().join(".claude/tmp/quality-gate-status.json");
+  let mut failure = object(&json!({
+    "hook_event_name":"PostToolUseFailure",
+    "tool_name":"Bash","tool_input":{"command":"cargo test"},
+    "error":"Exit code 1","is_interrupt":true
+  }));
+  assert_eq!(run(dir.path(), &failure).0, Ok(Decision::Allow));
+  assert!(!gate.exists());
+  failure.insert("is_interrupt".to_owned(), json!(false));
+  assert_eq!(run(dir.path(), &failure).0, Ok(Decision::Allow));
+  let state: Value = serde_json::from_slice(&std::fs::read(&gate).unwrap()).unwrap();
+  assert_eq!(
+    state["reason"],
+    "Quality command failed: cargo test (exit 1)"
+  );
+
+  let success = object(&json!({
+    "hook_event_name":"PostToolUse",
+    "tool_name":"Bash","tool_input":{"command":"cargo test"},
+    "tool_response":{"stdout":"","stderr":"","interrupted":false,"isImage":false,"noOutputExpected":false}
+  }));
+  assert_eq!(run(dir.path(), &success).0, Ok(Decision::Allow));
+  let state: Value = serde_json::from_slice(&std::fs::read(gate).unwrap()).unwrap();
+  assert_eq!(state["status"], "passing");
+}
+
+#[test]
 fn an_unrecognized_gate_document_is_replaced_with_a_warning() {
   let dir = tempfile::tempdir().unwrap();
   let gate = dir.path().join(".claude/tmp/quality-gate-status.json");

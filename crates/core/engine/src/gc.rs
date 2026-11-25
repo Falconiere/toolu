@@ -1,6 +1,6 @@
 //! Reclaim what finished epics and gates leave behind: merged worktrees and
 //! branches, the `refs/epic-wip/*` snapshots of merged issues, old job logs,
-//! and idle VMs. [`sweep`] reports by default and acts with `apply`; `toolu gc`
+//! and idle VMs. [`sweep`](crate::gc::sweep) reports by default and acts with `apply`. `toolu gc`
 //! and the epic engine (after `epic-closed`) both call it. Every step tolerates
 //! "already gone", so a repeated sweep is harmless.
 

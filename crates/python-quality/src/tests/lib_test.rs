@@ -14,7 +14,9 @@ fn the_python_quality_crate_is_its_plugin_and_prints_its_guide() {
   let guide = run(&matches, &Ctx::default()).stdout.unwrap_or_default();
   assert!(guide.starts_with("python-quality has no verbs"), "{guide}");
   assert!(guide.contains("lang.python in toolu.config.json"));
+  assert!(guide.contains("no longer runs after every edit"), "{guide}");
   assert!(
-    guide.ends_with("Run toolu doctor to see whether the rule is registered and compiled in.")
+    guide.contains("Oversized files and functions advise"),
+    "{guide}"
   );
 }

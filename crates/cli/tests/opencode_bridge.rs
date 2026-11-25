@@ -71,26 +71,30 @@ impl Sb {
 }
 
 #[test]
-fn a_protected_file_write_is_denied_before_the_tool_runs() {
+fn a_protected_file_write_advises_before_the_tool_runs() {
   let sb = Sb::new().unwrap();
   let target = sb.path("project/.env").display().to_string();
   let event = json!({"tool": "write", "sessionID": "ses_1", "id": "call_1",
     "input": {"path": target, "content": "SECRET=1"}});
   let reply = sb.bridge("tool.execute.before", "toolu", &event).unwrap();
-  assert_eq!(reply["action"], "deny", "{reply}");
+  assert_eq!(reply["action"], "continue", "{reply}");
   assert!(
-    reply["reason"].as_str().unwrap().contains(".env"),
+    reply["context"].as_str().unwrap().contains(".env"),
     "{reply}"
   );
 }
 
 #[test]
-fn a_shell_write_to_a_protected_file_is_denied_and_a_read_runs() {
+fn a_shell_write_to_a_protected_file_advises_and_a_read_is_silent() {
   let sb = Sb::new().unwrap();
   let shell = json!({"tool": "shell", "sessionID": "s", "id": "c",
     "input": {"command": "echo SECRET=1 >.env"}});
   let reply = sb.bridge("tool.execute.before", "toolu", &shell).unwrap();
-  assert_eq!(reply["action"], "deny", "{reply}");
+  assert_eq!(reply["action"], "continue", "{reply}");
+  assert!(
+    reply["context"].as_str().unwrap().contains(".env"),
+    "{reply}"
+  );
   let read = json!({"tool": "read", "sessionID": "s", "id": "c", "input": {"path": "a.txt"}});
   assert_eq!(
     sb.bridge("tool.execute.before", "toolu", &read).unwrap(),

@@ -116,32 +116,44 @@ fn the_remote_base_wins_over_a_lagging_local_base() {
 }
 
 #[test]
-fn an_over_budget_push_is_denied_by_default_and_the_base_branch_is_exempt() {
+fn an_over_budget_push_advises_by_default_and_pins_honor_the_mode() {
   let repo = grown(350);
   let env = repo.env();
-  let Decision::Deny { reason } = push(&repo, &env) else {
-    panic!("the balanced preset blocks");
+  let Decision::Advisory { message } = push(&repo, &env) else {
+    panic!("the balanced preset advises");
   };
   assert!(
-    reason
+    message
       .as_str()
       .contains("351 of 300 code lines, 3 of 100 files against main"),
-    "{reason:?}"
+    "{message:?}"
+  );
+  assert!(
+    message.as_str().contains("does not block the push"),
+    "{message:?}"
   );
   let file = repo.root.join(".home/toolu.config.json");
   let set = |body: &str| std::fs::write(&file, body).expect("config");
-  set(r#"{"version":1,"gates":{"prSize":{"mode":"advise"}}}"#);
-  assert!(matches!(push(&repo, &env), Decision::Advisory { .. }));
+  set(r#"{"version":1,"gates":{"prSize":{"mode":"block"}}}"#);
+  let Decision::Deny { reason } = push(&repo, &env) else {
+    panic!("block mode denies");
+  };
+  assert!(reason.as_str().contains("Push denied"), "{reason:?}");
   set(r#"{"version":1,"gates":{"prSize":{"maxLines":351}}}"#);
   assert_eq!(push(&repo, &env), Decision::Allow);
-  set(r#"{"version":1}"#);
+  set(r#"{"version":1,"gates":{"prSize":{"mode":"block"}}}"#);
   let Decision::Deny { reason } = push(&repo, &env.clone().with("PUSH_REVIEW_BASE", "gone")) else {
-    panic!("an unmeasured branch is denied");
+    panic!("an unmeasured branch is denied in block mode");
   };
   assert!(
     reason.as_str().contains("base 'gone' not found locally"),
     "{reason:?}"
   );
+  set(r#"{"version":1}"#);
+  assert!(matches!(
+    push(&repo, &env.clone().with("PUSH_REVIEW_BASE", "gone")),
+    Decision::Advisory { .. }
+  ));
   repo
     .sh("git branch -q -D main && git branch -q -m main")
     .expect("rename");

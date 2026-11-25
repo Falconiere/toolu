@@ -24,7 +24,7 @@ Your AI coding agent is a superb pair-programmer, but left alone it optimizes fo
 
 toolu moves those rules out of your head and into the tool:
 
-- **Hooks check edits** — installed language-quality plugins check supported files after edits. A failing quality gate blocks commits and pushes in the main checkout under the default preset.
+- **Gates hold the push, not the edit** — nothing runs after an edit. A failing quality command turns the gate red, and under the default preset that red gate blocks `git push` in the main checkout while commits always land.
 - **Skills enforce a process** — one delivery-flow skill with write/review checkpoints before execution, so design happens before code and review happens before delivery.
 - **A registry keeps it modular** — drop in a domain plugin (Rust rules, TypeScript rules, structural search) and its hook modules register themselves into the core engine, fail-closed, with zero wiring.
 
@@ -32,7 +32,7 @@ It's a personal bundle, built in the open, MIT-licensed. Take the whole thing or
 
 ## The quality gate
 
-The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality` is installed, supported edits are checked on the spot. Shell changes are checked after a quality baseline exists, with a limit of 20 changed source files per event; see [shell quality checks](docs/registry.md#language-quality-rules). Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
+The headline feature, moved to where it does not slow the agent down. When `rust-quality`, `ts-quality`, and/or `python-quality` is installed, its rules are available to review and to `toolu rust-quality check`, but **no edit is checked on the spot**: the plugins' SessionStart hook retires any per-edit registration. Enforcement is at push: a quality command the agent runs (`cargo test`, `bun test`, `tsc`, …) records its result, and a red gate blocks `git push` while commits always land. Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
 
 <table>
 <tr><th align="left">TypeScript</th><th align="left">Rust</th><th align="left">Python</th></tr>
@@ -67,7 +67,7 @@ The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality`
 </td></tr>
 </table>
 
-In the main checkout, the default `balanced` preset blocks commits and pushes while the quality gate is red. Fix the reported failures to clear it. Gate delivery is configurable through [gate modes](docs/config.md#gate-modes-gates); the `strict` preset also blocks on missing review and documentation evidence.
+In the main checkout, the default `balanced` preset blocks `git push` while the quality gate is red; commits are never stopped. Fix the reported failures to clear it. Size findings advise and never block. Gate delivery is configurable through [gate modes](docs/config.md#gate-modes-gates); the `strict` preset blocks every gate, including review and documentation evidence.
 
 ## Install
 
@@ -198,9 +198,9 @@ plugins.
 | Group | Plugin | What it does |
 |--------|--------|--------------|
 | Core | **`toolu`** | Registry-driven hook engine, commit workflows, model routing, push-review gate, and custom-agent templates. |
-| Quality gate | **`rust-quality`** | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
-| Quality gate | **`ts-quality`** | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
-| Quality gate | **`python-quality`** | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
+| Quality gate | **`rust-quality`** | Rust quality rules for reviews and the push gate — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
+| Quality gate | **`ts-quality`** | TypeScript quality rules for reviews and the push gate — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
+| Quality gate | **`python-quality`** | Python quality rules for reviews and the push gate — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
 | Code intel | **`ast-grep`** | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
 | Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores over text and images that a script can branch on. |
 | Workflow | **`documentation-gate`** | Jev-routed editing worker and committed-diff documentation review. |

@@ -33,6 +33,7 @@ Standalone, no plugin dependencies.
 ## What it provides
 
 - **`jev` skill** — mandatory when semantic decisions exist: gather evidence, call before the decision it informs, and reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions and reuse unchanged results.
+- **`jev-eval`, `jev-triage`, `jev-documents`, `jev-act` skills** — task recipes on top of the same `toolu jev` verbs: graded judging and self-consistency of outputs; routing items into categories with a none-fits gate; document and image extraction with companion presence checks; and gating an agent's action on a probability with a calibrated band. Each defers syntax to the `jev` skill.
 - **Jev CLI** — `toolu jev` provides `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call, including Box questions that locate a target in an image). Every verb takes `--image REF=PATH` for PNG or JPEG input.
 - **SessionStart hook** — removes the `<config-dir>/jev/jev.sh` link older versions published (a file of your own stays) and injects the mandate to run `toolu jev` on startup, resume, clear, and compaction. It makes no API call.
 - **UserPromptSubmit hook** — restates that mandate on substantive prompts so it survives long sessions; silent for trivial confirmations. An absent hook key prompts command-environment verification. No API call.

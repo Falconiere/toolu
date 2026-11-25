@@ -43,14 +43,13 @@ fn the_private_config_holds_both_checkout_plugins_with_their_shims() {
 }
 
 #[test]
-fn the_driver_names_itself_opencode_and_gets_the_staged_prompts() {
+fn the_driver_names_itself_opencode_and_gets_the_shell_prompts() {
   let driver = Opencode {
     exe: "/bin/opencode".into(),
     model: Some("m/x".to_owned()),
   };
   assert_eq!(driver.name(), "opencode");
   let prompts = driver.prompts();
-  assert!(prompts.stages_first);
   assert_eq!(prompts.allowed, crate::host_smoke_prompts::CODEX_ALLOWED);
   let step = Step {
     name: "edit",

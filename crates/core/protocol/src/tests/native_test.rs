@@ -153,6 +153,7 @@ fn cursor_and_hermes_names_belong_to_one_host() {
   assert_eq!(hosts_for_native("beforeShellExecution"), [Host::Cursor]);
   assert_eq!(hosts_for_native("afterFileEdit"), [Host::Cursor]);
   assert_eq!(hosts_for_native("pre_tool_call"), [Host::Hermes]);
+  assert_eq!(hosts_for_native("PostToolUseFailure"), [Host::Claude]);
 }
 
 #[test]

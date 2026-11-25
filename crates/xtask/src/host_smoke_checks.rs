@@ -3,6 +3,13 @@
 
 use std::path::Path;
 
+use serde_json::Value;
+
+const GATE_FILE: &str = "quality-gate-status.json";
+const STATUS: &str = "failing";
+const SOURCE: &str = "gate-status-hook";
+const REASON: &str = "Quality command failed: sh tools/smoke/test.sh (exit 1)";
+
 /// `Ok` when `condition` holds, else the `message`.
 pub(crate) fn must(condition: bool, message: &str) -> Result<(), String> {
   if condition {
@@ -45,42 +52,41 @@ pub(crate) fn ran_in(nonce: &str, transcript: &str) -> Result<(), String> {
   )
 }
 
-/// The gate file records the failing edit, and `sample.ts` holds it.
+/// The gate file records the failing quality command.
 pub(crate) fn quality(project: &Path, state_dir: &str) -> Result<(), String> {
-  let gate = project.join(state_dir).join("quality-gate-status.json");
+  let gate = gate(project, state_dir);
   let state = std::fs::read_to_string(&gate)
     .map_err(|err| format!("quality gate file missing: {}: {err}", gate.display()))?;
-  let source = std::fs::read_to_string(project.join("sample.ts"))
-    .map_err(|err| format!("cannot read sample.ts: {err}"))?;
-  quality_state(&state, &source)
+  quality_state(&state)
 }
 
-/// The pure half of [`quality`].
-pub(crate) fn quality_state(state: &str, source: &str) -> Result<(), String> {
+/// The pure half of [`quality`]: the gate file records the failing wrapper command.
+pub(crate) fn quality_state(state: &str) -> Result<(), String> {
+  let state: Value =
+    serde_json::from_str(state).map_err(|err| format!("the quality gate is not JSON: {err}"))?;
   must(
-    state.contains("\"status\": \"failing\"") && state.contains("TS file exceeds 3-line limit"),
-    "quality failure not recorded",
-  )?;
-  must(
-    source.lines().filter(|line| !line.is_empty()).count() >= 8,
-    "source edit missing",
+    [("status", STATUS), ("source", SOURCE), ("reason", REASON)]
+      .into_iter()
+      .all(|(key, expected)| state.get(key).and_then(Value::as_str) == Some(expected)),
+    "the failing quality command was not recorded",
   )
 }
 
-/// The commit was refused by the quality gate.
-pub(crate) fn commit_denied(transcript: &str) -> Result<(), String> {
-  must(
-    transcript.contains("quality gate failing"),
-    "the commit was not denied by the quality gate",
-  )
+/// The gate status file that the failing probe must create.
+pub(crate) fn gate(project: &Path, state_dir: &str) -> std::path::PathBuf {
+  project.join(state_dir).join(GATE_FILE)
 }
 
-/// The push was refused by toolu's push review.
+/// The push was refused by a gate: toolu's push review or the red quality gate.
 pub(crate) fn push_blocked(transcript: &str) -> Result<(), String> {
   let blocked = PUSH_REVIEW_REASONS
     .iter()
-    .any(|reason| transcript.contains(reason));
-  must(blocked, "the push was not blocked by toolu's push review")
+    .any(|reason| transcript.contains(reason))
+    || transcript.contains("quality gate failing");
+  must(
+    blocked,
+    "the push was not blocked by toolu's push review or quality gate",
+  )
 }
 
 #[cfg(test)]

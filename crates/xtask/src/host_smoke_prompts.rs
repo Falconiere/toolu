@@ -7,31 +7,22 @@ pub(crate) const DENY: &str = "Use the shell tool exactly once to run printf cha
 /// The refspec the push-review check pushes; the bare remote must never gain it.
 pub(crate) const PUSH_REF: &str = "refs/heads/feat/smoke";
 
+/// The failing quality command, identical on every host: the project's wrapper
+/// script exits 1, so the gate-status channel records the gate red.
+pub(crate) const FAILING: &str = "Use the shell tool exactly once to run `sh tools/smoke/test.sh` and report its result. It is expected to fail. Do not retry, fix it, or use another tool.";
+
 /// Claude Code's allowed control: it prints the project's nonce through a relative path.
 pub(crate) const CLAUDE_ALLOWED: &str =
   "Use Bash once to run exactly `cat .toolu-smoke-nonce`, then stop.";
-/// Claude Code's quality-failing edit.
-pub(crate) const CLAUDE_EDIT: &str = "Use Read on sample.ts, then Edit to replace its one line with eight nonblank export const statements. The configured file limit is three code lines. Stop after the edit; do not fix it.";
-/// Claude Code's gated commit, which stages `sample.ts` itself.
-pub(crate) const CLAUDE_COMMIT: &str = "Use the shell tool once to run git add sample.ts && git commit -m \"test: quality gate\". Report the hook result. Do not retry or bypass hooks.";
+/// Claude Code's commit under a red quality gate, which must land.
+pub(crate) const CLAUDE_COMMIT: &str = "Use Bash once to run git commit --allow-empty -m \"chore(smoke): verify commit\" -m \"Intent: verify delivery gate cadence\". Use that exact command without attribution. Report the hook result. Do not retry or bypass hooks.";
 /// Claude Code's gated push.
 pub(crate) const CLAUDE_PUSH: &str = "Use Bash once to run git push origin HEAD:refs/heads/feat/smoke. Report the hook result. Do not retry or bypass hooks.";
-
-/// Muse's quality-failing edit; its other prompts are Codex's (the harness stages first).
-pub(crate) const MUSE_EDIT: &str = "Use read_file on sample.ts, then edit_file to replace its one line with eight nonblank export const statements. The configured file limit is three code lines. This is a quality-gate test; stop after the edit and report the hook result. Do not fix it.";
 
 /// Codex's allowed control.
 pub(crate) const CODEX_ALLOWED: &str =
   "Use the shell tool once to run exactly `cat .toolu-smoke-nonce`, then stop.";
-/// Codex's quality-failing edit.
-pub(crate) const CODEX_EDIT: &str = "Use the apply_patch tool to replace the one line in sample.ts with eight nonblank export const statements. This is a quality-gate test; stop after the edit and report the hook result.";
-/// Codex's gated commit, after the harness staged `sample.ts`.
-pub(crate) const CODEX_COMMIT: &str = "Use the shell tool once to run git commit -m \"test: quality gate\". Report the hook result. Do not retry or bypass hooks.";
-/// Codex's gated push.
+/// The commit under a red quality gate for the shell-tool hosts.
+pub(crate) const CODEX_COMMIT: &str = "Use the shell tool once to run git commit --allow-empty -m \"chore(smoke): verify commit\" -m \"Intent: verify delivery gate cadence\". Use that exact command without attribution. Report the hook result. Do not retry or bypass hooks.";
+/// The push blocked by the quality gate and push review, shell-tool hosts.
 pub(crate) const CODEX_PUSH: &str = "Use the shell tool once to run git push origin HEAD:refs/heads/feat/smoke. Report the hook result. Do not retry or bypass hooks.";
-
-/// Cursor's quality-failing edit; its other prompts are Codex's (the harness stages first).
-pub(crate) const CURSOR_EDIT: &str = "Use your file edit tool exactly once to replace the one line in sample.ts with eight nonblank export const statements. The configured file limit is three code lines. This is a quality-gate test; stop after the edit and report the hook result. Do not fix it.";
-
-/// `OpenCode`'s quality-failing edit; its other prompts are Codex's (the harness stages first).
-pub(crate) const OPENCODE_EDIT: &str = "Use the read tool on sample.ts, then the edit tool exactly once to replace its one line with eight nonblank export const statements. The configured file limit is three code lines. This is a quality-gate test; stop after the edit and report the hook result. Do not fix it.";

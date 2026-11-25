@@ -1,55 +1,41 @@
-//! toolu core, `engine` layer (#418): the `PreToolUse` and `PostToolUse` walk of
-//! `@toolu/core/dispatch` and `@toolu/core/registry`.
-//!
-//! - `dispatch`: `dispatch_pre_tool` and `dispatch_post_tool`, the walk over one
-//!   hook call: built-in gates (`gate`, `builtins`), then the registry; deny over
-//!   ask over advisory before a tool, block over advisory after it, and one walk
-//!   per path of a multi-file patch;
-//! - `registry`: the `<config>/toolu/{pre,post}-tools.d` listing, installed-plugin
-//!   gating and the Codex prune; manifests enable compiled-in rules and `.sh`
-//!   modules run as executables. `.js` modules no longer run (#440):
-//!   [`registry::esm_modules`] names them for the session-start advisory;
-//! - `gates`: private implementations of the post-tool `gate_status` and
-//!   `push_waiver` built-ins, exposed through `builtins::POST_TOOL`;
-//! - `trace`: what a dispatch did with each module;
-//! - `detect`: the git operations a parsed command performs (push, commit, the
-//!   pushed repository and branch);
-//! - `ledger` (#421): the delivery-flow plan ledger behind `toolu ledger`;
-//! - `resources` (#421): machine-wide leases and the managed job runner;
-//! - `outline` (#857): file items with ranges, signatures and docs from one
-//!   structural scan, behind `toolu ast-grep outline`;
-//! - `verdict`, `review_state` and `waiver` (#421): the four-gate verdict, the
-//!   push-review state checks and push waivers.
-//!
-//! Cross-plugin traits (#460): plugin logic one plugin owns and another uses
-//! is a trait here. The owner implements it and `crates/cli` passes that
-//! implementation to the user, so no plugin crate depends on another:
-//!
-//! - [`babysit::BabysitTick`]: owned by pr-babysit, run by the epic engine;
-//! - [`status::StatusSnapshot`]: owned by the hub (`crates/toolu`), rendered by
-//!   statusline.
+//! Shared hook dispatch, gate state, and delivery primitives for Toolu plugins.
 
 use std::fmt;
 
+/// PR babysitter interface used by the epic engine.
 pub mod babysit;
+/// Built-in hook gate tables.
 pub mod builtins;
+/// Git operations identified in parsed shell commands.
 pub mod detect;
+/// Pre-tool and post-tool hook dispatch.
 pub mod dispatch;
+/// Documentation review registration and results.
 pub mod docs_review;
+/// Shared interface for native hook gates.
 pub mod gate;
 mod gates;
+/// State cleanup and idle checks.
 pub mod gc;
+/// Delivery plan ledger and verification.
 pub mod ledger;
-/// Run only the MCP blocker for the standalone hook.
-pub mod mcp_hook;
+/// Structural summaries of source files.
 pub mod outline;
+/// Language quality rules and findings.
 pub mod quality;
+/// Installed hook rule discovery.
 pub mod registry;
+/// Resource leases and managed jobs.
 pub mod resources;
+/// Push-review state and validation.
 pub mod review_state;
+/// Status snapshots shared with the hub.
 pub mod status;
+/// Hook dispatch traces.
 pub mod trace;
+/// Delivery gate verdicts.
 pub mod verdict;
+/// Waiver handling for push checks.
 pub mod waiver;
 
 pub use dispatch::{

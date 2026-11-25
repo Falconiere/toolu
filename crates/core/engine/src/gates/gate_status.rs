@@ -11,7 +11,9 @@
 
 use std::path::{Path, PathBuf};
 
+use serde_json::{Map, Value};
 use toolu_protocol::decision::Decision;
+use toolu_protocol::host::Host;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_protocol::text::Text;
 use toolu_runtime::host::roots::Roots;
@@ -77,6 +79,28 @@ fn failed(status: &str) -> bool {
     && status.bytes().any(|b| b != b'0')
 }
 
+/// Claude Bash supplies an exit code in the failure text, or a completed response on success.
+fn claude_shell_status(payload: &Map<String, Value>) -> Option<&str> {
+  match payload.get("hook_event_name")?.as_str()? {
+    "PostToolUseFailure" if payload.get("is_interrupt") == Some(&Value::Bool(false)) => {
+      let status = payload
+        .get("error")?
+        .as_str()?
+        .lines()
+        .next()?
+        .strip_prefix("Exit code ")?;
+      failed(status).then_some(status)
+    }
+    "PostToolUse" => {
+      let response = payload.get("tool_response")?;
+      response.get("stdout")?.as_str()?;
+      response.get("stderr")?.as_str()?;
+      (response.get("interrupted") == Some(&Value::Bool(false))).then_some("0")
+    }
+    _ => None,
+  }
+}
+
 impl Gate for GateStatus {
   fn name(&self) -> &'static str {
     "gate-status.sh"
@@ -117,8 +141,15 @@ fn record(
   ctx: &RuleContext<'_>,
 ) -> Result<Decision, String> {
   let command = tool_command(ctx.raw);
-  let status = tool_exit_status(ctx.raw);
-  if failed(&status) {
+  let claude_failure = ctx.host == Host::Claude
+    && ctx.raw.get("hook_event_name").and_then(Value::as_str) == Some("PostToolUseFailure");
+  let explicit = tool_exit_status(ctx.raw);
+  let status = if claude_failure || (ctx.host == Host::Claude && explicit.is_empty()) {
+    claude_shell_status(ctx.raw).unwrap_or_default()
+  } else {
+    &explicit
+  };
+  if failed(status) {
     if !quality.iter().any(|q| q.command.exit_proves) {
       return Ok(Decision::Allow);
     }
@@ -130,7 +161,11 @@ fn record(
       violations: "",
     };
     record_gate_failure(state, gate, &failure);
-    let message = Text::new(failing_context(&command, &status)).map_err(|err| err.to_string())?;
+    // Claude already returned the failure to the model, and the push check reports the saved gate.
+    if claude_failure {
+      return Ok(Decision::Allow);
+    }
+    let message = Text::new(failing_context(&command, status)).map_err(|err| err.to_string())?;
     return Ok(Decision::Advisory { message });
   }
   if status == "0" && quality.iter().all(|q| q.command.exit_proves) {

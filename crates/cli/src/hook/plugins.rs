@@ -1,7 +1,7 @@
 //! The other plugins' native hooks, dispatched by [`super::run`] before the
 //! lifecycle path. Each reports through the prelude's advisory, so they return
-//! an [`Outcome`] directly: `agent-tier` and `mcp-tools` write their own
-//! output, while the rest go through [`super::prefix`].
+//! an [`Outcome`] directly: `agent-tier` writes its own output, while the rest
+//! go through [`super::prefix`].
 
 use std::path::Path;
 
@@ -14,7 +14,7 @@ use toolu_runtime::host::detect::detect;
 use crate::Context;
 use crate::fast::HookRequest;
 
-/// The other plugins' hooks: `agent-tier` and `mcp-tools`, jev, toolu-review,
+/// The other plugins' hooks: `agent-tier`, jev, toolu-review,
 /// ast-grep, git-better, the quality plugins, the statusline, pr-babysit and
 /// epic-orchestrator.
 /// Each reports through the prelude's advisory.
@@ -76,7 +76,7 @@ pub(super) fn epic_hook(request: &HookRequest, context: &Context<'_>) -> Option<
   }
 }
 
-/// toolu's `agent-tier` and `mcp-tools`. They write their own output.
+/// toolu's `agent-tier`. It writes its own output.
 pub(super) fn routed_hook(
   request: &HookRequest,
   stdin: &dyn Fn() -> std::io::Result<String>,
@@ -84,10 +84,8 @@ pub(super) fn routed_hook(
   if request.plugin != "toolu" {
     return None;
   }
-  let root = request.plugin_root.as_deref().map(Path::new);
   match request.name.as_str() {
     "agent-tier" => Some(toolu_hub::agent_tier::hook(stdin())),
-    "mcp-tools" => Some(toolu_hub::mcp_hook::hook(stdin(), root)),
     _ => None,
   }
 }
@@ -142,7 +140,8 @@ pub(super) fn git_better_hook(request: &HookRequest, context: &Context<'_>) -> O
   }
 }
 
-/// A quality plugin's two `SessionStart` entries (the hub's `QUALITY_PLUGINS`) and
+/// A quality plugin's two `SessionStart` entries (the hub's `QUALITY_PLUGINS`)
+/// — `hook forget` retires any per-edit rule an older session registered — and
 /// `post-tools`, which runs only that plugin's rules.
 pub(super) fn quality_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
   let plugin = QUALITY_PLUGINS
@@ -151,6 +150,16 @@ pub(super) fn quality_hook(request: &HookRequest, context: &Context<'_>) -> Opti
   let env = (context.env)();
   match request.name.as_str() {
     "register" => Some(plugin.register(&env, detect(&env, None).host)),
+    "forget" => {
+      let payload = (context.stdin)()
+        .ok()
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok());
+      let cwd = payload
+        .as_ref()
+        .and_then(|doc| doc.get("cwd"))
+        .and_then(serde_json::Value::as_str);
+      Some(plugin.forget(&env, detect(&env, None).host, cwd.map(Path::new)))
+    }
     "check-toolu" => Some(check_toolu(&env)),
     "post-tools" => Some(plugin_tool_hook(
       plugin.spec,

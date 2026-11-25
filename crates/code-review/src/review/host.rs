@@ -157,50 +157,48 @@ pub(crate) fn argv(spec: &Argv<'_>) -> Result<Vec<String>, String> {
 /// stay in `argv`.
 fn flags(spec: &Argv<'_>) -> Result<Vec<String>, String> {
   let host = spec.host;
-  let mut args = Vec::new();
-  match host {
-    Host::Claude => {
-      args.extend(["-p".into(), "--output-format".into(), "json".into()]);
-      args.extend(["--json-schema".into(), spec.schema_json.into()]);
-    }
-    Host::Codex => {
-      args.extend([
-        "exec".into(),
-        "-s".into(),
-        "read-only".into(),
-        "--skip-git-repo-check".into(),
-        "--output-schema".into(),
-        spec.schema_file.into(),
-        "-".into(),
-      ]);
-    }
-    Host::Cursor => {
-      args.extend([
-        "-p".into(),
-        "--trust".into(),
-        "--output-format".into(),
-        "json".into(),
-      ]);
-    }
+  Ok(match host {
+    Host::Claude => vec![
+      "-p".into(),
+      "--output-format".into(),
+      "json".into(),
+      "--json-schema".into(),
+      spec.schema_json.into(),
+      "--tools".into(),
+      String::new(), // Pass an explicit empty argv value to disable all tools.
+      "--strict-mcp-config".into(),
+    ],
+    Host::Codex => vec![
+      "exec".into(),
+      "-s".into(),
+      "read-only".into(),
+      "--skip-git-repo-check".into(),
+      "--output-schema".into(),
+      spec.schema_file.into(),
+      "-".into(),
+    ],
+    Host::Cursor => vec![
+      "-p".into(),
+      "--trust".into(),
+      "--output-format".into(),
+      "json".into(),
+    ],
     Host::Muse => {
       let prompt_file = spec
         .prompt_file
         .ok_or_else(|| "muse takes the prompt from a file".to_owned())?;
-      args.extend([
+      vec![
         "exec".into(),
         "--prompt-file".into(),
         prompt_file.into(),
         "--output-schema".into(),
         spec.schema_file.into(),
-      ]);
+      ]
     }
-    Host::Opencode => {
-      args.extend(["run".into(), "--format".into(), "json".into()]);
-    }
+    Host::Opencode => vec!["run".into(), "--format".into(), "json".into()],
     Host::Grok | Host::Hermes => return Err(format!("{} has no review CLI", host.name())),
     Host::Qwen => return Err("qwen is not supported as a review worker".to_owned()),
-  }
-  Ok(args)
+  })
 }
 
 /// The reviewed host: Jev's answer when it names an available host, else the

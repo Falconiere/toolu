@@ -1,6 +1,6 @@
 # ts-quality
 
-TypeScript `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest.
+TypeScript quality rules compiled into `toolu`, applied in review and at the push gate.
 
 ## Install
 
@@ -14,16 +14,18 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Supported TypeScript edits are checked on the spot, including eligible shell changes after an edit quality settlement or the first non-quiet shell event establishes a baseline. Shell checks cover at most 20 changed source files per command and advise about the rest. Findings contribute to toolu's quality gate. The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its `.json` manifest into toolu's registry, and removes the `.js` module and `.sh` bridge of earlier releases:
+The rules are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into `toolu`. The `SessionStart` hook removes older per-edit registrations and clears their saved failures. Explicit quality commands record their own results.
 
-- File / function line limits (config-driven).
+Enforcement happens at push time. A quality command the agent runs (`bun test`, `tsc`, `vitest`, …) records its result; a failing one turns the gate red, and a red gate denies `git push` while `gates.qualityGate` blocks. Commits are never stopped. Oversized files and functions advise and never block. `toolu ts-quality` prints the guide.
+
+The rules cover:
+
+- File / function line limits (config-driven, advisory).
 - No `../` relative imports — use the `@/` alias (only enforced when the project defines a `@/*` path alias in its tsconfig).
 - No `as` type assertions and no hand-rolled type guards — use a type guard / Zod schema.
 - Tests colocated in a flat `__tests__/`.
 - Duplicate-type detection across the tree, plus "does too much" / too-many-factories heuristics.
 - No `console` left in, no lint suppression, no thrown literals; React hooks/props, toast, and error-handling AST checks.
-
-The rule runs inside the core toolu dispatcher only while this plugin is installed. Removing it drops its checks at the next tool call. `toolu ts-quality --help` lists the checks.
 
 ## Muse
 

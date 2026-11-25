@@ -1,17 +1,8 @@
-//! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|muse|cursor|opencode|both]`:
-//! a live smoke of the native toolu hooks in real Claude Code, Codex, Muse, Cursor and
-//! `OpenCode` sessions (`both`, the default, means Claude Code, Codex and Muse; Cursor and
-//! `OpenCode` are asked for by name), with no `bun` on the children's `PATH`.
-//! Every host runs on macOS and Linux; on
-//! Linux, Codex and Muse sandbox their commands with bubblewrap. Per host it checks that
-//! a protected `.env` write
-//! is denied, an allowed `cat` of the project's nonce file runs, a post-edit quality
-//! failure is recorded, a `git commit` is denied by the quality gate and a `git push` by
-//! push review.
+//! Live hook smoke tests in Claude Code, Codex, Muse, Cursor and `OpenCode`.
+//! Each run checks a pinned protected-file denial, a failing quality command,
+//! a successful local commit, and enforcement at push.
 //!
-//! The sessions spend model credits, so this is never a gate step. The evidence
-//! directory is kept (and printed) on failure; on success it is deleted unless
-//! `TOOLU_HOST_SMOKE_KEEP=1`.
+//! Retain successful runs with `TOOLU_HOST_SMOKE_KEEP=1`.
 
 use std::ffi::OsString;
 use std::os::unix::fs::PermissionsExt as _;
@@ -183,7 +174,7 @@ fn finding(name: &str, step: &str, result: Result<(), String>) -> Option<String>
   result.err().map(|why| format!("{name}: {step}: {why}"))
 }
 
-/// The deny, control, edit and commit steps in one project.
+/// The deny, control, failing-command and commit steps in one project.
 fn project_steps(driver: &dyn Driver, run: &Run<'_>) -> Vec<String> {
   let name = driver.name();
   let project = match create(
@@ -202,10 +193,13 @@ fn project_steps(driver: &dyn Driver, run: &Run<'_>) -> Vec<String> {
     ("native deny", steps::deny(driver, run, &project)),
     ("allowed control", steps::allowed(driver, run, &project)),
     (
-      "post-edit quality state",
-      steps::edit(driver, run, &project),
+      "failing quality command records the gate",
+      steps::failing(driver, run, &project),
     ),
-    ("commit gate", steps::commit(driver, run, &project)),
+    (
+      "commit under a red gate",
+      steps::commit(driver, run, &project),
+    ),
   ]
   .into_iter()
   .filter_map(|(step, result)| finding(name, step, result))
@@ -287,7 +281,7 @@ fn drive(plan: &Plan, root: &Path) -> Vec<String> {
     let host_found = drive_host(plan, *host, root);
     if host_found.is_empty() {
       output::say(&format!(
-        "{}: native deny, post-edit quality state, commit gate and push review passed",
+        "{}: native deny, failing quality command, commit under a red gate and blocked push passed",
         host.name()
       ));
     }

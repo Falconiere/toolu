@@ -1,6 +1,6 @@
 # rust-quality
 
-Rust `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest.
+Rust quality rules compiled into `toolu`, applied in review and at the push gate.
 
 ## Install
 
@@ -14,7 +14,11 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Supported Rust edits are checked on the spot, including eligible shell changes after an edit quality settlement or the first non-quiet shell event establishes a baseline. Shell checks cover at most 20 changed source files per command and advise about the rest. Findings contribute to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its `.json` manifest into toolu's registry, and removes the `.js` module and `.sh` bridge of earlier releases once, with a notice:
+The rules are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into `toolu`. The `SessionStart` hook removes older per-edit registrations and clears their saved failures. Explicit quality commands record their own results.
+
+Enforcement happens at push time. A quality command the agent runs (`cargo clippy`, `cargo test`, `cargo nextest`, …) records its result; a failing one turns the gate red, and a red gate denies `git push` while `gates.qualityGate` blocks. Commits are never stopped. Oversized files, functions and `impl` blocks advise and never block.
+
+The rules cover:
 
 - File / function / `impl` line limits (config-driven).
 - No `.unwrap()` / `.expect()` — use `?` or `match`.
@@ -23,7 +27,7 @@ Supported Rust edits are checked on the spot, including eligible shell changes a
 - Unit tests in a module-sibling `tests/` (wired by a bodyless `#[cfg(test)] mod tests;`, `#[path]`-attributed or not); crate-root `tests/` for integration. No inline test bodies in `src/`.
 - Doc-comment checks on public items.
 
-The rule runs in the core toolu dispatcher only while this plugin is installed — uninstall it and the Rust rules vanish, fail-closed. `toolu rust-quality --help` lists the checks, and `toolu rust-quality check [<path>...]` runs them over a repository's tracked and untracked `.rs` files, the way this repository's gate does.
+`toolu rust-quality check [<path>...]` runs the rules over a repository's tracked and untracked `.rs` files, the way this repository's gate does.
 
 ## Muse
 

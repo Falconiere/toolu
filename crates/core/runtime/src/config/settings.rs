@@ -20,8 +20,6 @@ pub const BASH_ALLOWLIST: &str = "bash-allowlist.txt";
 pub const BASH_DENYLIST: &str = "bash-denylist.txt";
 /// `commit-prefixes.txt`: allowed Conventional Commits types.
 pub const COMMIT_PREFIXES: &str = "commit-prefixes.txt";
-/// `mcp-blocklist.txt`: blocked MCP server prefixes with a redirect hint.
-pub const MCP_BLOCKLIST: &str = "mcp-blocklist.txt";
 /// `protected-files.txt`: extended globs guarded by the protectedFiles gate.
 pub const PROTECTED_FILES: &str = "protected-files.txt";
 /// `rust-unsafe-exemptions.txt`: crate names allowed to use `unsafe`.
@@ -67,33 +65,6 @@ pub fn read_list(path: &Path) -> Result<Vec<String>, String> {
     .map(str::to_owned)
     .collect();
   Ok(lines)
-}
-
-/// One `mcp-blocklist.txt` entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct McpBlockEntry {
-  /// The blocked server prefix, trimmed.
-  pub prefix: String,
-  /// The hint after ` -> `, or empty.
-  pub redirect: String,
-}
-
-/// `mcp-blocklist.txt` split as `mcp-blocker.sh` did: an optional ` -> <text>`
-/// redirect after the prefix; an entry with an empty prefix is dropped.
-///
-/// # Errors
-/// As [`read_list`].
-pub fn mcp_blocklist(dir: &Path) -> Result<Vec<McpBlockEntry>, String> {
-  let entries = read_list(&dir.join(MCP_BLOCKLIST))?
-    .into_iter()
-    .map(|line| {
-      let (prefix, redirect) = line.split_once(" -> ").unwrap_or((&line, ""));
-      McpBlockEntry {
-        prefix: prefix.trim_matches(is_js_space).to_owned(),
-        redirect: redirect.to_owned(),
-      }
-    });
-  Ok(entries.filter(|entry| !entry.prefix.is_empty()).collect())
 }
 
 /// One `code-edit-rules.json` rule.

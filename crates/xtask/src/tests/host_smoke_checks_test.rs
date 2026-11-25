@@ -1,12 +1,8 @@
-use super::{commit_denied, deny, must, push_blocked, quality, quality_state, ran_in};
+use super::{deny, must, push_blocked, quality, quality_state, ran_in};
 use crate::host_smoke_project::NONCE_FILE;
 use crate::host_smoke_prompts::{CLAUDE_ALLOWED, CODEX_ALLOWED};
 
-const FAILING: &str =
-  "{\n  \"status\": \"failing\",\n  \"errors\": [\"TS file exceeds 3-line limit\"]\n}";
-fn eight() -> String {
-  "export const a = 1;\n".repeat(8)
-}
+const FAILING: &str = "{\n  \"status\": \"failing\",\n  \"source\": \"gate-status-hook\",\n  \"reason\": \"Quality command failed: sh tools/smoke/test.sh (exit 1)\"\n}";
 
 #[test]
 fn must_reports_its_message() {
@@ -83,17 +79,16 @@ fn both_allowed_prompts_cat_the_nonce_by_its_relative_path() {
 }
 
 #[test]
-fn quality_state_needs_the_failure_and_the_edit() {
-  assert!(quality_state(FAILING, &eight()).is_ok());
-  let passing = "{\"status\": \"passing\"}";
-  assert_eq!(
-    quality_state(passing, &eight()).unwrap_err(),
-    "quality failure not recorded"
-  );
-  assert_eq!(
-    quality_state(FAILING, "export const n = 1;\n").unwrap_err(),
-    "source edit missing"
-  );
+fn quality_state_needs_the_gate_status_hook_failure_for_the_exact_command() {
+  assert!(quality_state(FAILING).is_ok());
+  for state in [
+    "not json",
+    "{\"status\": \"passing\", \"source\": \"gate-status-hook\", \"reason\": \"Quality command failed: sh tools/smoke/test.sh (exit 1)\"}",
+    "{\"status\": \"failing\", \"source\": \"other-hook\", \"reason\": \"Quality command failed: sh tools/smoke/test.sh (exit 1)\"}",
+    "{\"status\": \"failing\", \"source\": \"gate-status-hook\", \"reason\": \"Quality command failed: npm test (exit 1)\"}",
+  ] {
+    assert!(quality_state(state).is_err(), "{state}");
+  }
 }
 
 #[test]
@@ -110,14 +105,7 @@ fn quality_reads_the_host_directory() {
     FAILING,
   )
   .unwrap();
-  std::fs::write(dir.path().join("sample.ts"), eight()).unwrap();
   assert!(quality(dir.path(), ".codex/tmp").is_ok());
-}
-
-#[test]
-fn a_commit_is_denied_only_by_the_quality_gate() {
-  assert!(commit_denied("BLOCKED: quality gate failing - fix the violations").is_ok());
-  assert!(commit_denied("[main abc] test: quality gate").is_err());
 }
 
 #[test]
@@ -126,6 +114,6 @@ fn a_push_is_blocked_by_either_review_reason() {
   let ask = "No clean review is recorded for this diff. Approving pushes anyway";
   assert!(push_blocked(block).is_ok());
   assert!(push_blocked(ask).is_ok());
-  assert!(push_blocked("BLOCKED: quality gate failing").is_err());
+  assert!(push_blocked("BLOCKED: quality gate failing").is_ok());
   assert!(push_blocked("To /tmp/remote.git * [new branch] HEAD -> feat/smoke").is_err());
 }

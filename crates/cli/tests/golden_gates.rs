@@ -199,17 +199,17 @@ fn replay_corpus(suite: Suite, file: &str, prefixes: &[&str]) -> Res<Replay> {
 }
 
 #[test]
-fn modules_a_replay_all_109_golden_cases() {
+fn modules_a_replay_all_89_golden_cases() {
   let replay = replay_cases(Suite::A, "pre-tool-modules-a").unwrap();
-  if let Some(problems) = replay.problems(109) {
+  if let Some(problems) = replay.problems(89) {
     panic!("{problems}");
   }
 }
 
 #[test]
-fn modules_a_replay_the_22_corpus_rows_they_decide() {
+fn modules_a_replay_the_18_corpus_rows_they_decide() {
   let replay = replay_corpus(Suite::A, "pre-tool-modules-a", &[]).unwrap();
-  if let Some(problems) = replay.problems(22) {
+  if let Some(problems) = replay.problems(18) {
     panic!("{problems}");
   }
 }

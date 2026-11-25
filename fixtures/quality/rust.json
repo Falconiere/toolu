@@ -448,7 +448,7 @@
         }
       ],
       "expect": "advisory",
-      "contains": ["exceeds 5-line limit", ".unwrap()"]
+      "contains": [".unwrap()"]
     },
     {
       "name": "assembled: fixing one of two keeps the gate failing",
@@ -548,12 +548,7 @@
         }
       ],
       "expect": "advisory",
-      "contains": [
-        "exceeds 5-line limit",
-        "Forbidden lint suppression",
-        "Forbidden unsafe code",
-        "Impl block too large"
-      ]
+      "contains": ["Forbidden lint suppression", "Forbidden unsafe code"]
     },
     {
       "name": "size: a clippy config names clippy in the hint",

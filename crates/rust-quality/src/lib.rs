@@ -1,6 +1,6 @@
 //! The rust-quality rule crate: the post-edit Rust rules compiled into `toolu`,
-//! their `SessionStart` registration, and the `toolu rust-quality` namespace
-//! with its `check` verb. `crates/cli` reaches it through the hub
+//! the `SessionStart` hook that clears their stale gate state, and the
+//! `toolu rust-quality` namespace with its `check` verb. `crates/cli` reaches it through the hub
 //! (`crates/toolu`).
 
 mod ast_rules;
@@ -27,25 +27,25 @@ pub const PLUGIN: &str = "rust-quality";
 /// The registry spec of the rule.
 pub const SPEC: &str = rule::SPEC;
 
-/// Its `SessionStart` registration for `.rs` edits: the manifest, and the prune of the old
-/// `.js` module and `.sh` bridge.
+/// Its `SessionStart` retirement for `.rs` edits: removes the rule manifest a
+/// registered session left, and prunes the old `.js` module and `.sh` bridge.
 pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
   plugin: PLUGIN,
   spec: SPEC,
   name: rule::NAME,
 };
 
-const ABOUT: &str = "Rust quality rules that run after each edit";
+const ABOUT: &str = "Rust quality rules for reviews and the push gate";
 
-const GUIDE: &str = "rust-quality's rules run after every edit of a .rs file in a Cargo project \
-   with cargo on PATH. Violations (oversized files, functions and impl blocks, inline test \
-   modules, misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, \
-   mocks) fail the file's quality-gate entry until it is fixed; missing or verbose docs are \
-   advisories.\n\nLimits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, \
+const GUIDE: &str = "rust-quality no longer runs after every edit; its SessionStart hook retires \
+   any earlier registration. toolu rust-quality check runs the blocking rules over a whole \
+   repository (or the paths you name). Blocking findings (inline test modules, misplaced tests, \
+   lint suppression, unsafe code, unwrap/expect/panic in src, mocks) fail the file's quality-gate \
+   entry; a failing gate denies git push while gates.qualityGate blocks — commits are never \
+   stopped. Oversized files, functions and impl blocks and missing or verbose docs advise and \
+   never block.\n\nLimits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, \
    maxImplLines, noMocks); crates allowed to use unsafe are listed in \
-   settings/rust-unsafe-exemptions.txt. toolu rust-quality check runs the same blocking rules \
-   over a whole repository. Run toolu doctor to see whether the rule is registered and \
-   compiled in.";
+   settings/rust-unsafe-exemptions.txt.";
 
 /// The `toolu rust-quality` namespace.
 pub fn command() -> Command {

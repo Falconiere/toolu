@@ -1,5 +1,5 @@
-//! python-quality's native `SessionStart` register in a real config dir, then the
-//! real `toolu hook post-tools` on Python and non-Python edits.
+//! python-quality's native `SessionStart` retirement in a real config dir, and the
+//! real `toolu hook post-tools` proving no edit runs a rule any more.
 
 #[path = "helpers/feed.rs"]
 mod feed;
@@ -93,13 +93,13 @@ fn toolu(sb: &Sandbox, args: &[&str], path: &str, stdin: &str) -> Res<Output> {
   Ok(child.wait_with_output()?)
 }
 
-fn register(sb: &Sandbox) -> Res<Output> {
+fn retire(sb: &Sandbox) -> Res<Output> {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/python-quality");
   let root = root.display().to_string();
   let args = [
     "python-quality",
     "hook",
-    "register",
+    "forget",
     "--event",
     "SessionStart",
     "--plugin-root",
@@ -126,39 +126,23 @@ fn listing(dir: &Path) -> Res<Vec<String>> {
   Ok(names)
 }
 
-fn snapshot(dir: &Path) -> Res<Vec<(String, std::time::SystemTime)>> {
-  [MANIFEST]
-    .iter()
-    .map(|name| {
-      let path = dir.join(name);
-      Ok((fs::read_to_string(&path)?, fs::metadata(&path)?.modified()?))
-    })
-    .collect()
-}
-
 #[test]
-fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
+fn forget_retires_the_registration_and_doctor_is_clean() {
   let sb = sandbox(true).unwrap();
   let post = sb.home.join(POST);
   fs::create_dir_all(&post).unwrap();
+  fs::write(post.join(MANIFEST), "{\"version\":1}\n").unwrap();
   fs::write(
     post.join("python-quality@toolu__python-quality.js"),
     "old\n",
   )
   .unwrap();
   fs::write(post.join("python-quality@toolu__old-concern.sh"), "old\n").unwrap();
-  let first = register(&sb).unwrap();
-  assert!(first.status.success(), "{first:?}");
-  let notice: Value = serde_json::from_slice(&first.stdout).unwrap();
-  assert_eq!(
-    notice["systemMessage"],
-    "python-quality's JavaScript module was replaced by its native rule in toolu."
-  );
-  assert_eq!(listing(&post).unwrap(), [MANIFEST]);
-  let before = snapshot(&post).unwrap();
-  let again = register(&sb).unwrap();
+  let first = retire(&sb).unwrap();
+  assert_eq!((first.status.code(), first.stdout.len()), (Some(0), 0));
+  assert_eq!(listing(&post).unwrap(), Vec::<String>::new());
+  let again = retire(&sb).unwrap();
   assert_eq!((again.status.code(), again.stdout.len()), (Some(0), 0));
-  assert_eq!(snapshot(&post).unwrap(), before);
 
   let fired = write(
     &sb,
@@ -168,8 +152,14 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
   )
   .unwrap();
   assert!(fired.status.success(), "{fired:?}");
-  let stdout = String::from_utf8(fired.stdout).unwrap();
-  assert!(stdout.contains("Forbidden suppression in"), "{stdout}");
+  assert_eq!(String::from_utf8(fired.stdout).unwrap(), "");
+  assert!(
+    !sb
+      .project
+      .join(".claude/tmp/quality-gate-status.json")
+      .exists(),
+    "an edit still recorded a gate state"
+  );
 
   let doctor = toolu(
     &sb,
@@ -189,7 +179,7 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
 #[test]
 fn an_uninstalled_plugin_stays_silent() {
   let sb = sandbox(false).unwrap();
-  assert!(register(&sb).unwrap().status.success());
+  assert!(retire(&sb).unwrap().status.success());
   let output = write(
     &sb,
     "src/bad.py",
@@ -202,9 +192,9 @@ fn an_uninstalled_plugin_stays_silent() {
 }
 
 #[test]
-fn non_python_edits_spawn_no_tool() {
+fn no_edit_spawns_a_tool() {
   let sb = sandbox(true).unwrap();
-  assert!(register(&sb).unwrap().status.success());
+  assert!(retire(&sb).unwrap().status.success());
   let stubs = sb.home.join("stubs");
   fs::create_dir_all(&stubs).unwrap();
   let log = sb.home.join("spawned.log");
@@ -221,15 +211,13 @@ fn non_python_edits_spawn_no_tool() {
   for (rel, body) in [
     ("src/a.ts", "export const a = 1;\n"),
     ("README.md", "# x\n"),
+    ("src/test_b.py", "import os\n"),
   ] {
     let output = write(&sb, rel, body, &path).unwrap();
     assert!(output.status.success(), "{rel}: {output:?}");
     assert_eq!(String::from_utf8(output.stdout).unwrap(), "", "{rel}");
   }
   assert!(!log.exists(), "{}", fs::read_to_string(&log).unwrap());
-  let output = write(&sb, "src/test_b.py", "import os\n", &path).unwrap();
-  assert!(output.status.success(), "{output:?}");
-  assert!(log.exists(), "a .py edit reaches its tools");
 }
 
 /// `toolu python-quality hook check-toolu` on Codex, whose plugin list holds `installed`.

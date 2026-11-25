@@ -47,7 +47,6 @@ when you run them.
 | `bash-denylist.txt`           | `bash-commands` gate (`toolu_engine::gates`)        | Tokens the bash guard rejects via argv-aware parsing.              |
 | `code-edit-rules.json`        | `code-edit-rules` gate (`toolu_engine::gates`)      | Pattern rules for Write/Edit gating on source files.               |
 | `commit-prefixes.txt`         | `commit-gate` gate (`toolu_engine::gates`)          | Allowed Conventional Commits prefixes for `git commit` messages.   |
-| `mcp-blocklist.txt`           | `mcp-blocker` gate (`toolu_engine::gates`)          | MCP server prefixes blocked unconditionally (plain text).          |
 | `toolu.config.example.json` | (reference — copy to `~/.claude/toolu.config.json`) | Example runtime opt-out config (skills/hooks/mcp). See `docs/config.md`. |
 | `protected-files.txt`         | `protected-files` gate (`toolu_engine::gates`)      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
 | `rust-unsafe-exemptions.txt`  | `crates/rust-quality/src/rule.rs`                 | Files/paths exempt from the `unsafe` Rust check.                   |
@@ -55,28 +54,13 @@ when you run them.
 Each plain-text file is one entry per line, `#` for comments. JSON files
 follow whatever schema the consuming script documents.
 
-### `mcp-blocklist.txt` redirect hints
-
-A blocklist line may carry an optional `-> <text>` suffix after the server
-prefix. When that server is denied, the text is appended to the deny reason so
-the user is pointed at the replacement. The prefix alone drives the match; the
-hint is ignored for matching.
-
-```text
-# <server-prefix> -> <redirect text shown in the deny reason>
-# Example (commented = inert; uncomment to actually block the Atlassian MCP and
-# steer Jira work to the host's native Jira tools when available):
-# claude_ai_Atlassian -> use the host's native Jira tools instead
-```
-
-The example is shown **commented**, so nothing is blocked out of the box.
-Uncomment the line (in your own settings dir) only if you want a hard block too.
+### Shell allowlist and denylist
 
 Allow/deny semantics for the bash guard: rules apply to each simple command
 on the line. A command that matches a deny rule is still allowed if that same
 command also matches an allowlist rule (the allowlist is an explicit override,
 not a default gate); an allow rule matching a *different* command on the line
-does not override it, so `ls && node -e …` with `ls` allowed is still denied.
+does not override it, so `ls && node -e …` with `ls` allowed still matches the deny rule. The configured gate mode controls the verdict.
 Commands that match no deny rule are allowed by default.
 
 > Allowlist caveat: single-token allowlist entries match anywhere in a
@@ -115,7 +99,7 @@ edited `settings/` file the same way when it replaces the plugin directory.
 The statusline moved to its own optional plugin, **`statusline`** — it shows
 `model | effort | ctx | <gate> | folder | branch`, with a loud red
 `✗ gate:failing` marker driven by the same `.claude/tmp/quality-gate-status.json`
-the rust-quality / ts-quality / python-quality hooks write. Install it and wire `settings.json` per
+explicit quality commands update. Install it and wire `settings.json` per
 `plugins/statusline/README.md`:
 
 ```
@@ -137,5 +121,5 @@ link older versions published (a file of your own stays) and rewrites a
 For per-skill, per-hook, or per-MCP opt-out without touching the data
 files above, see `docs/config.md`. The config file lives at
 `~/.claude/toolu.config.json` (or the project-local override) and is
-deep-merged at runtime. The `mcp-blocklist.txt` blocklist still works in
-parallel; either source can block a server.
+deep-merged at runtime. MCP gating was retired with the mcp-blocker gate:
+`mcp.<server>: false` still parses but enforces nothing.

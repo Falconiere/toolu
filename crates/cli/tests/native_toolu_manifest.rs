@@ -10,7 +10,7 @@ fn root() -> PathBuf {
 
 type Entries = Vec<(&'static str, Option<&'static str>)>;
 
-fn expected() -> [(&'static str, Entries); 6] {
+fn expected() -> [(&'static str, Entries); 7] {
   [
     (
       "SessionStart",
@@ -34,7 +34,6 @@ fn expected() -> [(&'static str, Entries); 6] {
           "pre-tools",
           Some("apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep"),
         ),
-        ("mcp-tools", Some("mcp__")),
         ("agent-tier", Some("spawn_agent|Agent|Task")),
       ],
     ),
@@ -44,6 +43,10 @@ fn expected() -> [(&'static str, Entries); 6] {
         "post-tools",
         Some("apply_patch|Edit|Write|MultiEdit|Bash|Shell"),
       )],
+    ),
+    (
+      "PostToolUseFailure",
+      vec![("post-tools-failure", Some("Bash"))],
     ),
     ("Stop", vec![("stop", None)]),
   ]

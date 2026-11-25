@@ -23,9 +23,9 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
 | [`opencode`](opencode.md) | `plugins/toolu` | available | Run toolu plugins under OpenCode; their generated server.js calls these |
-| [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | available | TypeScript quality rules that run after each edit |
-| [`python-quality`](python-quality.md) | `plugins/python-quality` | available | Python quality rules that run after each edit |
-| [`rust-quality`](rust-quality.md) | `plugins/rust-quality` | available | Rust quality rules that run after each edit |
+| [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | available | TypeScript quality rules for reviews and the push gate |
+| [`python-quality`](python-quality.md) | `plugins/python-quality` | available | Python quality rules for reviews and the push gate |
+| [`rust-quality`](rust-quality.md) | `plugins/rust-quality` | available | Rust quality rules for reviews and the push gate |
 | [`ast-grep`](ast-grep.md) | `plugins/ast-grep` | available | Structural code search and rewrite with ast-grep |
 | [`brainstorm`](brainstorm.md) | `plugins/brainstorm` | available | Think a change through before building (a Markdown-only plugin) |
 | [`delivery-flow`](delivery-flow.md) | `plugins/delivery-flow` | available | Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin) |
@@ -63,9 +63,9 @@ Commands:
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and push-review status
   opencode        Run toolu plugins under OpenCode; their generated server.js calls these
-  ts-quality      TypeScript quality rules that run after each edit
-  python-quality  Python quality rules that run after each edit
-  rust-quality    Rust quality rules that run after each edit
+  ts-quality      TypeScript quality rules for reviews and the push gate
+  python-quality  Python quality rules for reviews and the push gate
+  rust-quality    Rust quality rules for reviews and the push gate
   ast-grep        Structural code search and rewrite with ast-grep
   brainstorm      Think a change through before building (a Markdown-only plugin)
   delivery-flow   Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin)

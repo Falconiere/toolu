@@ -22,7 +22,8 @@
           "old_string": "a",
           "new_string": "b"
         }
-      }
+      },
+      "config": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}
     },
     {
       "name": "protected-files: block mode denies",
@@ -100,7 +101,8 @@
         "toolInput": {
           "command": "echo x > .env"
         }
-      }
+      },
+      "config": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}
     },
     {
       "name": "protected-files: off mode is silent",
@@ -213,7 +215,8 @@
         "toolInput": {
           "command": "*** Begin Patch\n*** Update File: src/a.ts\n@@\n-a\n+b\n*** Update File: .env\n@@\n-a\n+b\n*** End Patch"
         }
-      }
+      },
+      "config": {"version": 1, "gates": {"protectedFiles": {"mode": "ask"}}}
     },
     {
       "name": "multi-file patch: blocked second path",
@@ -278,10 +281,9 @@
       }
     },
     {
-      "name": "bash-commands: denylisted command asks",
+      "name": "bash-commands: denylisted command advises",
       "expect": {
-        "claude": "ask",
-        "codex": "deny"
+        "claude": "advisory"
       },
       "setupByHost": {
         "claude": [],
@@ -411,9 +413,9 @@
       }
     },
     {
-      "name": "quality-gate: failing gate blocks a commit",
+      "name": "quality-gate: failing gate allows a commit",
       "expect": {
-        "claude": "deny"
+        "claude": "advisory"
       },
       "setupByHost": {
         "claude": [
@@ -1177,64 +1179,6 @@
         "toolName": "Bash",
         "toolInput": {
           "command": "ls"
-        }
-      }
-    },
-    {
-      "name": "mcp-blocker: blocklisted server with redirect, block mode",
-      "settings": {
-        "mcp-blocklist.txt": "exampleblocked -> use the CLI\n"
-      },
-      "config": {
-        "version": 1,
-        "gates": {
-          "mcpBlocker": {
-            "mode": "block"
-          }
-        }
-      },
-      "expect": {
-        "claude": "deny"
-      },
-      "setupByHost": {
-        "claude": [],
-        "codex": []
-      },
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
-        }
-      }
-    },
-    {
-      "name": "mcp-blocker: also runs inside the dispatcher",
-      "config": {
-        "version": 1,
-        "mcp": {
-          "exampleblocked": false
-        }
-      },
-      "expect": {
-        "claude": "ask",
-        "codex": "deny"
-      },
-      "setupByHost": {
-        "claude": [],
-        "codex": []
-      },
-      "fixture": {
-        "kind": "tool",
-        "event": "PreToolUse",
-        "toolName": "mcp__exampleblocked__search",
-        "toolInput": {},
-        "mcp": {
-          "server": "exampleblocked",
-          "tool": "search"
         }
       }
     }

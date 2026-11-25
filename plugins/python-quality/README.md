@@ -1,6 +1,6 @@
 # python-quality
 
-Python `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest.
+Python quality rules compiled into `toolu`, applied in review and at the push gate.
 
 ## Install
 
@@ -14,7 +14,11 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Supported Python edits are checked on the spot, including eligible shell changes after an edit quality settlement or the first non-quiet shell event establishes a baseline. Shell checks cover at most 20 changed source files per command and advise about the rest. Findings contribute to toolu's quality gate. The checks are the `toolu-python-quality` crate (`crates/python-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its `.json` manifest into toolu's registry, and removes the `.js` module and `.sh` bridge of earlier releases. The checks are static-only — the gate never invokes `ruff`, `pylint`, or any other linter:
+The rules are the `toolu-python-quality` crate (`crates/python-quality`), compiled into `toolu`, and they are static-only: the gate never invokes `ruff`, `pylint`, or any other linter. The `SessionStart` hook removes older per-edit registrations and clears their saved failures. Explicit quality commands record their own results.
+
+Enforcement happens at push time, from the quality commands the gate-status module recognises (`cargo test`, `cargo clippy`, `bun test`, `tsc`, `vitest`, `jest`, a project's `check.sh`/`test.sh`): a failing one turns the gate red, and a red gate denies `git push` while `gates.qualityGate` blocks. Commits are never stopped. Oversized files and functions advise and never block. `pytest` is not on that list, so a Python project's red state comes from whichever recognised command wraps it.
+
+The rules cover:
 
 - File / function line limits (config-driven).
 - No suppression: bare `except:`, one-line `except ...: pass`, blanket `# noqa`, bare `# type: ignore`.
@@ -22,7 +26,7 @@ Supported Python edits are checked on the spot, including eligible shell changes
 - No mocks in tests (`unittest.mock`/`mock`/`pytest_mock` imports — covering `MagicMock` — plus `mocker`/`monkeypatch` fixtures).
 - Docstring checks on public functions and classes.
 
-The rule runs inside the core toolu dispatcher only while this plugin is installed — uninstall it and the Python rules vanish, fail-closed. `toolu python-quality --help` lists the checks, and `toolu doctor` reports whether the rule is registered.
+`toolu python-quality` prints the guide.
 
 ## Muse
 

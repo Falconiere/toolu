@@ -32,8 +32,11 @@ pub fn native_event(host: Host, event: HostEvent) -> Option<&'static str> {
 }
 
 /// The host event a native name stands for. A name two events share maps to
-/// the first in [`HostEvent::ALL`]; Cursor's aliases map last.
+/// the first in [`HostEvent::ALL`]; host-specific aliases only map back.
 pub fn canonical_event(host: Host, native: &str) -> Option<HostEvent> {
+  if host == Host::Claude && native == "PostToolUseFailure" {
+    return Some(HostEvent::ToolPost);
+  }
   let row = HostEvent::ALL
     .into_iter()
     .find(|event| native_event(host, *event) == Some(native));

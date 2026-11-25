@@ -15,22 +15,21 @@ fn the_command_line_loads_both_plugins_and_ends_with_the_prompt() {
   let line = words.join(" ");
   assert_eq!(words.first().map(String::as_str), Some("/bin/claude"));
   assert!(line.contains("--plugin-dir /repo/plugins/toolu --plugin-dir /repo/plugins/ts-quality"));
-  assert!(line.contains("--model haiku -p --permission-mode auto"));
+  assert!(line.contains("--model haiku -p --permission-mode auto --setting-sources project"));
   assert!(line.contains("--output-format stream-json --verbose --tools Read,Edit"));
   assert!(line.ends_with("--max-budget-usd 2 do it"));
 }
 
 #[test]
-fn the_claude_driver_stages_inside_its_commit_prompt() {
+fn the_claude_driver_names_itself_and_keeps_its_prompts() {
   let claude = Claude {
     exe: "claude".into(),
     repo: "/repo".into(),
   };
   let prompts = claude.prompts();
   assert_eq!(claude.name(), "claude");
-  assert!(!prompts.stages_first);
   assert_eq!(prompts.commit, CLAUDE_COMMIT);
-  assert!(prompts.commit.contains("git add sample.ts && git commit"));
+  assert!(prompts.commit.contains("git commit --allow-empty"));
   assert!(
     prompts
       .push

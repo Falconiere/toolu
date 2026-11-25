@@ -445,106 +445,6 @@
       "stdout": "",
       "stderr": "",
       "exitCode": 0
-    },
-    "mcp-blocker: asks on a listed server, pointing at the blocklist file": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__search\\\", on the blocked server \\\"exampleblocked\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: allows an unlisted server": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: a prefix entry blocks a longer server name": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__claude_ai_Canva__search\\\", on the blocked server \\\"claude_ai_Canva\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: a prefix entry does not block a different prefix": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: an exact server name blocks": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__save\\\", on the blocked server \\\"exampleblocked\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: on Codex a listed server is blocked": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: config mcp.<server>=false blocks without the file": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__someserver__do\\\", on the blocked server \\\"someserver\\\" (disabled in your toolu config (mcp.someserver=false)).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: a non-object config mcp neither blocks nor crashes": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: a redirect hint is appended to the reason": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__someserver__do\\\", on the blocked server \\\"someserver\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. Use instead: use the jira skill instead\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: a commented entry does not block": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: empty stdin": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: non-JSON stdin": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: a tool name without a server segment": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: mode block denies": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: mode advise warns without stopping": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. The call was NOT stopped — gates.mcpBlocker.mode is 'advise'.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: mode off is silent": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: an invalid config envelope still blocks a listed server": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__search\\\", on the blocked server \\\"exampleblocked\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: a whitespace-padded entry still matches": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__search\\\", on the blocked server \\\"exampleblocked\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: config mcp value 'false' as a string does not block": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: no blocklist and no config is silent": {
-      "stdout": "",
-      "stderr": "",
-      "exitCode": 0
     }
   },
   "corpus": {
@@ -635,26 +535,6 @@
     },
     "multi-file patch: advisories only [codex]": {
       "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/b.rs\\nApply these rules: Rust: zero compiler/clippy warnings + no unwrap()/expect()/panic! outside tests + keep it simple — no speculative abstractions\\n\\nFile: src/c.ts\\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: blocklisted server with redirect, block mode [claude]": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. Use instead: use the CLI\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: blocklisted server with redirect, block mode [codex]": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. Use instead: use the CLI\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: also runs inside the dispatcher [claude]": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__search\\\", on the blocked server \\\"exampleblocked\\\" (disabled in your toolu config (mcp.exampleblocked=false)).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "mcp-blocker: also runs inside the dispatcher [codex]": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (disabled in your toolu config (mcp.exampleblocked=false)). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0
     }

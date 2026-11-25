@@ -15,8 +15,7 @@ use toolu_protocol::launcher::opencode::{FILE, hooks_of, shim};
 
 use crate::host_smoke::sweep;
 use crate::host_smoke_env::ChildEnv;
-use crate::host_smoke_prompts::OPENCODE_EDIT;
-use crate::host_smoke_steps::{Driver, Prompts, Run, Step, edit_session, staged_prompts};
+use crate::host_smoke_steps::{Driver, Prompts, Run, Step, staged_prompts};
 
 /// An `OpenCode` installation and the model its sessions use.
 pub(crate) struct Opencode {
@@ -115,10 +114,6 @@ impl Driver for Opencode {
 
   fn prompts(&self) -> Prompts {
     staged_prompts()
-  }
-
-  fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String> {
-    edit_session(self, run, project, OPENCODE_EDIT)
   }
 }
 

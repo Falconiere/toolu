@@ -10,10 +10,6 @@
       "maxRssMiB": 7,
       "cpuMs": 4
     },
-    "toolu/mcp-tools": {
-      "maxRssMiB": 7,
-      "cpuMs": 3
-    },
     "toolu/post-tools": {
       "maxRssMiB": 6,
       "cpuMs": 10
@@ -78,7 +74,7 @@
       "maxRssMiB": 7,
       "cpuMs": 7
     },
-    "muse:python-quality/register": {
+    "muse:python-quality/forget": {
       "maxRssMiB": 7,
       "cpuMs": 7
     },
@@ -86,7 +82,7 @@
       "maxRssMiB": 7,
       "cpuMs": 7
     },
-    "muse:rust-quality/register": {
+    "muse:rust-quality/forget": {
       "maxRssMiB": 7,
       "cpuMs": 7
     },
@@ -109,10 +105,6 @@
     "muse:toolu/check-binary": {
       "maxRssMiB": 8,
       "cpuMs": 12
-    },
-    "muse:toolu/mcp-tools": {
-      "maxRssMiB": 8,
-      "cpuMs": 7
     },
     "muse:toolu/post-tools": {
       "maxRssMiB": 9,
@@ -142,7 +134,7 @@
       "maxRssMiB": 7,
       "cpuMs": 7
     },
-    "muse:ts-quality/register": {
+    "muse:ts-quality/forget": {
       "maxRssMiB": 7,
       "cpuMs": 7
     }

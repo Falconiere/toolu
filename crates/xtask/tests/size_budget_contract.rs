@@ -65,10 +65,10 @@ fn plan_review_blocks_an_over_budget_plan_without_follow_ups() -> Res {
 }
 
 #[test]
-fn execution_never_pushes_over_the_budget_even_when_the_gate_advises() -> Res {
-  let rule = "Over the budget is a blocker whatever the gate mode, `advise` included: do not push";
+fn execution_reports_size_advice_and_honors_a_failing_size_gate() -> Res {
+  let rule = "Report advisory findings. When the row fails, keep a working slice";
   pinned(&format!("{REFS}/execution.md"), rule)?;
-  let audit = "A `size` row over its budget blocks delivery even when it reads `advise`";
+  let audit = "advance when it reports `overall: ready`. Report any size advisory.";
   pinned(&format!("{REFS}/execution.md"), audit)
 }
 

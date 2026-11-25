@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use toolu_protocol::host::Host;
 
-use super::{CodeEditRule, McpBlockEntry, code_edit_rules, mcp_blocklist, read_list, settings_dir};
+use super::{CodeEditRule, code_edit_rules, read_list, settings_dir};
 use crate::env::Env;
 use crate::host::roots::Roots;
 
@@ -68,49 +68,12 @@ fn the_shipped_lists_read() {
     read_list(&shipped().join(super::RUST_UNSAFE_EXEMPTIONS)).unwrap(),
     Vec::<String>::new()
   );
-  assert_eq!(
-    mcp_blocklist(&shipped()).unwrap(),
-    Vec::<McpBlockEntry>::new()
-  );
-}
-
-#[test]
-fn mcp_entries_split_as_mcp_blocker_did() {
-  let cases = [
-    (
-      "claude_ai_Example -> use the host's native tools instead",
-      "claude_ai_Example",
-      "use the host's native tools instead",
-    ),
-    ("  figma  ", "figma", ""),
-    ("canva -> a -> b", "canva", "a -> b"),
-  ];
-  for (line, prefix, redirect) in cases {
-    let dir = tempfile::tempdir().unwrap();
-    write(
-      dir.path(),
-      super::MCP_BLOCKLIST,
-      &format!("# header\n{line}\n"),
-    );
-    let entry = McpBlockEntry {
-      prefix: prefix.to_owned(),
-      redirect: redirect.to_owned(),
-    };
-    assert_eq!(mcp_blocklist(dir.path()).unwrap(), [entry]);
-  }
-  let dir = tempfile::tempdir().unwrap();
-  write(dir.path(), super::MCP_BLOCKLIST, "  -> hint only\n\tok \n");
-  let ok = McpBlockEntry {
-    prefix: "ok".to_owned(),
-    redirect: String::new(),
-  };
-  assert_eq!(mcp_blocklist(dir.path()).unwrap(), [ok]);
 }
 
 #[test]
 fn a_looping_link_reads_as_absent_and_bytes_decode_lossily() {
   let dir = tempfile::tempdir().unwrap();
-  std::fs::create_dir(dir.path().join(super::MCP_BLOCKLIST)).unwrap();
+  std::fs::create_dir(dir.path().join(super::BASH_DENYLIST)).unwrap();
   let symlink = dir.path().join("loop.txt");
   std::os::unix::fs::symlink(&symlink, &symlink).unwrap();
   assert_eq!(read_list(&symlink).unwrap(), Vec::<String>::new());

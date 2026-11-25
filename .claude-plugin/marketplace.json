@@ -36,7 +36,7 @@
     {
       "name": "python-quality",
       "source": "./plugins/python-quality",
-      "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
+      "description": "Python quality rules for checks and the push gate.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["python", "quality", "hooks"],
@@ -48,7 +48,7 @@
     {
       "name": "rust-quality",
       "source": "./plugins/rust-quality",
-      "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",
+      "description": "Rust quality rules for checks and the push gate.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["rust", "quality", "hooks"],
@@ -60,7 +60,7 @@
     {
       "name": "ts-quality",
       "source": "./plugins/ts-quality",
-      "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
+      "description": "TypeScript quality rules for checks and the push gate.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["typescript", "quality", "hooks"],

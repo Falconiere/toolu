@@ -57,7 +57,7 @@ impl GateMode {
 const GATE_PRESETS: [&str; 3] = ["strict", "balanced", "relaxed"];
 
 /// The gates a mode can be set for.
-pub const GATE_NAMES: [&str; 10] = [
+pub const GATE_NAMES: [&str; 9] = [
   "pushReview",
   "qualityGate",
   "commitGate",
@@ -66,12 +66,12 @@ pub const GATE_NAMES: [&str; 10] = [
   "docsSync",
   "agentTier",
   "protectedFiles",
-  "mcpBlocker",
   "prSize",
 ];
 
-/// Security guardrails: `ask` at every preset but strict, and `ask` degrades to block.
-pub const GATE_GUARDRAILS: [&str; 3] = ["protectedFiles", "mcpBlocker", "bashCommands"];
+/// Security guardrails: `advise` at every preset but strict; an explicit `ask`
+/// still degrades to block where the host cannot prompt.
+pub const GATE_GUARDRAILS: [&str; 2] = ["protectedFiles", "bashCommands"];
 
 /// Marks an absent or rejected mode key; never a valid mode.
 const UNSET: &str = "__unset__";
@@ -89,13 +89,12 @@ fn read_mode(config: &LoadedConfig, path: &str) -> Option<GateMode> {
 fn preset_mode(preset: &str, name: &str, guardrail: bool) -> GateMode {
   match (preset, guardrail) {
     ("strict", _) => GateMode::Block,
-    (_, true) => GateMode::Ask,
     ("relaxed", false) if ["pushReview", "qualityGate", "prSize"].contains(&name) => {
       GateMode::Advise
     }
     ("relaxed", false) => GateMode::Off,
-    (_, false) if name == "qualityGate" || name == "prSize" => GateMode::Block,
-    (_, false) => GateMode::Advise,
+    (_, false) if name == "qualityGate" => GateMode::Block,
+    _ => GateMode::Advise,
   }
 }
 
