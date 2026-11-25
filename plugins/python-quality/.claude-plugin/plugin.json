@@ -1,6 +1,6 @@
 {
   "name": "python-quality",
-  "version": "10.3.0",
+  "version": "10.4.0",
   "hookProtocol": 4,
   "description": "Python quality rules for checks and the push gate.",
   "author": {
